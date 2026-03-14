@@ -34,13 +34,8 @@ export const authOptions: NextAuthOptions = {
 
                 if (!user || !user.password) return null;
 
-                // Support both plain text (legacy) and hashed passwords during transition
-                // Support both plain text (legacy) and hashed passwords during transition
-                let isPasswordMatch = user.password === credentials.password;
-                if (!isPasswordMatch) {
-                    // Check if it's a valid hash or just a mismatch
-                    isPasswordMatch = await bcrypt.compare(credentials.password, user.password).catch(() => false);
-                }
+                // Only accept bcrypt-hashed passwords
+                const isPasswordMatch = await bcrypt.compare(credentials.password, user.password).catch(() => false);
 
                 console.log(`[Auth] Login attempt for ${credentials.email}: Match=${isPasswordMatch}`);
 

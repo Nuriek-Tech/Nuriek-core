@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ROLES } from "@/lib/constants";
 import { sendOnboardingEmail } from "@/lib/mail";
+import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
@@ -43,6 +44,7 @@ export async function POST(req: Request) {
         }
 
         // Create user and profile in a transaction
+        const hashedPassword = await bcrypt.hash("password123", 12);
         const result = await prisma.$transaction(async (tx) => {
             const user = await tx.user.create({
                 data: {
@@ -50,7 +52,7 @@ export async function POST(req: Request) {
                     email,
                     role,
                     onboardingStatus: "IN_PROGRESS",
-                    password: "password123", // Default password for first login
+                    password: hashedPassword, // ✅ Securely hashed
                     profile: {
                         create: {
                             department,

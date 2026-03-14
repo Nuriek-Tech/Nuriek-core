@@ -1,5 +1,6 @@
 import { prisma } from "./lib/prisma";
 import { ROLES } from "./lib/constants";
+import bcrypt from "bcryptjs";
 
 async function main() {
     // 1. Seed Users
@@ -35,14 +36,16 @@ async function main() {
     let adminId = "";
 
     for (const userData of users) {
+        const hashedPassword = await bcrypt.hash(userData.password, 12);
         const user = await prisma.user.upsert({
             where: { email: userData.email },
             update: {
-                name: userData.name, // Update name if it changed (e.g. Arun -> Super Admin)
-                password: userData.password, // Enforce password update
+                name: userData.name,
+                password: hashedPassword, // ✅ Always store hashed
             },
             create: {
                 ...userData,
+                password: hashedPassword,
                 profile: {
                     create: {
                         position: userData.role === ROLES.FOUNDER ? "Founder & CEO" : "Team Member",
