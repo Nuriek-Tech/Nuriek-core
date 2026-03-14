@@ -82,8 +82,8 @@ async function main() {
         },
         {
             title: "Nuriek NDA v2",
-            description: "Standard non-disclosure agreement for all employees.",
-            url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+            description: "Standard non-disclosure agreement for all employees. Covers confidentiality, IP assignment, and non-solicitation.",
+            url: "/nuriek-nda-v2.html",
             type: "LEGAL",
             category: "Resources",
             allowedRoles: "ALL",
