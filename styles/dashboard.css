@@ -1,0 +1,182 @@
+.dashboardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+}
+
+.welcomeSection h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.welcomeSection p {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.card {
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cardTitle {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.cardIcon {
+    color: var(--nuriek-blue);
+    background: rgba(var(--nuriek-blue-rgb), 0.1);
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.statItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.statLabel {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.statValue {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.statTrend {
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.trendUp {
+    color: #34c759;
+}
+
+.trendDown {
+    color: #ff3b30;
+}
+
+.amsActionCard {
+    background: linear-gradient(135deg, rgba(var(--nuriek-blue-rgb), 0.1), rgba(var(--nuriek-accent-rgb), 0.05));
+    border: 1px solid rgba(var(--nuriek-blue-rgb), 0.2);
+}
+
+.timeDisplay {
+    font-size: 2.5rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    margin: 1rem 0;
+    text-align: center;
+}
+
+.checkInActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.actionBtn {
+    padding: 0.875rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.checkInBtn {
+    background: var(--nuriek-blue);
+    color: white;
+    grid-column: span 2;
+}
+
+.checkOutBtn {
+    background: var(--surface-lighter);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+}
+
+.breakBtn {
+    background: var(--surface-lighter);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+}
+
+.recentLogs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.logItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+}
+
+.logInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.logTitle {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.logTime {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.logStatus {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-xl);
+    font-weight: 600;
+}
+
+.statusOnTime {
+    background: rgba(52, 199, 89, 0.1);
+    color: #34c759;
+}
+
+.statusLate {
+    background: rgba(255, 59, 48, 0.1);
+    color: #ff3b30;
+}

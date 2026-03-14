@@ -1,0 +1,149 @@
+.sidebar {
+    width: 280px;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    gap: 2rem;
+    border-right: 1px solid var(--border);
+    z-index: 50;
+    transition: var(--transition-base);
+}
+
+.logoSection {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+}
+
+.logoImage {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.logoText {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.navSection {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.navItem {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: var(--transition-base);
+}
+
+.navItem:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+.navItemActive {
+    background: rgba(var(--nuriek-blue-rgb), 0.1);
+    color: var(--nuriek-blue);
+}
+
+.navItemActive .icon {
+    color: var(--nuriek-blue);
+}
+
+.icon {
+    width: 20px;
+    height: 20px;
+    color: var(--text-tertiary);
+    transition: var(--transition-base);
+}
+
+.userSection {
+    margin-top: auto;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.userInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--nuriek-blue), var(--nuriek-accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: white;
+    font-size: 0.85rem;
+}
+
+.userDetails {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.userName {
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.userRole {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: capitalize;
+}
+
+.logoutButton {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    color: #ff3b30;
+    font-size: 0.95rem;
+    font-weight: 500;
+    width: 100%;
+    justify-content: flex-start;
+}
+
+.logoutButton:hover {
+    background: rgba(255, 59, 48, 0.1);
+}
+
+@media (max-width: 1024px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+
+    .sidebarOpen {
+        transform: translateX(0);
+    }
+}

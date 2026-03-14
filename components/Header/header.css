@@ -1,0 +1,132 @@
+.header {
+    height: 72px;
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    border-bottom: 1px solid var(--border);
+    transition: var(--transition-base);
+}
+
+.mobileMenuButton {
+    display: none;
+    color: var(--text-primary);
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    cursor: pointer;
+}
+
+.mobileMenuButton:hover {
+    background: var(--surface-hover);
+}
+
+.searchWrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.5rem 1rem;
+    width: 100%;
+    max-width: 400px;
+    transition: var(--transition-base);
+}
+
+.searchWrapper:focus-within {
+    border-color: var(--nuriek-blue);
+    background: var(--surface-hover);
+}
+
+.searchInput {
+    width: 100%;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.searchIcon {
+    color: var(--text-tertiary);
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.actionButton {
+    position: relative;
+    color: var(--text-secondary);
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+}
+
+.actionButton:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+.badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--nuriek-blue);
+    border: 2px solid var(--background);
+}
+
+.quickActions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.checkInButton {
+    padding: 0.6rem 1.25rem;
+    background: linear-gradient(135deg, var(--nuriek-blue), var(--nuriek-blue-dark));
+    color: white;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 12px rgba(var(--nuriek-blue-rgb), 0.2);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.checkInButton:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(var(--nuriek-blue-rgb), 0.3);
+}
+
+@media (max-width: 1024px) {
+    .header {
+        padding: 0 1.25rem;
+        gap: 1rem;
+    }
+
+    .mobileMenuButton {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .searchWrapper {
+        display: none;
+    }
+
+    .checkInButton span {
+        display: none;
+    }
+
+    .checkInButton {
+        padding: 0.6rem;
+    }
+}

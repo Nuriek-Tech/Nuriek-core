@@ -1,0 +1,174 @@
+.directoryContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.searchBar {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+    max-width: 600px;
+}
+
+.employeeGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.employeeCard {
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    transition: var(--transition-base);
+}
+
+.employeeCard:hover {
+    transform: translateY(-4px);
+    border-color: var(--nuriek-blue);
+}
+
+.profilePic {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--nuriek-blue), var(--nuriek-accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+    border: 4px solid var(--surface-lighter);
+}
+
+.employeeInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.name {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.role {
+    font-size: 0.85rem;
+    color: var(--nuriek-blue);
+    font-weight: 600;
+}
+
+.email {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.cardFooter {
+    width: 100%;
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.viewProfileBtn {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--nuriek-blue);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Profile Detail Styles */
+.profileLayout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 2rem;
+}
+
+.profileSidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.sidebarCard {
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.profileAction {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: var(--surface-lighter);
+}
+
+.profileActionMain {
+    background: var(--nuriek-blue);
+    color: white;
+}
+
+.profileMain {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.infoSection {
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.infoGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.detailItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.detailLabel {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.detailValue {
+    font-size: 1rem;
+    font-weight: 500;
+}

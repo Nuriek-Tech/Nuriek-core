@@ -1,0 +1,145 @@
+.reportsContent {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.reportsHeader {
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.reportsHeader h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.summaryGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, min-minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.reportCard {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: transform 0.2s ease;
+}
+
+.reportCard:hover {
+    transform: translateY(-4px);
+}
+
+.cardTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-secondary);
+}
+
+.cardValue {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+
+.cardLabel {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.reportsLinks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.linkCard {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    text-decoration: none;
+    color: inherit;
+}
+
+.linkCard h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.25rem;
+}
+
+.linkCard p {
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.reportsTableSection {
+    margin-top: 2rem;
+}
+
+.filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.filterGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filterGroup label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.filterGroup select, .filterGroup input {
+    padding: 0.6rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: white;
+    outline: none;
+}
+
+.dataTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.dataTable th, .dataTable td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dataTable th {
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.dataTable tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.statusBadge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status-PRESENT, .status-APPROVED { background: rgba(52, 199, 89, 0.15); color: #32d74b; }
+.status-LATE, .status-PENDING { background: rgba(255, 159, 10, 0.15); color: #ff9f0a; }
+.status-ABSENT, .status-REJECTED { background: rgba(255, 69, 58, 0.15); color: #ff453a; }

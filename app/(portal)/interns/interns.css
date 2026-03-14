@@ -1,0 +1,152 @@
+.internGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 1.5rem;
+}
+
+.internCard {
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.internHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.internIdentity {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.internAvatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--surface-lighter);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: var(--nuriek-blue);
+    border: 2px solid var(--border);
+}
+
+.internIntro {
+    display: flex;
+    flex-direction: column;
+}
+
+.internName {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.internDuration {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+.scoreCircle {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    border: 3px solid var(--nuriek-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.scoreValue {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.scoreLabel {
+    font-size: 0.6rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.metricsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.metricItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.metricTitle {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.progressBar {
+    height: 6px;
+    background: var(--surface-lighter);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--nuriek-blue), var(--nuriek-accent));
+}
+
+.checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.checkItem {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.checkItemDone {
+    color: var(--text-primary);
+}
+
+.checkIcon {
+    color: var(--text-tertiary);
+}
+
+.checkIconDone {
+    color: #34c759;
+}
+
+.conversionSection {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.conversionTag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-xl);
+    background: rgba(var(--nuriek-blue-rgb), 0.1);
+    color: var(--nuriek-blue);
+}
