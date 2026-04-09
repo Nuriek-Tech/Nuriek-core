@@ -31,6 +31,7 @@ export default function DashboardPage() {
 
     const userRole = (session?.user as any)?.role;
     const isAdmin = userRole === "FOUNDER" || userRole === "HR_ADMIN";
+    const canCheckIn = !isAdmin; // ALL non-admin roles can check in: MANAGER, TEAM_LEAD, EMPLOYEE, INTERN, CONTRACTOR
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -51,14 +52,18 @@ export default function DashboardPage() {
                 const sumRes = await fetch("/api/reports/summary");
                 if (sumRes.ok) setAdminSummary(await sumRes.json());
             } else {
-                // Regular employees get their personal attendance logs and stats
+                // ALL non-admin employees get their personal attendance logs and stats
                 const [logsRes, statsRes, timesheetsRes] = await Promise.all([
                     fetch("/api/attendance"),
                     fetch("/api/stats/summary"),
                     fetch("/api/timesheets")
                 ]);
 
-                if (logsRes.ok) setLogs(await logsRes.json());
+                let parsedLogs: any[] = [];
+                if (logsRes.ok) {
+                    parsedLogs = await logsRes.json();
+                    setLogs(parsedLogs);
+                }
                 if (statsRes.ok) setStats(await statsRes.json());
                 if (timesheetsRes.ok) {
                     const tData = await timesheetsRes.json();
@@ -67,7 +72,7 @@ export default function DashboardPage() {
 
                 // Auto-detect check-in status from logs
                 const today = new Date().toDateString();
-                const todayLog = (await logsRes.clone().json()).find((l: any) => new Date(l.checkIn).toDateString() === today);
+                const todayLog = parsedLogs.find((l: any) => new Date(l.checkIn).toDateString() === today);
                 if (todayLog && !todayLog.checkOut) {
                     setIsCheckedIn(true);
                     setCheckInTime(new Date(todayLog.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
@@ -124,6 +129,20 @@ export default function DashboardPage() {
                     <h1>Welcome back, <span className="text-gradient">{session?.user?.name}</span></h1>
                     <p>{currentTime.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} • Office: Bangalore (HQ)</p>
                 </div>
+                {canCheckIn && (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.4rem" }}>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Clock size={24} color="var(--nuriek-blue)" />
+                            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: isCheckedIn ? "#34c759" : "rgba(255,255,255,0.3)", display: "inline-block", boxShadow: isCheckedIn ? "0 0 8px #34c759" : "none" }} />
+                            <span style={{ fontSize: "0.78rem", color: isCheckedIn ? "#34c759" : "var(--text-tertiary)", fontWeight: 500 }}>
+                                {isCheckedIn ? `Checked in at ${checkInTime}` : "Not checked in today"}
+                            </span>
+                        </div>
+                    </div>
+                )}
                 {isAdmin && (
                     <div style={{ textAlign: 'right', background: 'rgba(255,255,255,0.05)', padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.1)' }}>
                         <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -155,7 +174,7 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            <div className={isAdmin ? "" : "grid"}>
+            <div className={canCheckIn ? "grid" : ""}>
                 {isAdmin ? (
                     <div className="summaryGrid" style={{ marginTop: '2rem' }}>
                         <div className="card reportCard glass" style={{ borderLeft: '4px solid var(--nuriek-blue)', background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.08) 100%)' }}>

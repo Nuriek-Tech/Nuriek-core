@@ -1,0 +1,230 @@
+/* -----------------------------------------------
+   Certificates Page Styles
+   ----------------------------------------------- */
+
+.certContainer {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 0 4rem;
+}
+
+/* Banner */
+.certBanner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-lg);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+}
+
+.certBannerSuccess {
+    background: rgba(52, 199, 89, 0.12);
+    border: 1px solid rgba(52, 199, 89, 0.3);
+    color: #34c759;
+}
+
+/* Form Card */
+.certFormCard {
+    margin-bottom: 2rem;
+    animation: slideDown 0.25s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Type Selector Cards */
+.certTypeCard {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    text-align: left;
+    width: 100%;
+}
+
+.certTypeCard:hover {
+    background: rgba(255, 255, 255, 0.07);
+    transform: translateY(-2px);
+}
+
+.certTypeCardActive {
+    border-width: 2px;
+}
+
+.certTypeIcon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.certTypeLabel {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.certTypeDesc {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    line-height: 1.5;
+}
+
+.certTypeCheck {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+}
+
+/* Status Badge */
+.certStatusBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Request List */
+.certRequestList {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 1.25rem;
+}
+
+.certRequestItem {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.1rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    transition: background 0.15s;
+}
+
+.certRequestItem:last-child {
+    border-bottom: none;
+}
+
+/* Admin item variants */
+.certAdminItem {
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin: 0 -0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.certAdminPending {
+    background: rgba(255, 159, 10, 0.04);
+    border-left: 3px solid rgba(255, 159, 10, 0.5);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding-left: 1rem;
+}
+
+/* Admin Avatar */
+.certAdminAvatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--nuriek-blue), #bf5af2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+/* Download Button */
+.certDownloadBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(52, 199, 89, 0.1);
+    border: 1px solid rgba(52, 199, 89, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 0.45rem 1rem;
+    color: #34c759;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+.certDownloadBtn:hover {
+    background: rgba(52, 199, 89, 0.18);
+}
+
+/* Approve / Reject buttons */
+.certApproveBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(52, 199, 89, 0.12);
+    border: 1px solid rgba(52, 199, 89, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 0.45rem 1rem;
+    color: #34c759;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+.certApproveBtn:hover:not(:disabled) {
+    background: rgba(52, 199, 89, 0.22);
+}
+
+.certApproveBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.certRejectBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(255, 59, 48, 0.1);
+    border: 1px solid rgba(255, 59, 48, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 0.45rem 1rem;
+    color: #ff3b30;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+.certRejectBtn:hover:not(:disabled) {
+    background: rgba(255, 59, 48, 0.2);
+}
+
+.certRejectBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Empty State */
+.certEmptyState {
+    padding: 4rem 1rem;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}

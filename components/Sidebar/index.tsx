@@ -46,6 +46,10 @@ export default function Sidebar() {
                     if (item.path === "/drive" && ![ROLES.FOUNDER, ROLES.HR_ADMIN].includes(userRole)) {
                         label = "Employee Handbook";
                     }
+                    // Rename "Intern Management" to "My Performance" for interns
+                    if (item.path === "/interns" && userRole === ROLES.INTERN) {
+                        label = "My Performance";
+                    }
 
                     return (
                         <Link

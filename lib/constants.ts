@@ -34,7 +34,7 @@ export const NAV_ITEMS = [
     {
         label: "Intern Management",
         path: "/interns",
-        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER, ROLES.TEAM_LEAD],
+        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER, ROLES.TEAM_LEAD, ROLES.INTERN],
         icon: "GraduationCap",
     },
     {
@@ -72,6 +72,12 @@ export const NAV_ITEMS = [
         path: "/settings",
         roles: [ROLES.FOUNDER, ROLES.HR_ADMIN],
         icon: "Settings",
+    },
+    {
+        label: "My Certificates",
+        path: "/certificates",
+        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER, ROLES.TEAM_LEAD, ROLES.EMPLOYEE, ROLES.INTERN, ROLES.CONTRACTOR],
+        icon: "BadgeCheck",
     },
 ];
 

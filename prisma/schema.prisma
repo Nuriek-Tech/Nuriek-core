@@ -28,6 +28,7 @@ model User {
   badges        Badge[]
   signatures    Signature[]
   internPerformance InternPerformance?
+  certificateRequests CertificateRequest[]
 }
 
 model PerformanceReview {
@@ -178,4 +179,19 @@ model OrgTask {
   description String?
   publishedBy String
   createdAt   DateTime @default(now())
+}
+
+model CertificateRequest {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // EXPERIENCE | BONAFIDE
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  purpose     String?  // Optional reason / purpose stated by user
+  approvedBy  String?  // Name of approver
+  approvedAt  DateTime?
+  rejectedAt  DateTime?
+  rejectionNote String?
+  requestedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

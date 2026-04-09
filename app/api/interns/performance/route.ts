@@ -35,7 +35,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
-    if (!["HR_HEAD", "FOUNDER", "DIRECTOR"].includes((session?.user as any)?.role)) {
+    if (!["HR_ADMIN", "FOUNDER", "MANAGER", "TEAM_LEAD"].includes((session?.user as any)?.role)) {
         return new NextResponse("Unauthorized", { status: 401 });
     }
 
