@@ -1,87 +1,80 @@
 "use client";
 
-import {
-    Settings as SettingsIcon,
-    User,
-    Bell,
-    Shield,
-    Globe,
-    Palette,
-    Monitor,
-    ChevronRight,
-    Save
-} from "lucide-react";
-import "@/styles/dashboard.css";
+import { Suspense, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { User } from "lucide-react";
+import PasswordChangeForm from "@/components/PasswordChangeForm";
+import ProfileSettingsForm from "@/components/ProfileSettingsForm";
+import UserPreferences from "@/components/UserPreferences";
+import PortalAdminSettings from "@/components/PortalAdminSettings";
+import { formatRoleLabel } from "@/lib/roles";
+import "@/styles/people-hub.css";
+import "../admin/documents/admin-documents.css";
+import "./settings.css";
 
-export default function SettingsPage() {
-    const settingsSections = [
-        { title: "Profile Settings", desc: "Update your avatar, name, and basic info", icon: User },
-        { title: "Notifications", desc: "Manage email and push notification preferences", icon: Bell },
-        { title: "Security", desc: "Change password and enable 2FA", icon: Shield },
-        { title: "Display & Language", desc: "System theme and language localization", icon: Globe },
-        { title: "Appearance", desc: "Customize accent colors and UI density", icon: Palette },
-        { title: "Connected Devices", desc: "Manage your active login sessions", icon: Monitor },
-    ];
+function SettingsContent() {
+    const { data: session } = useSession();
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        if (window.location.hash === "#super-admin") {
+            requestAnimationFrame(() => {
+                document.getElementById("super-admin")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+        }
+    }, []);
 
     return (
-        <div className="dashboardContent">
-            <header className="dashboardHeader">
-                <div className="welcomeSection">
-                    <h1>Portal <span className="text-gradient">Settings</span></h1>
-                    <p>Customize your workspace experience and security</p>
+        <div className="hubPage setHub">
+            <header className="setHero">
+                <div className="setHeroMain">
+                    <p className="hubEyebrow">Account</p>
+                    <h1>
+                        Portal <span className="text-gradient">Settings</span>
+                    </h1>
+                    <p className="hubSubtitle setHeroSubtitle">
+                        Profile, security, preferences, and HR configuration.
+                    </p>
                 </div>
-                <button className="checkInButton">
-                    <Save size={18} />
-                    <span>Save Changes</span>
-                </button>
+
+                {session?.user && (
+                    <div className="setAccountCard glass">
+                        <div className="setAccountAvatar">
+                            {session.user.name?.charAt(0) ?? <User size={18} />}
+                        </div>
+                        <div className="setAccountBody">
+                            <div className="setAccountName">{session.user.name}</div>
+                            <div className="setAccountMeta">{session.user.email}</div>
+                            <div className="setAccountRole">
+                                {formatRoleLabel(session.user.role)}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </header>
 
-            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
-                {settingsSections.map(section => (
-                    <section key={section.title} className="card glass" style={{ cursor: 'pointer', transition: 'transform 0.2s' }}>
-                        <div className="cardHeader" style={{ border: 'none', paddingBottom: 0 }}>
-                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                <div style={{
-                                    width: 48, height: 48, borderRadius: 'var(--radius-lg)',
-                                    background: 'rgba(var(--nuriek-blue-rgb), 0.1)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    color: 'var(--nuriek-blue)'
-                                }}>
-                                    <section.icon size={24} />
-                                </div>
-                                <div className="logInfo">
-                                    <span className="logTitle" style={{ fontSize: '1.1rem' }}>{section.title}</span>
-                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginTop: '0.2rem' }}>{section.desc}</p>
-                                </div>
+            <div className="setLayout">
+                <ProfileSettingsForm />
+
+                <div className="setSideCol">
+                    <Suspense
+                        fallback={
+                            <div className="setPanel glass setPanel--compact">
+                                <p className="setLoadingText">Loading…</p>
                             </div>
-                            <ChevronRight size={20} style={{ opacity: 0.3 }} />
-                        </div>
-                    </section>
-                ))}
+                        }
+                    >
+                        <PasswordChangeForm />
+                    </Suspense>
+                    <UserPreferences />
+                </div>
             </div>
 
-            <section className="card glass" style={{ marginTop: '2rem', border: '1px solid rgba(255, 69, 58, 0.2)' }}>
-                <div className="cardHeader">
-                    <span className="cardTitle" style={{ color: '#ff453a' }}>Danger Zone</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        <h4 style={{ fontWeight: 600 }}>Deactivate Account</h4>
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>This will temporarily disable your portal access. Contact HR to reactivation.</p>
-                    </div>
-                    <button style={{
-                        padding: '0.75rem 1.5rem',
-                        borderRadius: 'var(--radius-md)',
-                        border: '1px solid #ff453a',
-                        color: '#ff453a',
-                        background: 'none',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                    }}>
-                        Deactivate
-                    </button>
-                </div>
-            </section>
+            <PortalAdminSettings />
         </div>
     );
+}
+
+export default function SettingsPage() {
+    return <SettingsContent />;
 }

@@ -1,23 +1,30 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireSession, requireRoles, isNextResponse } from "@/lib/rbac";
+import { ROLES } from "@/lib/constants";
+import type { Role } from "@/lib/constants";
+
+const PERFORMANCE_MANAGER_ROLES: Role[] = [
+    ROLES.HR_ADMIN,
+    ROLES.FOUNDER,
+    ROLES.MANAGER,
+    ROLES.TEAM_LEAD,
+];
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) return new NextResponse("Unauthorized", { status: 401 });
+    const user = await requireSession();
+    if (isNextResponse(user)) return user;
 
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId") || (session.user as any).id;
+    const userId = searchParams.get("userId") || user.id;
 
     try {
-        const performance = await (prisma as any).internPerformance.findUnique({
+        const performance = await prisma.internPerformance.findUnique({
             where: { userId },
             include: { user: true }
         });
 
-        if (!performance && (session.user as any).role === "INTERN") {
-            // Return default for interns if not found
+        if (!performance && user.role === ROLES.INTERN) {
             return NextResponse.json({
                 learningProgress: 0,
                 taskCompletion: 0,
@@ -28,20 +35,18 @@ export async function GET(req: Request) {
         }
 
         return NextResponse.json(performance);
-    } catch (error) {
+    } catch {
         return new NextResponse("Internal Error", { status: 500 });
     }
 }
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!["HR_ADMIN", "FOUNDER", "MANAGER", "TEAM_LEAD"].includes((session?.user as any)?.role)) {
-        return new NextResponse("Unauthorized", { status: 401 });
-    }
+    const user = await requireRoles(PERFORMANCE_MANAGER_ROLES);
+    if (isNextResponse(user)) return user;
 
     try {
         const body = await req.json();
-        const performance = await (prisma as any).internPerformance.upsert({
+        const performance = await prisma.internPerformance.upsert({
             where: { userId: body.userId },
             update: {
                 learningProgress: body.learningProgress,
@@ -62,7 +67,7 @@ export async function POST(req: Request) {
             }
         });
         return NextResponse.json(performance);
-    } catch (error) {
+    } catch {
         return new NextResponse("Internal Error", { status: 500 });
     }
 }

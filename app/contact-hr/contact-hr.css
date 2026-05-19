@@ -1,0 +1,257 @@
+.contactHrRoot {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--text-primary);
+}
+
+.chrPage {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: var(--font-nuriek-body, system-ui), sans-serif;
+}
+
+.chrShell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+}
+
+.chrTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: clamp(2rem, 5vh, 3rem);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.chrBack,
+.chrSiteLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6f6a63;
+  text-decoration: none;
+}
+
+.chrBack:hover,
+.chrSiteLink:hover {
+  color: #1a1917;
+}
+
+.chrGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(2rem, 5vw, 3.5rem);
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .chrGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chrEyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a847c;
+  margin-bottom: 0.65rem;
+}
+
+.chrTitle {
+  font-family: var(--font-nuriek-display, Georgia, serif);
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.75rem;
+}
+
+.chrLead {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #5c5751;
+  margin: 0 0 1.75rem;
+  max-width: 42ch;
+}
+
+.chrEmailCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+  background: #fff;
+  border: 1px solid rgba(26, 25, 23, 0.1);
+  border-radius: 16px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 12px 32px rgba(26, 25, 23, 0.06);
+  transition: border-color 0.2s, transform 0.15s;
+  margin-bottom: 1rem;
+}
+
+.chrEmailCard:hover {
+  border-color: rgba(26, 25, 23, 0.2);
+  transform: translateY(-2px);
+}
+
+.chrEmailIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--surface-hover);
+  color: #1a1917;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chrEmailLabel {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8a847c;
+  margin-bottom: 0.2rem;
+}
+
+.chrEmailValue {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a1917;
+}
+
+.chrHours {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #6f6a63;
+  line-height: 1.5;
+}
+
+.chrHours svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.chrTopics {
+  background: #fff;
+  border: 1px solid rgba(26, 25, 23, 0.08);
+  border-radius: 20px;
+  padding: 1.5rem 1.35rem;
+}
+
+.chrTopicsTitle {
+  font-family: var(--font-nuriek-display, Georgia, serif);
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin: 0 0 1rem;
+}
+
+.chrTopicList {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+}
+
+.chrTopic {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(26, 25, 23, 0.06);
+}
+
+.chrTopic:last-child {
+  border-bottom: none;
+}
+
+.chrTopicIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #f8f6f2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #5c5751;
+}
+
+.chrTopicName {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.15rem;
+}
+
+.chrTopicDesc {
+  font-size: 0.82rem;
+  color: #6f6a63;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.chrNote {
+  padding: 0.85rem 1rem;
+  background: #f8f6f2;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  color: #5c5751;
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+}
+
+.chrNote p {
+  margin: 0;
+}
+
+.chrActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.chrBtnPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.25rem;
+  background: #1a1917;
+  color: #f8f6f2;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.chrBtnPrimary:hover {
+  background: #000;
+}
+
+.chrBtnGhost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(26, 25, 23, 0.12);
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #1a1917;
+  text-decoration: none;
+  background: transparent;
+}
+
+.chrBtnGhost:hover {
+  background: #f8f6f2;
+}

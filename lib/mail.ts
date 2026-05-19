@@ -1,168 +1,240 @@
+import { sendWithRetry } from "@/lib/email-queue";
+import { nuriekEmailHeaderAttachment } from "@/lib/email-header-asset";
+import { portalAppUrl, portalEmailUrl } from "@/lib/portal-url";
+import {
+    createZohoTransporter,
+    formatZohoSmtpError,
+    isZohoConfigured,
+    zohoMailFrom,
+} from "@/lib/zoho-smtp";
 
-import nodemailer from 'nodemailer';
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.zoho.in",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.ZOHO_USER,
-    pass: process.env.ZOHO_PASSWORD,
-  },
-});
-
-export async function sendOnboardingEmail(user: { name: string, email: string }) {
-  const { name, email } = user;
-
-  // Log content for debug
-  console.log(`[Mail] Attempting to send onboarding email to ${email} via Zoho...`);
-
-  if (!process.env.ZOHO_USER || !process.env.ZOHO_PASSWORD) {
-    console.warn("ZOHO credentials missing. Email not sent.");
-    return { success: false, message: "Missing Zoho credentials in .env" };
-  }
-
-  try {
-    const info = await transporter.sendMail({
-      from: `"Nuriek Team" <${process.env.ZOHO_USER}>`,
-      to: email,
-      subject: 'Welcome to Nuriek - Onboarding Instructions',
-      html: `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
-          <div style="background-color: #0f172a; background-image: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 40px 20px; text-align: center;">
-             <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">Welcome to Nuriek</h1>
-             <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0; font-size: 16px;">We're thrilled to have you on board!</p>
-          </div>
-          
-          <div style="padding: 40px 30px;">
-            <p style="color: #333; font-size: 16px; line-height: 1.6;">Hi <strong>${name}</strong>,</p>
-            <p style="color: #555; font-size: 16px; line-height: 1.6;">Your official Nuriek account has been created. You can now access the internal portal to complete your onboarding process.</p>
-            
-            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 25px; margin: 30px 0; border-radius: 8px;">
-              <p style="margin: 0 0 15px; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">ACCESS CREDENTIALS</p>
-              
-              <div style="margin-bottom: 12px;">
-                  <span style="display: inline-block; width: 80px; color: #64748b; font-size: 14px;">Email:</span>
-                  <strong style="color: #334155; font-size: 15px;">${email}</strong>
-              </div>
-              <div style="margin-bottom: 20px;">
-                  <span style="display: inline-block; width: 80px; color: #64748b; font-size: 14px;">Password:</span>
-                  <code style="background: #e0f2fe; padding: 4px 8px; border-radius: 4px; color: #0284c7; font-size: 15px; font-family: monospace;">password123</code>
-              </div>
-              
-              <div style="text-align: center; margin-top: 25px;">
-                  <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}" style="background-color: #0f172a; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block; transition: background-color 0.2s;">Login to Portal</a>
-              </div>
-            </div>
-            
-            <h3 style="color: #334155; font-size: 18px; margin-top: 30px; font-weight: 600;">Next Steps:</h3>
-            <ul style="color: #475569; font-size: 15px; line-height: 1.6; padding-left: 20px;">
-              <li style="margin-bottom: 10px;">Log in using the temporary password above.</li>
-              <li style="margin-bottom: 10px;">Navigate to <strong>Settings</strong> to change your password immediately.</li>
-              <li style="margin-bottom: 10px;">Complete your profile and sign pending documents.</li>
-            </ul>
-            
-            <p style="color: #475569; font-size: 15px; margin-top: 30px;">If you have any trouble logging in, please contact the IT Helpdesk.</p>
-          </div>
-          
-          <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
-            <p style="margin: 0; font-size: 12px; color: #94a3b8;">&copy; 2026 Nuriek Inc. All rights reserved.</p>
-          </div>
-        </div>
-      `,
-    });
-
-    console.log(`[Mail] Email sent: ${info.messageId}`);
-    return { success: true, data: info };
-  } catch (error) {
-    console.error("Failed to send email via Zoho:", error);
-    return { success: false, error };
-  }
+function getTransporter() {
+    return createZohoTransporter();
 }
 
-export async function sendDocumentNotification(docTitle: string, docUrl: string, recipients: string[]) {
-  console.log(`[Mail] Sending document notification to ${recipients.length} recipients...`);
-
-  if (!process.env.ZOHO_USER || !process.env.ZOHO_PASSWORD) {
-    console.warn("ZOHO credentials missing. Email not sent.");
-    return { success: false, message: "Missing Zoho credentials" };
-  }
-
-  // Batch recipients if too many (simple split for now, though SMTP usually handles BCC limits)
-  // We'll send as one batch for now assuming < 100 users.
-  try {
-    const info = await transporter.sendMail({
-      from: `"Nuriek HR" <${process.env.ZOHO_USER}>`,
-      bcc: recipients, // Use BCC for privacy
-      subject: `New Document: ${docTitle}`,
-      html: `
-        <div style="font-family: sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #0f172a;">New Document Available</h2>
-          <p>A new document has been uploaded to the Company Drive:</p>
-          
-          <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <strong style="font-size: 18px;">${docTitle}</strong>
-          </div>
-          
-          <p>You can access it directly via the portal:</p>
-          <a href="${docUrl.startsWith('http') ? docUrl : `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}${docUrl}`}" 
-             style="background: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block;">
-             View Document
-          </a>
-          
-          <p style="margin-top: 30px; font-size: 12px; color: #666;">
-            This is an automated notification from Nuriek Drive.
-          </p>
-        </div>
-      `,
-    });
-    console.log(`[Mail] Notification sent: ${info.messageId}`);
-    return { success: true };
-  } catch (error) {
-    console.error("[Mail] Failed to send notification:", error);
-    return { success: false, error };
-  }
+function portalUrl(path = "") {
+    return portalAppUrl(path);
 }
 
-export async function sendTimesheetApprovalEmail(employeeName: string, date: string, recipients: string[]) {
-  console.log(`[Mail] Sending timesheet approval request to ${recipients.length} HR admins...`);
+/** Links in outbound emails — always a public URL (www.core.nuriek.com in production). */
+function emailPortalUrl(path = "") {
+    return portalEmailUrl(path);
+}
 
-  if (!process.env.ZOHO_USER || !process.env.ZOHO_PASSWORD) {
-    console.warn("ZOHO credentials missing. Email not sent.");
-    return { success: false, message: "Missing Zoho credentials" };
-  }
+export async function sendOnboardingEmail(user: {
+    name: string;
+    email: string;
+    temporaryPassword: string;
+}) {
+    return sendNuriekOnboardingEmail({
+        to: user.email,
+        recipientName: user.name,
+        workEmail: user.email,
+        password: user.temporaryPassword,
+        position: "Team member",
+        department: "Nuriek",
+        isIntern: false,
+    });
+}
 
-  try {
-    const info = await transporter.sendMail({
-      from: `"Nuriek HR" <${process.env.ZOHO_USER}>`,
-      bcc: recipients,
-      subject: `Timesheet Approval Required: ${employeeName}`,
-      html: `
-        <div style="font-family: sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #0f172a;">Pending Timesheet Approval</h2>
-          <p>A new timesheet has been submitted and requires your approval:</p>
-          
-          <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0 0 10px 0;"><strong>Employee:</strong> ${employeeName}</p>
-            <p style="margin: 0;"><strong>Date:</strong> ${date}</p>
-          </div>
-          
-          <p>Please log in to the portal and navigate to the <strong>Admin Timesheets</strong> section to approve or reject this submission.</p>
-          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/admin/timesheets" 
-             style="background: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block;">
-             Review Timesheet
-          </a>
-          
-          <p style="margin-top: 30px; font-size: 12px; color: #666;">
-            This is an automated notification from Nuriek HR.
-          </p>
+export async function sendNuriekOnboardingEmail(params: {
+    to: string;
+    recipientName: string;
+    workEmail: string;
+    password: string;
+    position: string;
+    department: string;
+    isIntern: boolean;
+    refNumber?: string;
+}) {
+    if (!isZohoConfigured()) {
+        return { success: false, message: "Missing Zoho credentials in .env" };
+    }
+
+    const { buildNuriekOnboardingEmailHtml, nuriekOnboardingEmailSubject } = await import(
+        "@/lib/nuriek-onboarding-email"
+    );
+
+    const loginUrl = portalUrl("/login");
+    const html = buildNuriekOnboardingEmailHtml(
+        {
+            recipientName: params.recipientName,
+            workEmail: params.workEmail,
+            password: params.password,
+            loginUrl,
+            position: params.position,
+            department: params.department,
+            isIntern: params.isIntern,
+            refNumber: params.refNumber,
+        },
+        "send"
+    );
+
+    const result = await sendWithRetry(async () => {
+        const info = await getTransporter().sendMail({
+            from: zohoMailFrom(),
+            to: params.to,
+            subject: nuriekOnboardingEmailSubject(params.isIntern),
+            html,
+            attachments: [nuriekEmailHeaderAttachment()],
+        });
+        return { success: true, data: info };
+    });
+
+    if (!result.success) {
+        return {
+            success: false,
+            message: result.error ? formatZohoSmtpError(result.error) : "Failed to send email",
+        };
+    }
+    return { success: true };
+}
+
+export async function sendDocumentNotification(
+    docTitle: string,
+    docUrl: string,
+    recipients: string[]
+) {
+    if (!process.env.ZOHO_USER || !process.env.ZOHO_PASSWORD) {
+        return { success: false, message: "Missing Zoho credentials" };
+    }
+
+    const fullUrl = docUrl.startsWith("http") ? docUrl : portalUrl(docUrl);
+
+    return sendWithRetry(async () => {
+        await getTransporter().sendMail({
+            from: zohoMailFrom(),
+            bcc: recipients,
+            subject: `New Document: ${docTitle}`,
+            html: `
+        <div style="font-family: sans-serif; padding: 20px;">
+          <h2>New Document Available</h2>
+          <p><strong>${docTitle}</strong> was uploaded to the Company Drive.</p>
+          <a href="${fullUrl}">Open in portal</a>
         </div>
       `,
+        });
+        return { success: true };
     });
-    console.log(`[Mail] Timesheet notification sent: ${info.messageId}`);
+}
+
+export async function sendSignatureRequestEmail(params: {
+    to: string;
+    documentTitle: string;
+    description?: string | null;
+    signerRole?: string;
+}) {
+    const { to, documentTitle, description, signerRole } = params;
+
+    if (!process.env.ZOHO_USER || !process.env.ZOHO_PASSWORD) {
+        console.warn("ZOHO credentials missing. Signature request email not sent.");
+        return { success: false, message: "Missing Zoho credentials" };
+    }
+
+    const documentsUrl = portalUrl("/documents");
+
+    return sendWithRetry(async () => {
+        await getTransporter().sendMail({
+            from: zohoMailFrom(),
+            to,
+            subject: `Action required: Sign "${documentTitle}"`,
+            html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+          <h1 style="color: #0f172a; font-size: 22px;">Signature requested</h1>
+          <p>Hello,</p>
+          <p>You have been asked to review and sign <strong>${documentTitle}</strong>${signerRole ? ` as <strong>${signerRole}</strong>` : ""}.</p>
+          ${description ? `<p style="color: #475569;">${description}</p>` : ""}
+          <ol style="color: #334155; line-height: 1.6;">
+            <li>Sign in to the Nuriek employee portal.</li>
+            <li>Open <strong>Documents &amp; Policy Hub</strong>.</li>
+            <li>Read the full document, then use <strong>Sign Now</strong>.</li>
+          </ol>
+          <a href="${documentsUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">
+            Open Documents Hub
+          </a>
+          <p style="color: #64748b; font-size: 13px;">The Sign button unlocks only after you scroll through the entire document.</p>
+        </div>
+      `,
+        });
+        return { success: true };
+    });
+}
+
+export async function sendOfferLetterEmail(params: {
+    to: string;
+    candidateName: string;
+    position: string;
+    department: string;
+    refNumber: string;
+    offerToken: string;
+    validUntil?: string;
+    employmentType?: string | null;
+}) {
+    const { to, candidateName, position, department, refNumber, offerToken, validUntil, employmentType } =
+        params;
+
+    if (!isZohoConfigured()) {
+        return { success: false, message: "Missing Zoho credentials in .env" };
+    }
+
+    const { buildOfferLetterEmailHtml, offerLetterEmailSubject } = await import(
+        "@/lib/offer-letter-email"
+    );
+    const offerUrl = emailPortalUrl(`/offer/${offerToken}`);
+
+    const result = await sendWithRetry(async () => {
+        const info = await getTransporter().sendMail({
+            from: zohoMailFrom(),
+            to,
+            subject: offerLetterEmailSubject(position, employmentType),
+            html: buildOfferLetterEmailHtml(
+                {
+                    candidateName,
+                    position,
+                    department,
+                    refNumber,
+                    offerUrl,
+                    validUntil,
+                    employmentType,
+                },
+                "send"
+            ),
+            attachments: [nuriekEmailHeaderAttachment()],
+        });
+        return { success: true, data: info };
+    });
+
+    if (!result.success) {
+        return {
+            success: false,
+            message: result.error ? formatZohoSmtpError(result.error) : "Failed to send email",
+        };
+    }
     return { success: true };
-  } catch (error) {
-    console.error("[Mail] Failed to send timesheet notification:", error);
-    return { success: false, error };
-  }
+}
+
+export async function sendTimesheetApprovalEmail(
+    employeeName: string,
+    date: string,
+    recipients: string[]
+) {
+    if (!process.env.ZOHO_USER || !process.env.ZOHO_PASSWORD) {
+        return { success: false, message: "Missing Zoho credentials" };
+    }
+
+    return sendWithRetry(async () => {
+        await getTransporter().sendMail({
+            from: zohoMailFrom(),
+            bcc: recipients,
+            subject: `Timesheet Approval Required: ${employeeName}`,
+            html: `
+        <div style="font-family: sans-serif; padding: 20px;">
+          <h2>Pending Timesheet Approval</h2>
+          <p><strong>${employeeName}</strong> — ${date}</p>
+          <a href="${portalUrl("/admin/timesheets")}">Review in portal</a>
+        </div>
+      `,
+        });
+        return { success: true };
+    });
 }

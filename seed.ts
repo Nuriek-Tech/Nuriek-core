@@ -1,8 +1,23 @@
 import { prisma } from "./lib/prisma";
 import { ROLES } from "./lib/constants";
 import bcrypt from "bcryptjs";
+import type { UserRole } from "@prisma/client";
 
 async function main() {
+    // Remove disallowed accounts (e.g. personal Gmail test users)
+    const removed = await prisma.user.deleteMany({
+        where: {
+            OR: [
+                { email: "test@gmail.com" },
+                { email: { contains: "@gmail.com" } },
+                { NOT: { email: { endsWith: "@nuriek.com" } } },
+            ],
+        },
+    });
+    if (removed.count > 0) {
+        console.log(`Removed ${removed.count} non-@nuriek.com account(s).`);
+    }
+
     // 1. Seed Users
     const users = [
         {
@@ -14,6 +29,12 @@ async function main() {
         {
             name: "HR Manager",
             email: "hr@nuriek.com",
+            password: "password123",
+            role: ROLES.HR_ADMIN,
+        },
+        {
+            name: "Rekha Singh",
+            email: "rekha@nuriek.com",
             password: "password123",
             role: ROLES.HR_ADMIN,
         },
@@ -41,14 +62,24 @@ async function main() {
             where: { email: userData.email },
             update: {
                 name: userData.name,
-                password: hashedPassword, // ✅ Always store hashed
+                role: userData.role as UserRole,
+                password: hashedPassword,
+                mustChangePassword: false,
             },
             create: {
-                ...userData,
+                name: userData.name,
+                email: userData.email,
+                role: userData.role as UserRole,
                 password: hashedPassword,
+                mustChangePassword: false,
                 profile: {
                     create: {
-                        position: userData.role === ROLES.FOUNDER ? "Founder & CEO" : "Team Member",
+                        position:
+                            userData.role === ROLES.FOUNDER
+                                ? "Super Admin"
+                                : userData.role === ROLES.HR_ADMIN
+                                  ? "HR Manager"
+                                  : "Team Member",
                         department: userData.role === ROLES.HR_ADMIN ? "HR" : "Core Team",
                     },
                 },
@@ -101,7 +132,7 @@ async function main() {
     ];
 
     for (const doc of documents) {
-        await (prisma as any).document.upsert({
+        await prisma.document.upsert({
             where: { id: `seed-${doc.title.replace(/\s+/g, '-').toLowerCase()}` },
             update: doc,
             create: {
@@ -121,7 +152,7 @@ async function main() {
         { name: "Diwali", date: new Date("2026-11-08"), type: "PUBLIC" },
     ];
     for (const h of holidays) {
-        await (prisma as any).holiday.create({ data: h });
+        await prisma.holiday.create({ data: h });
     }
     console.log("Seeded holidays");
 
@@ -145,7 +176,7 @@ async function main() {
 
         // Intern Performance for Sarah
         if (name === "Sarah") {
-            await (prisma as any).internPerformance.upsert({
+            await prisma.internPerformance.upsert({
                 where: { userId: userId },
                 create: {
                     userId: userId,

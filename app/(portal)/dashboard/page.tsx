@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
+import type { AdminSummary, AttendanceLog, StatsSummary, TimesheetRecord } from "@/lib/api-types";
+import { NAV_ITEMS, ROLES, isAdminRole, type Role } from "@/lib/constants";
+import { formatRoleLabel } from "@/lib/roles";
+import { useNavRole } from "@/hooks/useNavRole";
+import { NavIcon } from "@/lib/nav-icons";
 import {
     Clock,
-    MapPin,
     CheckCircle2,
     TrendingUp,
     AlertTriangle,
@@ -14,76 +19,128 @@ import {
     CalendarCheck,
     Users,
     LogOut,
-    Loader2
+    Loader2,
+    ArrowRight,
+    MapPin,
+    FileCheck,
+    BarChart3,
 } from "lucide-react";
 import "@/styles/dashboard.css";
+import "@/styles/dashboard-home.css";
+
+function getGreeting(): string {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 17) return "Good afternoon";
+    return "Good evening";
+}
 
 export default function DashboardPage() {
     const { data: session } = useSession();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isCheckedIn, setIsCheckedIn] = useState(false);
     const [checkInTime, setCheckInTime] = useState<string | null>(null);
-    const [logs, setLogs] = useState<any[]>([]);
-    const [stats, setStats] = useState<any>(null);
-    const [adminSummary, setAdminSummary] = useState<any>(null);
-    const [rejectedTimesheets, setRejectedTimesheets] = useState<any[]>([]);
+    const [logs, setLogs] = useState<AttendanceLog[]>([]);
+    const [stats, setStats] = useState<StatsSummary | null>(null);
+    const [adminSummary, setAdminSummary] = useState<AdminSummary | null>(null);
+    const [rejectedTimesheets, setRejectedTimesheets] = useState<TimesheetRecord[]>([]);
     const [isLoadingLogs, setIsLoadingLogs] = useState(true);
+    const [isLoadingAdminSummary, setIsLoadingAdminSummary] = useState(true);
+    const [onBreak, setOnBreak] = useState(false);
+    const [officeName, setOfficeName] = useState("Bangalore (HQ)");
 
-    const userRole = (session?.user as any)?.role;
-    const isAdmin = userRole === "FOUNDER" || userRole === "HR_ADMIN";
-    const canCheckIn = !isAdmin; // ALL non-admin roles can check in: MANAGER, TEAM_LEAD, EMPLOYEE, INTERN, CONTRACTOR
+    const { role: userRole, isReady: roleReady } = useNavRole();
+    const isAdmin = isAdminRole(userRole);
+    const canCheckIn = !isAdmin;
+
+    const quickLinks = useMemo(() => {
+        if (!userRole) return [];
+        return NAV_ITEMS.filter(
+            (item) => item.path !== "/dashboard" && item.roles.includes(userRole)
+        ).slice(0, 6);
+    }, [userRole]);
+
+    const disciplineScore = stats?.disciplineScore ?? 100;
+    const ringOffset = 251.2 - (251.2 * disciplineScore) / 100;
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
 
-    useEffect(() => {
-        if (session?.user) {
-            fetchData();
+    const fetchAdminSummary = useCallback(async () => {
+        setIsLoadingAdminSummary(true);
+        try {
+            const sumRes = await fetch("/api/reports/summary", { cache: "no-store" });
+            if (sumRes.ok) setAdminSummary(await sumRes.json());
+        } catch {
+            console.error("Failed to fetch org summary");
+        } finally {
+            setIsLoadingAdminSummary(false);
         }
-    }, [session]);
+    }, []);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
+        if (isAdmin) return;
+
         setIsLoadingLogs(true);
         try {
-            if (isAdmin) {
-                // Admins don't check in; they get a company-wide operational summary
-                const sumRes = await fetch("/api/reports/summary");
-                if (sumRes.ok) setAdminSummary(await sumRes.json());
-            } else {
-                // ALL non-admin employees get their personal attendance logs and stats
                 const [logsRes, statsRes, timesheetsRes] = await Promise.all([
                     fetch("/api/attendance"),
                     fetch("/api/stats/summary"),
-                    fetch("/api/timesheets")
+                    fetch("/api/timesheets"),
                 ]);
 
-                let parsedLogs: any[] = [];
+                let parsedLogs: AttendanceLog[] = [];
                 if (logsRes.ok) {
                     parsedLogs = await logsRes.json();
                     setLogs(parsedLogs);
                 }
                 if (statsRes.ok) setStats(await statsRes.json());
                 if (timesheetsRes.ok) {
-                    const tData = await timesheetsRes.json();
-                    setRejectedTimesheets(tData.filter((t: any) => t.status === "REJECTED"));
+                    const tData: TimesheetRecord[] = await timesheetsRes.json();
+                    setRejectedTimesheets(tData.filter((t) => t.status === "REJECTED"));
                 }
 
-                // Auto-detect check-in status from logs
                 const today = new Date().toDateString();
-                const todayLog = parsedLogs.find((l: any) => new Date(l.checkIn).toDateString() === today);
+                const todayLog = parsedLogs.find(
+                    (l) => new Date(l.checkIn).toDateString() === today
+                );
                 if (todayLog && !todayLog.checkOut) {
                     setIsCheckedIn(true);
-                    setCheckInTime(new Date(todayLog.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+                    setCheckInTime(
+                        new Date(todayLog.checkIn).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                        })
+                    );
+                    setOnBreak(Boolean(todayLog.breakStart && !todayLog.breakEnd));
+                } else {
+                    setOnBreak(false);
                 }
-            }
-        } catch (error) {
+        } catch {
             console.error("Failed to fetch dashboard data");
         } finally {
             setIsLoadingLogs(false);
         }
-    };
+    }, [isAdmin]);
+
+    useEffect(() => {
+        if (!roleReady) return;
+
+        if (isAdmin) {
+            fetchAdminSummary();
+            return;
+        }
+
+        if (!session?.user) return;
+
+        fetchData();
+        fetch("/api/config/public")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => d?.officeName && setOfficeName(d.officeName))
+            .catch(() => undefined);
+    }, [roleReady, isAdmin, session?.user, fetchAdminSummary, fetchData]);
 
     const handleCheckIn = async () => {
         setIsLoadingLogs(true);
@@ -91,10 +148,12 @@ export default function DashboardPage() {
             const res = await fetch("/api/attendance/check-in", { method: "POST" });
             if (res.ok) {
                 setIsCheckedIn(true);
-                setCheckInTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+                setCheckInTime(
+                    new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                );
                 fetchData();
             }
-        } catch (error) {
+        } catch {
             console.error("Check-in failed");
         } finally {
             setIsLoadingLogs(false);
@@ -108,206 +167,479 @@ export default function DashboardPage() {
             if (res.ok) {
                 setIsCheckedIn(false);
                 setCheckInTime(null);
-                fetchAttendance();
+                fetchData();
             }
-        } catch (error) {
+        } catch {
             console.error("Check-out failed");
         } finally {
             setIsLoadingLogs(false);
         }
     };
 
-    const fetchAttendance = async () => {
-        // Redirection to main fetchData to solve lint without changing too many refs
-        return fetchData();
+    const handleBreak = async (action: "break-start" | "break-end") => {
+        setIsLoadingLogs(true);
+        try {
+            const res = await fetch(`/api/attendance/${action}`, { method: "POST" });
+            if (res.ok) {
+                setOnBreak(action === "break-start");
+                await fetchData();
+            }
+        } catch (error) {
+            console.error("Break action failed", error);
+        } finally {
+            setIsLoadingLogs(false);
+        }
     };
 
+    const timeStr = currentTime.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+    });
+
+    const dateStr = currentTime.toLocaleDateString("en-US", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+    });
+
+    const recentLogs = logs.slice(0, 5);
+    const attendanceRate = adminSummary?.attendanceRate ?? 0;
+    const absentToday = adminSummary?.absentEstimate ?? 0;
+    const monthDenominator = stats?.workingDaysElapsed ?? stats?.totalDays ?? 0;
+
     return (
-        <div className="dashboardContent">
-            <header className="dashboardHeader">
-                <div className="welcomeSection">
-                    <h1>Welcome back, <span className="text-gradient">{session?.user?.name}</span></h1>
-                    <p>{currentTime.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} • Office: Bangalore (HQ)</p>
+        <div className="dashHome">
+            <header className="dashHero">
+                <div className="dashHeroMain">
+                    <p className="dashEyebrow">{getGreeting()}</p>
+                    <h1>
+                        Welcome back,{" "}
+                        <span className="text-gradient">{session?.user?.name ?? "there"}</span>
+                    </h1>
+                    <div className="dashMeta">
+                        <span>{dateStr}</span>
+                        <span className="dashMetaDot" aria-hidden />
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                            <MapPin size={14} />
+                            {officeName}
+                        </span>
+                        <span className="dashMetaDot" aria-hidden />
+                        <span className="dashRolePill">{formatRoleLabel(userRole)}</span>
+                    </div>
                 </div>
-                {canCheckIn && (
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.4rem" }}>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Clock size={24} color="var(--nuriek-blue)" />
-                            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: isCheckedIn ? "#34c759" : "rgba(255,255,255,0.3)", display: "inline-block", boxShadow: isCheckedIn ? "0 0 8px #34c759" : "none" }} />
-                            <span style={{ fontSize: "0.78rem", color: isCheckedIn ? "#34c759" : "var(--text-tertiary)", fontWeight: 500 }}>
-                                {isCheckedIn ? `Checked in at ${checkInTime}` : "Not checked in today"}
+
+                <div className="dashClockCard glass">
+                    <div className="dashClockTime">
+                        <Clock size={22} color="var(--nuriek-blue)" />
+                        {timeStr}
+                    </div>
+                    <p className="dashClockSub">
+                        {isAdmin ? "Organizational overview" : "Your workday at a glance"}
+                    </p>
+                    {canCheckIn && (
+                        <div className="dashStatusRow">
+                            <span
+                                className={`dashStatusDot ${isCheckedIn ? "dashStatusDot--on" : "dashStatusDot--off"}`}
+                            />
+                            <span
+                                className={`dashStatusText ${isCheckedIn ? "dashStatusText--on" : "dashStatusText--off"}`}
+                            >
+                                {isCheckedIn
+                                    ? `Checked in at ${checkInTime}`
+                                    : "Not checked in today"}
                             </span>
                         </div>
-                    </div>
-                )}
-                {isAdmin && (
-                    <div style={{ textAlign: 'right', background: 'rgba(255,255,255,0.05)', padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Clock size={24} color="var(--nuriek-blue)" />
-                            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                            Real-time Organizational Overview
-                        </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </header>
 
             {!isAdmin && rejectedTimesheets.length > 0 && (
-                <div style={{ background: 'rgba(255, 59, 48, 0.15)', borderLeft: '4px solid #ff3b30', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-                    <AlertTriangle color="#ff3b30" size={24} style={{ marginTop: '0.2rem', minWidth: '24px' }} />
+                <div className="dashAlert" role="alert">
+                    <AlertTriangle color="#ff3b30" size={22} style={{ flexShrink: 0, marginTop: 2 }} />
                     <div>
-                        <h3 style={{ color: '#ff3b30', fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.4rem' }}>Compliance Issue</h3>
-                        <p style={{ color: 'var(--text-primary)', fontSize: '0.9rem', marginBottom: '0.2rem' }}>
-                            You have {rejectedTimesheets.length} rejected timesheet{rejectedTimesheets.length > 1 ? 's' : ''}. Please review your submissions in the Time Management tab.
+                        <h3 className="dashAlertTitle">Action required</h3>
+                        <p className="dashAlertBody">
+                            You have {rejectedTimesheets.length} rejected timesheet
+                            {rejectedTimesheets.length > 1 ? "s" : ""}. Please update them in Time
+                            Management.
                         </p>
-                        <ul style={{ margin: 0, paddingLeft: '1.25rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                            {rejectedTimesheets.slice(0, 3).map((t: any) => (
-                                <li key={t.id} style={{ marginBottom: '0.2rem' }}>Timesheet for {new Date(t.date).toLocaleDateString()} was rejected.</li>
+                        <ul className="dashAlertList">
+                            {rejectedTimesheets.slice(0, 3).map((t) => (
+                                <li key={t.id}>
+                                    {new Date(t.date).toLocaleDateString()} — rejected
+                                </li>
                             ))}
-                            {rejectedTimesheets.length > 3 && <li>...and {rejectedTimesheets.length - 3} more.</li>}
+                            {rejectedTimesheets.length > 3 && (
+                                <li>…and {rejectedTimesheets.length - 3} more</li>
+                            )}
                         </ul>
                     </div>
                 </div>
             )}
 
-            <div className={canCheckIn ? "grid" : ""}>
-                {isAdmin ? (
-                    <div className="summaryGrid" style={{ marginTop: '2rem' }}>
-                        <div className="card reportCard glass" style={{ borderLeft: '4px solid var(--nuriek-blue)', background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.08) 100%)' }}>
-                            <div className="cardTop">
-                                <span>Total Workforce</span>
-                                <Users size={24} color="var(--nuriek-blue)" />
+            {isAdmin ? (
+                <>
+                    <section className="dashKpiGrid" aria-label="Organization metrics">
+                        <article className="dashKpiCard glass glass-hover">
+                            <div className="dashKpiTop">
+                                <span className="dashKpiLabel">Total workforce</span>
+                                <span className="dashKpiIcon dashKpiIcon--blue">
+                                    <Users size={20} />
+                                </span>
                             </div>
-                            <div className="cardValue" style={{ fontSize: '2.5rem', color: 'white' }}>{adminSummary?.totalEmployees || 0}</div>
-                            <div className="cardLabel" style={{ color: 'rgba(255,255,255,0.6)' }}>Active Employees</div>
-                        </div>
+                            <div className="dashKpiValue dashKpiValue--blue">
+                                {isLoadingAdminSummary && adminSummary == null ? (
+                                    <Loader2 className="animate-spin" size={28} />
+                                ) : (
+                                    (adminSummary?.totalEmployees ?? "—")
+                                )}
+                            </div>
+                            <span className="dashKpiHint">Employees (excl. interns & super admin/HR)</span>
+                        </article>
 
-                        <div className="card reportCard glass" style={{ borderLeft: '4px solid #34c759', background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.08) 100%)' }}>
-                            <div className="cardTop">
-                                <span>Present Today</span>
-                                <Clock size={24} color="#34c759" />
+                        <article className="dashKpiCard glass glass-hover">
+                            <div className="dashKpiTop">
+                                <span className="dashKpiLabel">Present today</span>
+                                <span className="dashKpiIcon dashKpiIcon--green">
+                                    <Clock size={20} />
+                                </span>
                             </div>
-                            <div className="cardValue" style={{ fontSize: '2.5rem', color: '#34c759' }}>{adminSummary?.checkedInToday || 0}</div>
-                            <div className="cardLabel" style={{ color: 'rgba(255,255,255,0.6)' }}>{adminSummary?.attendanceRate?.toFixed(1) || 0}% Attendance Rate</div>
-                        </div>
+                            <div className="dashKpiValue dashKpiValue--green">
+                                {adminSummary?.checkedInToday ?? "—"}
+                            </div>
+                            <span className="dashKpiHint">
+                                {attendanceRate.toFixed(1)}% of expected in office today
+                            </span>
+                        </article>
 
-                        <div className="card reportCard glass" style={{ borderLeft: '4px solid #ff9f0a', background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.08) 100%)' }}>
-                            <div className="cardTop">
-                                <span>On Leave</span>
-                                <Calendar size={24} color="#ff9f0a" />
+                        <article className="dashKpiCard glass glass-hover">
+                            <div className="dashKpiTop">
+                                <span className="dashKpiLabel">On leave</span>
+                                <span className="dashKpiIcon dashKpiIcon--orange">
+                                    <Calendar size={20} />
+                                </span>
                             </div>
-                            <div className="cardValue" style={{ fontSize: '2.5rem', color: '#ff9f0a' }}>{adminSummary?.onLeaveToday || 0}</div>
-                            <div className="cardLabel" style={{ color: 'rgba(255,255,255,0.6)' }}>Approved Leaves Today</div>
-                        </div>
+                            <div className="dashKpiValue dashKpiValue--orange">
+                                {adminSummary?.onLeaveToday ?? "—"}
+                            </div>
+                            <span className="dashKpiHint">Approved leaves today</span>
+                        </article>
 
-                        <div className="card reportCard glass" style={{ borderLeft: '4px solid #ff3b30', background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.08) 100%)' }}>
-                            <div className="cardTop">
-                                <span>Pending Requests</span>
-                                <CalendarCheck size={24} color="#ff3b30" />
+                        <article className="dashKpiCard glass glass-hover">
+                            <div className="dashKpiTop">
+                                <span className="dashKpiLabel">Pending requests</span>
+                                <span className="dashKpiIcon dashKpiIcon--red">
+                                    <CalendarCheck size={20} />
+                                </span>
                             </div>
-                            <div className="cardValue" style={{ fontSize: '2.5rem', color: '#ff3b30' }}>{adminSummary?.pendingLeaves || 0}</div>
-                            <div className="cardLabel" style={{ color: 'rgba(255,255,255,0.6)' }}>Awaiting Action</div>
-                        </div>
-                    </div>
-                ) : (
-                    <>
-                        <section className="card amsActionCard glass">
-                            <div className="cardHeader">
-                                <span className="cardTitle">Attendance Control</span>
-                                <Clock className="cardIcon" size={20} />
+                            <div className="dashKpiValue dashKpiValue--red">
+                                {adminSummary?.pendingLeaves ?? "—"}
+                            </div>
+                            <span className="dashKpiHint">Awaiting HR action</span>
+                        </article>
+                    </section>
+
+                    <section className="dashTwoCol">
+                        <article className="dashPanel glass">
+                            <div className="dashPanelHeader">
+                                <span className="dashPanelTitle">Today&apos;s attendance</span>
+                                <BarChart3 className="dashPanelIcon" size={20} />
+                            </div>
+                            <div className="dashProgressBlock">
+                                <div className="dashProgressHead">
+                                    <span style={{ color: "var(--text-secondary)" }}>
+                                        Check-in rate
+                                    </span>
+                                    <strong>{attendanceRate.toFixed(1)}%</strong>
+                                </div>
+                                <div className="dashProgressTrack">
+                                    <div
+                                        className="dashProgressFill"
+                                        style={{ width: `${Math.min(100, attendanceRate)}%` }}
+                                    />
+                                </div>
+                            </div>
+                            <ul className="dashInsightList">
+                                <li className="dashInsightItem">
+                                    <span>Checked in</span>
+                                    <span className="dashInsightValue" style={{ color: "#34c759" }}>
+                                        {adminSummary?.checkedInToday ?? 0}
+                                    </span>
+                                </li>
+                                <li className="dashInsightItem">
+                                    <span>On approved leave</span>
+                                    <span className="dashInsightValue" style={{ color: "#ff9f0a" }}>
+                                        {adminSummary?.onLeaveToday ?? 0}
+                                    </span>
+                                </li>
+                                <li className="dashInsightItem">
+                                    <span>Expected in office</span>
+                                    <span className="dashInsightValue">
+                                        {adminSummary?.expectedInOffice ?? "—"}
+                                    </span>
+                                </li>
+                                <li className="dashInsightItem">
+                                    <span>Not yet in</span>
+                                    <span className="dashInsightValue">{absentToday}</span>
+                                </li>
+                                <li className="dashInsightItem">
+                                    <span>Pending leave approvals</span>
+                                    <span className="dashInsightValue" style={{ color: "#ff3b30" }}>
+                                        {adminSummary?.pendingLeaves ?? 0}
+                                    </span>
+                                </li>
+                            </ul>
+                            {isLoadingLogs && (
+                                <div className="dashLoading">
+                                    <Loader2 className="animate-spin" size={22} />
+                                </div>
+                            )}
+                        </article>
+
+                        <article className="dashPanel glass">
+                            <div className="dashPanelHeader">
+                                <span className="dashPanelTitle">Quick actions</span>
+                            </div>
+                            <div className="dashQuickGrid">
+                                {quickLinks.map((item) => (
+                                    <Link key={item.path} href={item.path} className="dashQuickLink">
+                                        <NavIcon name={item.icon} className="dashQuickIcon" size={18} />
+                                        <span>{item.label}</span>
+                                        <ArrowRight size={14} className="dashQuickArrow" />
+                                    </Link>
+                                ))}
+                            </div>
+                        </article>
+                    </section>
+                </>
+            ) : (
+                <>
+                    <section className="dashMainGrid">
+                        <article className="dashPanel dashPanel--accent glass">
+                            <div className="dashPanelHeader">
+                                <span className="dashPanelTitle">Attendance</span>
+                                <Clock className="dashPanelIcon" size={20} />
                             </div>
 
-                            <div className="timeDisplay">
-                                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-                            </div>
+                            <div className="dashTimeBig">{timeStr}</div>
 
-                            <div className="checkInActions">
+                            <div className="dashActions">
                                 {!isCheckedIn ? (
-                                    <button className="actionBtn checkInBtn" onClick={handleCheckIn}>
-                                        <LogIn size={20} />
-                                        <span>Check In</span>
+                                    <button
+                                        type="button"
+                                        className="dashBtn dashBtn--primary"
+                                        onClick={handleCheckIn}
+                                        disabled={isLoadingLogs}
+                                    >
+                                        <LogIn size={18} />
+                                        Check in
                                     </button>
                                 ) : (
                                     <>
-                                        <button className="actionBtn breakBtn">
+                                        <button
+                                            type="button"
+                                            className="dashBtn dashBtn--ghost"
+                                            onClick={() =>
+                                                handleBreak(onBreak ? "break-end" : "break-start")
+                                            }
+                                            disabled={isLoadingLogs}
+                                        >
                                             <Coffee size={18} />
-                                            <span>Take Break</span>
+                                            {onBreak ? "End break" : "Take break"}
                                         </button>
-                                        <button className="actionBtn checkOutBtn" onClick={handleCheckOut}>
+                                        <button
+                                            type="button"
+                                            className="dashBtn dashBtn--danger"
+                                            onClick={handleCheckOut}
+                                            disabled={isLoadingLogs}
+                                        >
                                             <LogOut size={18} />
-                                            <span>Check Out</span>
+                                            Check out
                                         </button>
                                     </>
                                 )}
                             </div>
 
-                            <div className="recentLogs">
-                                <p className="statLabel">Latest Database Logs</p>
+                            <div>
+                                <p
+                                    className="statLabel"
+                                    style={{ marginBottom: "0.5rem", fontSize: "0.75rem" }}
+                                >
+                                    Recent activity
+                                </p>
                                 {isLoadingLogs ? (
-                                    <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}>
-                                        <Loader2 className="animate-spin" size={20} />
+                                    <div className="dashLoading">
+                                        <Loader2 className="animate-spin" size={22} />
                                     </div>
-                                ) : logs.length > 0 ? (
-                                    logs.map((log: any) => (
-                                        <div key={log.id} className="logItem">
-                                            <div className="logInfo">
-                                                <span className="logTitle">{new Date(log.checkIn).toLocaleDateString()}</span>
-                                                <span className="logTime">
-                                                    {new Date(log.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    {log.checkOut ? ` — ${new Date(log.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ' (Active)'}
-                                                </span>
-                                            </div>
-                                            <span className={`logStatus ${log.status === 'ON_TIME' ? 'statusOnTime' : 'statusLate'}`}>
-                                                {log.status.replace('_', ' ')}
-                                            </span>
-                                        </div>
-                                    ))
+                                ) : recentLogs.length > 0 ? (
+                                    <div className="dashLogList">
+                                        {recentLogs.map((log) => {
+                                            const active = !log.checkOut;
+                                            return (
+                                                <div key={log.id} className="dashLogItem">
+                                                    <div>
+                                                        <div className="dashLogDate">
+                                                            {new Date(log.checkIn).toLocaleDateString(
+                                                                undefined,
+                                                                {
+                                                                    weekday: "short",
+                                                                    month: "short",
+                                                                    day: "numeric",
+                                                                }
+                                                            )}
+                                                        </div>
+                                                        <div className="dashLogTime">
+                                                            {new Date(log.checkIn).toLocaleTimeString(
+                                                                [],
+                                                                { hour: "2-digit", minute: "2-digit" }
+                                                            )}
+                                                            {log.checkOut
+                                                                ? ` — ${new Date(log.checkOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                                                                : " · Active session"}
+                                                        </div>
+                                                    </div>
+                                                    <span
+                                                        className={`dashBadge ${
+                                                            active
+                                                                ? "dashBadge--active"
+                                                                : log.status === "ON_TIME" ||
+                                                                    log.status === "PRESENT"
+                                                                  ? "dashBadge--ok"
+                                                                  : log.status === "LATE"
+                                                                    ? "dashBadge--late"
+                                                                    : ""
+                                                        }`}
+                                                    >
+                                                        {active
+                                                            ? "Active"
+                                                            : log.status.replace("_", " ")}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 ) : (
-                                    <p className="subtitle" style={{ textAlign: 'center', fontSize: '0.85rem' }}>No logs found in database.</p>
+                                    <p className="dashEmpty">No attendance records yet.</p>
                                 )}
                             </div>
-                        </section>
+                        </article>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <section className="card glass">
-                                <div className="cardHeader">
-                                    <span className="cardTitle">Monthly Summary</span>
-                                    <Calendar className="cardIcon" size={20} />
+                        <aside className="dashAside">
+                            <article className="dashPanel glass">
+                                <div className="dashPanelHeader">
+                                    <span className="dashPanelTitle">This month</span>
+                                    <Calendar className="dashPanelIcon" size={20} />
                                 </div>
-                                <div className="statsGrid">
-                                    <div className="statItem">
-                                        <span className="statLabel">Present Days</span>
-                                        <span className="statValue">{stats?.presentDays || 0} / 22</span>
+                                <div className="dashMiniStats">
+                                    <div className="dashMiniStat">
+                                        <div className="dashMiniStatLabel">Present days</div>
+                                        <div className="dashMiniStatValue">
+                                            {stats?.presentDays ?? 0}
+                                            <span
+                                                style={{
+                                                    fontSize: "0.9rem",
+                                                    fontWeight: 500,
+                                                    color: "var(--text-secondary)",
+                                                }}
+                                            >
+                                                {" "}
+                                                / {monthDenominator || "—"} workdays
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="statItem">
-                                        <span className="statLabel">Late Marks</span>
-                                        <span className="statValue">{stats?.lateMarks || 0}</span>
-                                        <span className="statTrend" style={{ color: (stats?.lateMarks || 0) === 0 ? '#34c759' : '#ff9f0a' }}>
-                                            {(stats?.lateMarks || 0) === 0 ? <><CheckCircle2 size={12} /> Excellent</> : <><AlertTriangle size={12} /> Needs Improvement</>}
+                                    <div className="dashMiniStat">
+                                        <div className="dashMiniStatLabel">Late marks</div>
+                                        <div className="dashMiniStatValue">
+                                            {stats?.lateMarks ?? 0}
+                                        </div>
+                                        <span
+                                            className={`dashTrend ${
+                                                (stats?.lateMarks ?? 0) === 0
+                                                    ? "dashTrend--good"
+                                                    : "dashTrend--warn"
+                                            }`}
+                                        >
+                                            {(stats?.lateMarks ?? 0) === 0 ? (
+                                                <>
+                                                    <CheckCircle2 size={12} /> On track
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <AlertTriangle size={12} /> Improve punctuality
+                                                </>
+                                            )}
                                         </span>
                                     </div>
                                 </div>
-                            </section>
-                            <section className="card glass">
-                                <div className="cardHeader">
-                                    <span className="cardTitle">Discipline Score</span>
-                                    <TrendingUp className="cardIcon" size={20} />
+                            </article>
+
+                            <article className="dashPanel glass">
+                                <div className="dashPanelHeader">
+                                    <span className="dashPanelTitle">Discipline score</span>
+                                    <TrendingUp className="dashPanelIcon" size={20} />
                                 </div>
-                                <div className="statItem">
-                                    <span className="statValue text-gradient">{stats?.disciplineScore || 100} / 100</span>
-                                    <p className="statLabel">
-                                        {(stats?.disciplineScore || 100) === 100 ? "Perfect record based on DB sync. Keep it up!" : "Score affected by late arrivals."}
-                                    </p>
+                                <div className="dashDiscipline">
+                                    <div className="dashRingWrap">
+                                        <svg className="dashRingSvg" width="88" height="88" viewBox="0 0 88 88">
+                                            <defs>
+                                                <linearGradient id="dashRingGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                    <stop offset="0%" stopColor="var(--nuriek-blue)" />
+                                                    <stop offset="100%" stopColor="var(--nuriek-accent)" />
+                                                </linearGradient>
+                                            </defs>
+                                            <circle className="dashRingBg" cx="44" cy="44" r="40" />
+                                            <circle
+                                                className="dashRingFg"
+                                                cx="44"
+                                                cy="44"
+                                                r="40"
+                                                strokeDasharray="251.2"
+                                                strokeDashoffset={ringOffset}
+                                            />
+                                        </svg>
+                                        <div className="dashRingCenter">
+                                            <span className="dashRingScore">{disciplineScore}</span>
+                                            <span className="dashRingLabel">/ 100</span>
+                                        </div>
+                                    </div>
+                                    <div className="dashDisciplineText">
+                                        <span className="text-gradient" style={{ fontWeight: 700, fontSize: "1.1rem" }}>
+                                            {disciplineScore >= 90
+                                                ? "Excellent standing"
+                                                : disciplineScore >= 70
+                                                  ? "Good standing"
+                                                  : "Needs attention"}
+                                        </span>
+                                        <p>
+                                            {disciplineScore === 100
+                                                ? "Strong month so far. Keep it up!"
+                                                : "Based on late marks and weekdays without check-in this month (IST)."}
+                                        </p>
+                                    </div>
                                 </div>
-                            </section>
-                        </div>
-                    </>
-                )}
-            </div>
-        </div >
+                            </article>
+
+                            <article className="dashPanel glass">
+                                <div className="dashPanelHeader">
+                                    <span className="dashPanelTitle">Quick actions</span>
+                                </div>
+                                <div className="dashQuickGrid">
+                                    {quickLinks.map((item) => (
+                                        <Link key={item.path} href={item.path} className="dashQuickLink">
+                                            <NavIcon name={item.icon} className="dashQuickIcon" size={18} />
+                                            <span>{item.label}</span>
+                                            <ArrowRight size={14} className="dashQuickArrow" />
+                                        </Link>
+                                    ))}
+                                </div>
+                            </article>
+                        </aside>
+                    </section>
+                </>
+            )}
+        </div>
     );
 }

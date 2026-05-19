@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AlertTriangle, Trash2, X } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, Trash2 } from "lucide-react";
 
 interface DeleteDocumentModalProps {
     isOpen: boolean;

@@ -1,33 +1,31 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireSession, isNextResponse } from "@/lib/rbac";
+import { getLeaveBalance, countInclusiveDays } from "@/lib/leave";
+import { logAudit } from "@/lib/audit";
+import type { Role } from "@/lib/constants";
 
 export async function GET() {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-        return new NextResponse("Unauthorized", { status: 401 });
-    }
+    const user = await requireSession();
+    if (isNextResponse(user)) return user;
 
     try {
         const leaves = await prisma.leave.findMany({
-            where: { userId: (session.user as any).id },
-            orderBy: { startDate: 'desc' },
+            where: { userId: user.id },
+            orderBy: { startDate: "desc" },
         });
 
-        return NextResponse.json(leaves);
-    } catch (error) {
+        const balance = await getLeaveBalance(user.id, user.role as Role);
+
+        return NextResponse.json({ leaves, balance });
+    } catch {
         return new NextResponse("Internal Server Error", { status: 500 });
     }
 }
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-        return new NextResponse("Unauthorized", { status: 401 });
-    }
+    const user = await requireSession();
+    if (isNextResponse(user)) return user;
 
     try {
         const body = await req.json();
@@ -37,15 +35,38 @@ export async function POST(req: Request) {
             return new NextResponse("Missing required fields", { status: 400 });
         }
 
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const requestedDays = countInclusiveDays(start, end);
+        const balance = await getLeaveBalance(user.id, user.role as Role);
+
+        if (requestedDays > balance.remaining) {
+            return NextResponse.json(
+                {
+                    error: `Insufficient leave balance. You have ${balance.remaining} day(s) remaining.`,
+                },
+                { status: 400 }
+            );
+        }
+
         const leave = await prisma.leave.create({
             data: {
-                userId: (session.user as any).id,
+                userId: user.id,
                 type,
-                startDate: new Date(startDate),
-                endDate: new Date(endDate),
+                startDate: start,
+                endDate: end,
                 reason,
                 status: "PENDING",
-            }
+            },
+        });
+
+        await logAudit({
+            actorId: user.id,
+            actorEmail: user.email,
+            action: "LEAVE_REQUEST",
+            entity: "Leave",
+            entityId: leave.id,
+            metadata: { type, days: requestedDays },
         });
 
         return NextResponse.json(leave);

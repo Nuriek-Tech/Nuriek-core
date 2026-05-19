@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState } from "react";
 import { SessionProvider } from "next-auth/react";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const SidebarContext = createContext<{
     isOpen: boolean;
@@ -20,10 +21,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
     const toggle = () => setIsOpen((prev) => !prev);
 
     return (
-        <SessionProvider>
-            <SidebarContext.Provider value={{ isOpen, setIsOpen, toggle }}>
-                {children}
-            </SidebarContext.Provider>
+        <SessionProvider refetchOnWindowFocus={false} refetchInterval={5 * 60}>
+            <ThemeProvider>
+                <SidebarContext.Provider value={{ isOpen, setIsOpen, toggle }}>
+                    {children}
+                </SidebarContext.Provider>
+            </ThemeProvider>
         </SessionProvider>
     );
 }

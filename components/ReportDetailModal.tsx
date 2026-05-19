@@ -1,20 +1,17 @@
 "use client";
 
-import { X, Calendar, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { X, Calendar, Clock } from "lucide-react";
+import type { AttendanceLog, LeaveRecord, UserSummary } from "@/lib/api-types";
 import "@/styles/reports.css";
 
-interface ReportDetailModalProps {
+type ReportDetailModalProps = {
     isOpen: boolean;
     onClose: () => void;
-    user: {
-        id: string;
-        name: string;
-        email: string;
-        role: string;
-    } | null;
-    data: any; // Can be attendance or leave data
-    type: "ATTENDANCE" | "LEAVE";
-}
+    user: Pick<UserSummary, "id" | "name" | "email" | "role"> | null;
+} & (
+    | { type: "ATTENDANCE"; data: AttendanceLog[] }
+    | { type: "LEAVE"; data: LeaveRecord[] }
+);
 
 export default function ReportDetailModal({ isOpen, onClose, user, data, type }: ReportDetailModalProps) {
     if (!isOpen || !user) return null;
@@ -40,48 +37,54 @@ export default function ReportDetailModal({ isOpen, onClose, user, data, type }:
 
                     {data && data.length > 0 ? (
                         <div className="historyList" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            {data.map((item: any, index: number) => (
-                                <div key={index} style={{
-                                    padding: '1rem',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    borderRadius: '8px',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center'
-                                }}>
-                                    {type === "ATTENDANCE" ? (
-                                        <>
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                <span style={{ fontWeight: 500 }}>{new Date(item.checkIn).toLocaleDateString()}</span>
-                                                <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
-                                                    In: {new Date(item.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <span className={`statusBadge status-${item.status}`}>{item.status}</span>
-                                                {item.checkOut && (
-                                                    <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '0.3rem' }}>
-                                                        Out: {new Date(item.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                <span style={{ fontWeight: 500 }}>{item.type}</span>
-                                                <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
-                                                    {new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}
-                                                </span>
-                                            </div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <span className={`statusBadge status-${item.status}`}>{item.status}</span>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            ))}
+                            {type === "ATTENDANCE"
+                                ? data.map((item, index) => (
+                                    <div key={index} style={{
+                                        padding: '1rem',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span style={{ fontWeight: 500 }}>{new Date(item.checkIn).toLocaleDateString()}</span>
+                                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+                                                In: {new Date(item.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <span className={`statusBadge status-${item.status}`}>{item.status}</span>
+                                            {item.checkOut && (
+                                                <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '0.3rem' }}>
+                                                    Out: {new Date(item.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                                : data.map((item, index) => (
+                                    <div key={index} style={{
+                                        padding: '1rem',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span style={{ fontWeight: 500 }}>{item.type}</span>
+                                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+                                                {new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <span className={`statusBadge status-${item.status}`}>{item.status}</span>
+                                        </div>
+                                    </div>
+                                ))}
                         </div>
                     ) : (
                         <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>

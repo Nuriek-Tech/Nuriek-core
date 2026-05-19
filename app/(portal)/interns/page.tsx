@@ -5,7 +5,6 @@ import {
     CheckCircle2,
     Circle,
     TrendingUp,
-    Award,
     BookOpen,
     Loader2,
     Edit3,
@@ -20,41 +19,25 @@ import {
     Activity,
     ChevronDown,
     ChevronUp,
-    UserCheck
+    UserCheck,
+    Clock,
+    ExternalLink,
 } from "lucide-react";
+import { daysInSystem, resolveInternStartDate } from "@/lib/intern-tenure";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import type { InternPerformance, UserSummary } from "@/lib/api-types";
+import "@/styles/people-hub.css";
 import "./interns.css";
-import { useState, useEffect } from "react";
-
-const RISK_COLORS: Record<string, string> = {
-    LOW: "#34c759",
-    MEDIUM: "#ff9f0a",
-    HIGH: "#ff3b30"
-};
-
-const RISK_BG: Record<string, string> = {
-    LOW: "rgba(52,199,89,0.12)",
-    MEDIUM: "rgba(255,159,10,0.12)",
-    HIGH: "rgba(255,59,48,0.12)"
-};
 
 interface ChecklistItem {
     task: string;
     done: boolean;
 }
 
-interface InternData {
-    id: string;
-    name: string;
+interface InternData extends UserSummary, Partial<InternPerformance> {
     email: string;
-    role: string;
-    learningProgress: number;
-    taskCompletion: number;
-    score: number;
-    conversionRisk: string;
-    duration: string;
-    onboardingData: string;
     profile?: {
         position?: string;
         department?: string;
@@ -62,10 +45,21 @@ interface InternData {
     };
 }
 
+function riskClass(risk: string): string {
+    const k = (risk || "LOW").toLowerCase();
+    if (k === "high") return "internRiskBadge--high";
+    if (k === "medium") return "internRiskBadge--medium";
+    return "internRiskBadge--low";
+}
+
 export default function InternsPage() {
     const { data: session } = useSession();
-    const userRole = (session?.user as any)?.role;
-    const isAdmin = ["HR_ADMIN", "FOUNDER", "MANAGER", "TEAM_LEAD"].includes(userRole);
+    const userRole = session?.user?.role;
+    const isAdmin =
+        userRole === "HR_ADMIN" ||
+        userRole === "FOUNDER" ||
+        userRole === "MANAGER" ||
+        userRole === "TEAM_LEAD";
     const isIntern = userRole === "INTERN";
 
     const [interns, setInterns] = useState<InternData[]>([]);
@@ -74,8 +68,8 @@ export default function InternsPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+    const [riskFilter, setRiskFilter] = useState("ALL");
 
-    // Edit form state
     const [editForm, setEditForm] = useState({
         learningProgress: 0,
         taskCompletion: 0,
@@ -86,44 +80,72 @@ export default function InternsPage() {
     const [editChecklist, setEditChecklist] = useState<ChecklistItem[]>([]);
     const [newTask, setNewTask] = useState("");
 
-    useEffect(() => {
-        fetchInterns();
-    }, [session]);
-
-    const fetchInterns = async () => {
+    const fetchInterns = useCallback(async () => {
         if (!session?.user) return;
         setIsLoading(true);
         try {
             const res = await fetch("/api/users");
             if (res.ok) {
-                const users = await res.json();
-                let internList = users.filter((u: any) => u.role === "INTERN");
+                const users: UserSummary[] = await res.json();
+                let internList = users.filter((u) => u.role === "INTERN");
 
-                // If viewing as intern, only fetch own data
                 if (isIntern) {
-                    const userId = (session.user as any).id;
-                    internList = internList.filter((u: any) => u.id === userId);
+                    internList = internList.filter((u) => u.id === session.user.id);
                 }
 
-                const perfPromises = internList.map(async (intern: any) => {
+                const perfPromises = internList.map(async (intern) => {
                     try {
-                        const pRes = await fetch(`/api/interns/performance?userId=${intern.id}`);
-                        const pData = pRes.ok ? await pRes.json() : {};
-                        return { ...intern, ...pData };
+                        const pRes = await fetch(
+                            `/api/interns/performance?userId=${intern.id}`
+                        );
+                        const pData: Partial<InternPerformance> = pRes.ok
+                            ? await pRes.json()
+                            : {};
+                        return {
+                            ...intern,
+                            email: intern.email ?? "",
+                            ...pData,
+                        } as InternData;
                     } catch {
-                        return intern;
+                        return { ...intern, email: intern.email ?? "" } as InternData;
                     }
                 });
 
-                const results = await Promise.all(perfPromises);
-                setInterns(results);
+                setInterns(await Promise.all(perfPromises));
             }
-        } catch (error) {
+        } catch {
             console.error("Failed to fetch interns");
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [session, isIntern]);
+
+    useEffect(() => {
+        fetchInterns();
+    }, [fetchInterns]);
+
+    const filteredInterns = useMemo(() => {
+        if (riskFilter === "ALL") return interns;
+        return interns.filter((i) => (i.conversionRisk || "LOW") === riskFilter);
+    }, [interns, riskFilter]);
+
+    const avgScore =
+        interns.length > 0
+            ? Math.round(interns.reduce((a, i) => a + (i.score || 0), 0) / interns.length)
+            : 0;
+    const avgLearning =
+        interns.length > 0
+            ? Math.round(
+                  interns.reduce((a, i) => a + (i.learningProgress || 0), 0) / interns.length
+              )
+            : 0;
+    const avgTasks =
+        interns.length > 0
+            ? Math.round(
+                  interns.reduce((a, i) => a + (i.taskCompletion || 0), 0) / interns.length
+              )
+            : 0;
+    const highRiskCount = interns.filter((i) => i.conversionRisk === "HIGH").length;
 
     const startEdit = (intern: InternData) => {
         const onboarding: ChecklistItem[] = JSON.parse(intern.onboardingData || "[]");
@@ -145,19 +167,19 @@ export default function InternsPage() {
     };
 
     const toggleChecklistItem = (idx: number) => {
-        setEditChecklist(prev =>
-            prev.map((item, i) => i === idx ? { ...item, done: !item.done } : item)
+        setEditChecklist((prev) =>
+            prev.map((item, i) => (i === idx ? { ...item, done: !item.done } : item))
         );
     };
 
     const addChecklistItem = () => {
         if (!newTask.trim()) return;
-        setEditChecklist(prev => [...prev, { task: newTask.trim(), done: false }]);
+        setEditChecklist((prev) => [...prev, { task: newTask.trim(), done: false }]);
         setNewTask("");
     };
 
     const removeChecklistItem = (idx: number) => {
-        setEditChecklist(prev => prev.filter((_, i) => i !== idx));
+        setEditChecklist((prev) => prev.filter((_, i) => i !== idx));
     };
 
     const saveInternPerformance = async (internId: string) => {
@@ -169,8 +191,8 @@ export default function InternsPage() {
                 body: JSON.stringify({
                     userId: internId,
                     ...editForm,
-                    onboardingData: editChecklist
-                })
+                    onboardingData: editChecklist,
+                }),
             });
 
             if (res.ok) {
@@ -190,112 +212,154 @@ export default function InternsPage() {
     };
 
     return (
-        <div className="docContainer">
-            <header className="dashboardHeader">
-                <div className="welcomeSection">
+        <div className="hubPage">
+            <header className="hubHero">
+                <div className="hubHeroMain">
+                    <p className="hubEyebrow">{isIntern ? "Growth" : "Talent"}</p>
                     <h1>
                         {isIntern ? (
-                            <><span className="text-gradient">My Performance</span></>
+                            <span className="text-gradient">My Performance</span>
                         ) : (
-                            <><span className="text-gradient">Intern Management</span></>
+                            <>
+                                Intern <span className="text-gradient">Management</span>
+                            </>
                         )}
                     </h1>
-                    <p>
+                    <p className="hubSubtitle">
                         {isIntern
-                            ? "Your growth metrics, onboarding progress, and performance score"
-                            : "Track progress, discipline, and performance of the intern cohort"}
+                            ? "Your learning progress, tasks, onboarding checklist, and performance score."
+                            : "Track intern cohort progress, conversion risk, and onboarding milestones."}
                     </p>
                 </div>
                 {isAdmin && (
-                    <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-                        <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "var(--radius-lg)", padding: "0.6rem 1.2rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                            <Users size={16} style={{ color: "var(--nuriek-blue)" }} />
-                            <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{interns.length} Intern{interns.length !== 1 ? "s" : ""}</span>
-                        </div>
-                        <Link href="/directory/onboard?role=INTERN" className="checkInButton" style={{ textDecoration: "none" }}>
+                    <div className="hubHeroActions">
+                        <span className="hubStatChip">
+                            <Users size={16} color="var(--nuriek-blue)" />
+                            <strong>{interns.length}</strong> intern
+                            {interns.length !== 1 ? "s" : ""}
+                        </span>
+                        <Link
+                            href="/directory/onboard?role=INTERN"
+                            className="hubBtnPrimary"
+                        >
                             <GraduationCap size={18} />
-                            <span>Onboard Intern</span>
+                            Onboard intern
                         </Link>
                     </div>
                 )}
             </header>
 
-            {/* Stats summary for Admin */}
             {isAdmin && interns.length > 0 && (
-                <div className="grid" style={{ gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "2rem" }}>
-                    <div className="card glass" style={{ padding: "1.2rem 1.5rem" }}>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.4rem" }}>Avg Score</div>
-                        <div style={{ fontSize: "2rem", fontWeight: 700, color: "white" }}>
-                            {Math.round(interns.reduce((a, i) => a + (i.score || 0), 0) / interns.length)}
-                        </div>
+                <section className="hubKpiGrid" aria-label="Cohort summary">
+                    <article className="hubKpiCard glass">
+                        <span className="hubKpiLabel">Avg score</span>
+                        <span className="hubKpiValue hubKpiValue--default">{avgScore}</span>
+                    </article>
+                    <article className="hubKpiCard glass">
+                        <span className="hubKpiLabel">Avg learning</span>
+                        <span className="hubKpiValue hubKpiValue--blue">{avgLearning}%</span>
+                    </article>
+                    <article className="hubKpiCard glass">
+                        <span className="hubKpiLabel">Avg tasks</span>
+                        <span className="hubKpiValue hubKpiValue--green">{avgTasks}%</span>
+                    </article>
+                    <article className="hubKpiCard glass">
+                        <span className="hubKpiLabel">High risk</span>
+                        <span className="hubKpiValue hubKpiValue--red">{highRiskCount}</span>
+                    </article>
+                </section>
+            )}
+
+            {isAdmin && interns.length > 0 && (
+                <div className="hubToolbar">
+                    <div className="hubFilters" role="group" aria-label="Filter by risk">
+                        {["ALL", "LOW", "MEDIUM", "HIGH"].map((r) => (
+                            <button
+                                key={r}
+                                type="button"
+                                className={`hubFilterPill ${riskFilter === r ? "hubFilterPill--active" : ""}`}
+                                onClick={() => setRiskFilter(r)}
+                            >
+                                {r === "ALL" ? "All risk levels" : `${r.charAt(0)}${r.slice(1).toLowerCase()} risk`}
+                            </button>
+                        ))}
                     </div>
-                    <div className="card glass" style={{ padding: "1.2rem 1.5rem" }}>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.4rem" }}>Avg Learning</div>
-                        <div style={{ fontSize: "2rem", fontWeight: 700, color: "var(--nuriek-blue)" }}>
-                            {Math.round(interns.reduce((a, i) => a + (i.learningProgress || 0), 0) / interns.length)}%
-                        </div>
-                    </div>
-                    <div className="card glass" style={{ padding: "1.2rem 1.5rem" }}>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.4rem" }}>Avg Tasks</div>
-                        <div style={{ fontSize: "2rem", fontWeight: 700, color: "#34c759" }}>
-                            {Math.round(interns.reduce((a, i) => a + (i.taskCompletion || 0), 0) / interns.length)}%
-                        </div>
-                    </div>
-                    <div className="card glass" style={{ padding: "1.2rem 1.5rem" }}>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.4rem" }}>High Risk</div>
-                        <div style={{ fontSize: "2rem", fontWeight: 700, color: "#ff3b30" }}>
-                            {interns.filter(i => i.conversionRisk === "HIGH").length}
-                        </div>
-                    </div>
+                    <span className="hubResultCount">
+                        {filteredInterns.length} of {interns.length}
+                    </span>
                 </div>
             )}
 
             <div className="internGrid">
                 {isLoading ? (
-                    <div style={{ padding: "3rem", textAlign: "center", width: "100%", gridColumn: "1/-1" }}>
-                        <Loader2 className="animate-spin" size={32} style={{ margin: "0 auto" }} />
+                    <div className="hubLoading">
+                        <Loader2 className="animate-spin" size={32} />
                     </div>
-                ) : interns.length > 0 ? (
-                    interns.map((intern) => {
-                        const onboarding: ChecklistItem[] = JSON.parse(intern.onboardingData || "[]");
+                ) : filteredInterns.length > 0 ? (
+                    filteredInterns.map((intern) => {
+                        const onboarding: ChecklistItem[] = JSON.parse(
+                            intern.onboardingData || "[]"
+                        );
                         const isExpanded = expandedId === intern.id;
                         const isEditing = editingId === intern.id;
                         const wasSaved = saveSuccess === intern.id;
-                        const doneCount = onboarding.filter(i => i.done).length;
-                        const riskColor = RISK_COLORS[intern.conversionRisk] || "#34c759";
-                        const riskBg = RISK_BG[intern.conversionRisk] || "rgba(52,199,89,0.12)";
+                        const doneCount = onboarding.filter((i) => i.done).length;
+                        const riskKey = intern.conversionRisk ?? "LOW";
 
                         return (
-                            <div key={intern.id} className="internCard glass" style={wasSaved ? { border: "1px solid rgba(52,199,89,0.4)" } : {}}>
+                            <article
+                                key={intern.id}
+                                className={`internCard glass ${wasSaved ? "internCard--saved" : ""}`}
+                            >
                                 <header className="internHeader">
                                     <div className="internIdentity">
-                                        <div className="internAvatar">{intern.name?.charAt(0)}</div>
+                                        <div className="internAvatar">
+                                            {intern.name?.charAt(0) ?? "?"}
+                                        </div>
                                         <div className="internIntro">
                                             <span className="internName">{intern.name}</span>
-                                            <span className="internDuration">
-                                                {intern.profile?.position || "Intern"} • {intern.duration || "Month 1"}
-                                                {intern.profile?.department && ` • ${intern.profile.department}`}
+                                            <span className="internMeta">
+                                                {intern.profile?.position || "Intern"}
+                                                {intern.duration ? ` · ${intern.duration}` : ""}
+                                                {intern.profile?.department
+                                                    ? ` · ${intern.profile.department}`
+                                                    : ""}
                                             </span>
+                                            {(() => {
+                                                const start = resolveInternStartDate(
+                                                    intern.profile?.joinDate,
+                                                    intern.createdAt ?? new Date().toISOString()
+                                                );
+                                                const days = daysInSystem(start);
+                                                return (
+                                                    <span className="internTenurePill">
+                                                        <Clock size={12} />
+                                                        {days} day{days === 1 ? "" : "s"} in system
+                                                    </span>
+                                                );
+                                            })()}
+                                            <Link
+                                                href={`/interns/${intern.id}`}
+                                                className="internProfileLink"
+                                            >
+                                                View full profile <ExternalLink size={12} />
+                                            </Link>
                                         </div>
                                     </div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                                        <div className="scoreCircle">
-                                            <span className="scoreValue">{intern.score || 0}</span>
-                                            <span className="scoreLabel">Score</span>
+                                    <div className="internHeaderActions">
+                                        <div className="internScoreRing">
+                                            <span className="internScoreValue">
+                                                {intern.score || 0}
+                                            </span>
+                                            <span className="internScoreLabel">Score</span>
                                         </div>
                                         {isAdmin && !isEditing && (
                                             <button
+                                                type="button"
+                                                className="internEditBtn"
                                                 onClick={() => startEdit(intern)}
                                                 title="Edit performance"
-                                                style={{
-                                                    background: "rgba(10,132,255,0.12)",
-                                                    border: "1px solid rgba(10,132,255,0.3)",
-                                                    borderRadius: "var(--radius-md)",
-                                                    padding: "0.5rem",
-                                                    cursor: "pointer",
-                                                    color: "var(--nuriek-blue)",
-                                                    display: "flex", alignItems: "center"
-                                                }}
+                                                aria-label="Edit performance"
                                             >
                                                 <Edit3 size={16} />
                                             </button>
@@ -303,122 +367,205 @@ export default function InternsPage() {
                                     </div>
                                 </header>
 
-                                {/* Metrics */}
                                 {isEditing ? (
-                                    <div style={{ marginTop: "1.5rem", display: "flex", flexDirection: "column", gap: "1.2rem" }}>
-                                        {/* Score */}
+                                    <div className="internForm">
                                         <div>
-                                            <label style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.5rem" }}>
+                                            <label className="internFormLabel">
                                                 <Star size={12} /> Score (0–100)
                                             </label>
                                             <input
-                                                type="number" min="0" max="100"
-                                                className="input"
+                                                type="number"
+                                                min={0}
+                                                max={100}
+                                                className="internFormInput"
                                                 value={editForm.score}
-                                                onChange={e => setEditForm(prev => ({ ...prev, score: Number(e.target.value) }))}
-                                                style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "var(--radius-md)", padding: "0.6rem 0.75rem", color: "white" }}
+                                                onChange={(e) =>
+                                                    setEditForm((p) => ({
+                                                        ...p,
+                                                        score: Number(e.target.value),
+                                                    }))
+                                                }
                                             />
                                         </div>
 
-                                        {/* Learning Progress */}
                                         <div>
-                                            <label style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.5rem" }}>
-                                                <BookOpen size={12} /> Learning Progress %
+                                            <label className="internFormLabel">
+                                                <BookOpen size={12} /> Learning progress
                                             </label>
-                                            <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-                                                <input type="range" min="0" max="100" value={editForm.learningProgress}
-                                                    onChange={e => setEditForm(prev => ({ ...prev, learningProgress: Number(e.target.value) }))}
-                                                    style={{ flex: 1, accentColor: "var(--nuriek-blue)" }}
+                                            <div className="internRangeRow">
+                                                <input
+                                                    type="range"
+                                                    min={0}
+                                                    max={100}
+                                                    value={editForm.learningProgress}
+                                                    onChange={(e) =>
+                                                        setEditForm((p) => ({
+                                                            ...p,
+                                                            learningProgress: Number(
+                                                                e.target.value
+                                                            ),
+                                                        }))
+                                                    }
                                                 />
-                                                <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--nuriek-blue)", minWidth: "2.5rem" }}>{editForm.learningProgress}%</span>
+                                                <span className="internRangeVal">
+                                                    {editForm.learningProgress}%
+                                                </span>
                                             </div>
                                         </div>
 
-                                        {/* Task Completion */}
                                         <div>
-                                            <label style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.5rem" }}>
-                                                <Target size={12} /> Task Completion %
+                                            <label className="internFormLabel">
+                                                <Target size={12} /> Task completion
                                             </label>
-                                            <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-                                                <input type="range" min="0" max="100" value={editForm.taskCompletion}
-                                                    onChange={e => setEditForm(prev => ({ ...prev, taskCompletion: Number(e.target.value) }))}
-                                                    style={{ flex: 1, accentColor: "#34c759" }}
+                                            <div className="internRangeRow">
+                                                <input
+                                                    type="range"
+                                                    min={0}
+                                                    max={100}
+                                                    value={editForm.taskCompletion}
+                                                    onChange={(e) =>
+                                                        setEditForm((p) => ({
+                                                            ...p,
+                                                            taskCompletion: Number(
+                                                                e.target.value
+                                                            ),
+                                                        }))
+                                                    }
+                                                    style={{ accentColor: "#34c759" }}
                                                 />
-                                                <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "#34c759", minWidth: "2.5rem" }}>{editForm.taskCompletion}%</span>
+                                                <span className="internRangeVal internRangeVal--tasks">
+                                                    {editForm.taskCompletion}%
+                                                </span>
                                             </div>
                                         </div>
 
-                                        {/* Duration & Risk */}
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                                        <div className="internFormRow">
                                             <div>
-                                                <label style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem", display: "block" }}>Duration</label>
-                                                <input type="text"
+                                                <label className="internFormLabel">Duration</label>
+                                                <input
+                                                    type="text"
+                                                    className="internFormInput"
                                                     placeholder="e.g. Month 3 of 6"
                                                     value={editForm.duration}
-                                                    onChange={e => setEditForm(prev => ({ ...prev, duration: e.target.value }))}
-                                                    style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "var(--radius-md)", padding: "0.6rem 0.75rem", color: "white", fontSize: "0.875rem" }}
+                                                    onChange={(e) =>
+                                                        setEditForm((p) => ({
+                                                            ...p,
+                                                            duration: e.target.value,
+                                                        }))
+                                                    }
                                                 />
                                             </div>
                                             <div>
-                                                <label style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem", display: "block" }}>Conversion Risk</label>
+                                                <label className="internFormLabel">
+                                                    Conversion risk
+                                                </label>
                                                 <select
+                                                    className="internFormSelect"
                                                     value={editForm.conversionRisk}
-                                                    onChange={e => setEditForm(prev => ({ ...prev, conversionRisk: e.target.value }))}
-                                                    style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "var(--radius-md)", padding: "0.6rem 0.75rem", color: "white", fontSize: "0.875rem" }}
+                                                    onChange={(e) =>
+                                                        setEditForm((p) => ({
+                                                            ...p,
+                                                            conversionRisk: e.target.value,
+                                                        }))
+                                                    }
                                                 >
-                                                    <option value="LOW" style={{ background: "#111" }}>🟢 Low</option>
-                                                    <option value="MEDIUM" style={{ background: "#111" }}>🟡 Medium</option>
-                                                    <option value="HIGH" style={{ background: "#111" }}>🔴 High</option>
+                                                    <option value="LOW">Low</option>
+                                                    <option value="MEDIUM">Medium</option>
+                                                    <option value="HIGH">High</option>
                                                 </select>
                                             </div>
                                         </div>
 
-                                        {/* Onboarding Checklist */}
                                         <div>
-                                            <label style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem", display: "block" }}>
-                                                Onboarding Checklist
+                                            <label className="internFormLabel">
+                                                Onboarding checklist
                                             </label>
-                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                                            <div className="internChecklistEdit">
                                                 {editChecklist.map((item, idx) => (
-                                                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "rgba(255,255,255,0.03)", borderRadius: "var(--radius-md)", padding: "0.5rem 0.75rem" }}>
-                                                        <button onClick={() => toggleChecklistItem(idx)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", color: item.done ? "#34c759" : "var(--text-tertiary)", padding: 0 }}>
-                                                            {item.done ? <CheckCircle2 size={16} /> : <Circle size={16} />}
+                                                    <div
+                                                        key={idx}
+                                                        className="internChecklistEditItem"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            className={`internChecklistToggle ${item.done ? "done" : ""}`}
+                                                            onClick={() =>
+                                                                toggleChecklistItem(idx)
+                                                            }
+                                                        >
+                                                            {item.done ? (
+                                                                <CheckCircle2 size={16} />
+                                                            ) : (
+                                                                <Circle size={16} />
+                                                            )}
                                                         </button>
-                                                        <span style={{ flex: 1, fontSize: "0.85rem", color: item.done ? "var(--text-tertiary)" : "var(--text-primary)", textDecoration: item.done ? "line-through" : "none" }}>{item.task}</span>
-                                                        <button onClick={() => removeChecklistItem(idx)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ff3b30", display: "flex" }}>
+                                                        <span
+                                                            className={
+                                                                item.done ? "done" : ""
+                                                            }
+                                                        >
+                                                            {item.task}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            className="internChecklistRemove"
+                                                            onClick={() =>
+                                                                removeChecklistItem(idx)
+                                                            }
+                                                            aria-label="Remove item"
+                                                        >
                                                             <Trash2 size={14} />
                                                         </button>
                                                     </div>
                                                 ))}
                                             </div>
-                                            <div style={{ display: "flex", gap: "0.5rem" }}>
+                                            <div className="internAddRow">
                                                 <input
                                                     type="text"
-                                                    placeholder="Add checklist item..."
+                                                    className="internFormInput"
+                                                    placeholder="Add checklist item…"
                                                     value={newTask}
-                                                    onChange={e => setNewTask(e.target.value)}
-                                                    onKeyDown={e => e.key === "Enter" && addChecklistItem()}
-                                                    style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "var(--radius-md)", padding: "0.5rem 0.75rem", color: "white", fontSize: "0.85rem" }}
+                                                    onChange={(e) => setNewTask(e.target.value)}
+                                                    onKeyDown={(e) =>
+                                                        e.key === "Enter" && addChecklistItem()
+                                                    }
                                                 />
-                                                <button onClick={addChecklistItem} style={{ background: "var(--nuriek-blue)", border: "none", borderRadius: "var(--radius-md)", padding: "0.5rem 0.75rem", cursor: "pointer", color: "white", display: "flex", alignItems: "center" }}>
+                                                <button
+                                                    type="button"
+                                                    className="internAddBtn"
+                                                    onClick={addChecklistItem}
+                                                    aria-label="Add item"
+                                                >
                                                     <Plus size={16} />
                                                 </button>
                                             </div>
                                         </div>
 
-                                        {/* Actions */}
-                                        <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
+                                        <div className="internFormActions">
                                             <button
-                                                onClick={() => saveInternPerformance(intern.id)}
+                                                type="button"
+                                                className="internSaveBtn"
+                                                onClick={() =>
+                                                    saveInternPerformance(intern.id)
+                                                }
                                                 disabled={isSaving}
-                                                className="checkInButton"
-                                                style={{ flex: 1, height: "2.8rem" }}
                                             >
-                                                {isSaving ? <Loader2 size={18} className="animate-spin" /> : <><Save size={16} /><span>Save Changes</span></>}
+                                                {isSaving ? (
+                                                    <Loader2
+                                                        size={18}
+                                                        className="animate-spin"
+                                                    />
+                                                ) : (
+                                                    <>
+                                                        <Save size={16} />
+                                                        Save changes
+                                                    </>
+                                                )}
                                             </button>
                                             <button
+                                                type="button"
+                                                className="internCancelBtn"
                                                 onClick={cancelEdit}
-                                                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "var(--radius-lg)", padding: "0 1.2rem", cursor: "pointer", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.875rem" }}
                                             >
                                                 <X size={16} /> Cancel
                                             </button>
@@ -426,92 +573,146 @@ export default function InternsPage() {
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="metricsGrid">
-                                            <div className="metricItem">
-                                                <span className="metricTitle">
-                                                    <BookOpen size={14} /> Learning Progress
+                                        <div className="internMetrics">
+                                            <div className="internMetric">
+                                                <span className="internMetricLabel">
+                                                    <BookOpen size={14} /> Learning
                                                 </span>
-                                                <div className="progressBar">
-                                                    <div className="progressFill" style={{ width: `${intern.learningProgress || 0}%` }}></div>
+                                                <div className="internProgressTrack">
+                                                    <div
+                                                        className="internProgressFill"
+                                                        style={{
+                                                            width: `${intern.learningProgress || 0}%`,
+                                                        }}
+                                                    />
                                                 </div>
-                                                <span style={{ fontSize: "0.75rem", color: "var(--nuriek-blue)", fontWeight: 600 }}>{intern.learningProgress || 0}%</span>
+                                                <span className="internMetricPct internMetricPct--learn">
+                                                    {intern.learningProgress || 0}%
+                                                </span>
                                             </div>
-                                            <div className="metricItem">
-                                                <span className="metricTitle">
-                                                    <TrendingUp size={14} /> Task Completion
+                                            <div className="internMetric">
+                                                <span className="internMetricLabel">
+                                                    <TrendingUp size={14} /> Tasks
                                                 </span>
-                                                <div className="progressBar">
-                                                    <div className="progressFill" style={{ width: `${intern.taskCompletion || 0}%`, background: "linear-gradient(90deg, #34c759, #30d158)" }}></div>
+                                                <div className="internProgressTrack">
+                                                    <div
+                                                        className="internProgressFill internProgressFill--tasks"
+                                                        style={{
+                                                            width: `${intern.taskCompletion || 0}%`,
+                                                        }}
+                                                    />
                                                 </div>
-                                                <span style={{ fontSize: "0.75rem", color: "#34c759", fontWeight: 600 }}>{intern.taskCompletion || 0}%</span>
+                                                <span className="internMetricPct internMetricPct--tasks">
+                                                    {intern.taskCompletion || 0}%
+                                                </span>
                                             </div>
                                         </div>
 
-                                        {/* Expandable checklist */}
                                         <button
-                                            onClick={() => setExpandedId(isExpanded ? null : intern.id)}
-                                            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "var(--radius-md)", padding: "0.6rem 0.9rem", cursor: "pointer", color: "var(--text-secondary)", fontSize: "0.82rem", marginTop: "0.75rem" }}
+                                            type="button"
+                                            className="internCheckToggle"
+                                            onClick={() =>
+                                                setExpandedId(isExpanded ? null : intern.id)
+                                            }
                                         >
-                                            <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                            <span className="internCheckToggleLeft">
                                                 <Activity size={14} />
-                                                Onboarding Checklist ({doneCount}/{onboarding.length})
+                                                Onboarding ({doneCount}/{onboarding.length})
                                             </span>
-                                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                            {isExpanded ? (
+                                                <ChevronUp size={14} />
+                                            ) : (
+                                                <ChevronDown size={14} />
+                                            )}
                                         </button>
 
                                         {isExpanded && (
-                                            <div className="checklist" style={{ marginTop: "0.5rem" }}>
+                                            <div className="internChecklist">
                                                 {onboarding.length === 0 ? (
-                                                    <p style={{ fontSize: "0.82rem", color: "var(--text-tertiary)", textAlign: "center", padding: "1rem" }}>
-                                                        No checklist items yet. {isAdmin && "Click Edit to add items."}
+                                                    <p
+                                                        style={{
+                                                            fontSize: "0.82rem",
+                                                            color: "var(--text-tertiary)",
+                                                            textAlign: "center",
+                                                            padding: "0.75rem",
+                                                        }}
+                                                    >
+                                                        No checklist items yet.
+                                                        {isAdmin && " Click Edit to add items."}
                                                     </p>
-                                                ) : onboarding.map((item, idx) => (
-                                                    <div key={idx} className={`checkItem ${item.done ? "checkItemDone" : ""}`}>
-                                                        {item.done ? (
-                                                            <CheckCircle2 size={16} className="checkIconDone" />
-                                                        ) : (
-                                                            <Circle size={16} className="checkIcon" />
-                                                        )}
-                                                        <span>{item.task}</span>
-                                                    </div>
-                                                ))}
+                                                ) : (
+                                                    onboarding.map((item, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className={`internCheckItem ${item.done ? "internCheckItem--done" : ""}`}
+                                                        >
+                                                            {item.done ? (
+                                                                <CheckCircle2
+                                                                    size={16}
+                                                                    className="internCheckIcon--done"
+                                                                />
+                                                            ) : (
+                                                                <Circle
+                                                                    size={16}
+                                                                    className="internCheckIcon"
+                                                                />
+                                                            )}
+                                                            <span>{item.task}</span>
+                                                        </div>
+                                                    ))
+                                                )}
                                             </div>
                                         )}
 
-                                        <footer className="conversionSection">
-                                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                                <span className="conversionTag" style={{ background: riskBg, color: riskColor, borderColor: riskColor + "33" }}>
-                                                    <AlertTriangle size={12} />
-                                                    Conversion Risk: {intern.conversionRisk || "LOW"}
-                                                </span>
-                                            </div>
+                                        <footer className="internFooter">
+                                            <span
+                                                className={`internRiskBadge ${riskClass(riskKey)}`}
+                                            >
+                                                <AlertTriangle size={12} />
+                                                {riskKey} risk
+                                            </span>
                                             {wasSaved && (
-                                                <span style={{ fontSize: "0.8rem", color: "#34c759", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                                                    <CheckCircle2 size={14} /> Saved!
+                                                <span className="internSavedMsg">
+                                                    <CheckCircle2 size={14} /> Saved
                                                 </span>
                                             )}
                                         </footer>
                                     </>
                                 )}
-                            </div>
+                            </article>
                         );
                     })
                 ) : (
-                    <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "5rem 1rem" }}>
+                    <div className="internEmpty">
                         {isIntern ? (
-                            <div>
-                                <UserCheck size={48} style={{ opacity: 0.15, margin: "0 auto 1rem" }} />
-                                <p style={{ color: "var(--text-tertiary)", fontSize: "0.95rem" }}>Your performance profile is being set up by your manager.</p>
-                            </div>
+                            <>
+                                <UserCheck size={48} className="hubEmptyIcon" />
+                                <p>
+                                    Your performance profile is being set up by your manager.
+                                </p>
+                            </>
                         ) : (
-                            <div>
-                                <GraduationCap size={48} style={{ opacity: 0.15, margin: "0 auto 1rem" }} />
-                                <p style={{ color: "var(--text-tertiary)", fontSize: "0.95rem" }}>No interns currently in the cohort.</p>
-                                <Link href="/directory/onboard?role=INTERN" className="checkInButton" style={{ textDecoration: "none", display: "inline-flex", marginTop: "1.5rem" }}>
-                                    <Plus size={16} />
-                                    <span>Onboard First Intern</span>
-                                </Link>
-                            </div>
+                            <>
+                                <GraduationCap size={48} className="hubEmptyIcon" />
+                                <p>
+                                    {riskFilter !== "ALL"
+                                        ? "No interns match this risk filter."
+                                        : "No interns in the cohort yet."}
+                                </p>
+                                {riskFilter === "ALL" && (
+                                    <Link
+                                        href="/directory/onboard?role=INTERN"
+                                        className="hubBtnPrimary"
+                                        style={{
+                                            display: "inline-flex",
+                                            marginTop: "1.25rem",
+                                        }}
+                                    >
+                                        <Plus size={16} />
+                                        Onboard first intern
+                                    </Link>
+                                )}
+                            </>
                         )}
                     </div>
                 )}

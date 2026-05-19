@@ -1,71 +1,108 @@
-
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ROLES } from "@/lib/constants";
+import { ADMIN_ROLES, DRIVE_CATEGORIES } from "@/lib/constants";
+import { requireRoles, isNextResponse } from "@/lib/rbac";
+import { resolveUploadPath } from "@/lib/files";
+import { logAudit } from "@/lib/audit";
 import { unlink } from "fs/promises";
-import path from "path";
-import fs from "fs";
 
-export async function DELETE(
+export async function PATCH(
     req: NextRequest,
     props: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const params = await props.params;
-        const documentId = params.id;
-        const session = await getServerSession(authOptions);
-        console.log("[Delete API] Session:", JSON.stringify(session, null, 2));
+    const user = await requireRoles(ADMIN_ROLES);
+    if (isNextResponse(user)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-        if (!session?.user || ![ROLES.FOUNDER, ROLES.HR_ADMIN].includes((session.user as any).role)) {
-            console.error("[Delete API] Unauthorized access attempt", session?.user);
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    try {
+        const { id } = await props.params;
+        const { category } = await req.json();
+
+        if (!category || typeof category !== "string") {
+            return NextResponse.json({ error: "Folder name is required" }, { status: 400 });
         }
 
+        const trimmed = category.trim();
+        const allowed = DRIVE_CATEGORIES as readonly string[];
+        if (!allowed.includes(trimmed)) {
+            return NextResponse.json(
+                { error: `Invalid folder. Choose one of: ${allowed.join(", ")}` },
+                { status: 400 }
+            );
+        }
 
+        const existing = await prisma.document.findUnique({ where: { id } });
+        if (!existing || existing.type !== "DRIVE") {
+            return NextResponse.json({ error: "Drive file not found" }, { status: 404 });
+        }
 
-        // 1. Fetch document to get file path
+        const doc = await prisma.document.update({
+            where: { id },
+            data: { category: trimmed, updatedAt: new Date() },
+        });
+
+        await logAudit({
+            actorId: user.id,
+            actorEmail: user.email,
+            action: "DOCUMENT_UPLOAD",
+            entity: "Document",
+            entityId: id,
+            metadata: { title: doc.title, from: existing.category, to: trimmed, action: "move" },
+        });
+
+        return NextResponse.json(doc);
+    } catch (error) {
+        console.error("Move file error:", error);
+        return NextResponse.json({ error: "Failed to move file" }, { status: 500 });
+    }
+}
+
+export async function DELETE(
+    _req: NextRequest,
+    props: { params: Promise<{ id: string }> }
+) {
+    const user = await requireRoles(ADMIN_ROLES);
+    if (isNextResponse(user)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+        const { id: documentId } = await props.params;
+
         const doc = await prisma.document.findUnique({
             where: { id: documentId },
         });
 
         if (!doc) {
-            console.error(`[Delete] Document not found: ${documentId}`);
             return NextResponse.json({ error: "Document not found" }, { status: 404 });
         }
 
-        console.log(`[Delete] Deleting document: ${doc.title} (${doc.id})`);
-
-        // 2. Delete file from filesystem
-        if (doc.type === "DRIVE" && doc.url.startsWith("/uploads/")) {
-            const filePath = path.join(process.cwd(), "public", doc.url);
-            console.log(`[Delete] Removing file at: ${filePath}`);
-            if (fs.existsSync(filePath)) {
+        if (doc.type === "DRIVE") {
+            const filePath = resolveUploadPath(doc.url);
+            if (filePath) {
                 try {
                     await unlink(filePath);
-                } catch (e) {
-                    console.error("Failed to delete file from disk:", e);
-                    // Continue to delete metadata even if file delete fails (or maybe it was already gone)
+                } catch {
+                    // File may already be removed
                 }
-            } else {
-                console.warn(`[Delete] File not found on disk: ${filePath}`);
             }
         }
 
-        // 3. Delete database record
-        await prisma.document.delete({
-            where: { id: documentId },
+        await prisma.document.delete({ where: { id: documentId } });
+
+        await logAudit({
+            actorId: user.id,
+            actorEmail: user.email,
+            action: "DOCUMENT_DELETE",
+            entity: "Document",
+            entityId: documentId,
+            metadata: { title: doc.title },
         });
 
-        console.log(`[Delete] Success: ${documentId}`);
         return NextResponse.json({ success: true });
-
-    } catch (error: any) {
+    } catch (error) {
         console.error("Delete error:", error);
-        return NextResponse.json({
-            error: "Internal Server Error",
-            details: error?.message || String(error)
-        }, { status: 500 });
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

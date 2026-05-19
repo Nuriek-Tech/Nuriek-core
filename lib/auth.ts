@@ -1,15 +1,41 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-
 import bcrypt from "bcryptjs";
-import { ROLES } from "./constants";
+import { ROLES, type Role } from "./constants";
 import { prisma } from "./prisma";
+import { checkRateLimit, resetRateLimit } from "./rate-limit";
+import { logAudit } from "./audit";
+import { normalizeRole } from "./roles";
+import { isNuriekWorkEmail, normalizeWorkEmail } from "./email-policy";
 
-interface UserWithRole {
-    id: string;
-    name?: string | null;
-    email?: string | null;
-    role: string;
+async function loadUserForToken(email?: string | null, id?: string | null) {
+    if (id) {
+        return prisma.user.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true,
+                mustChangePassword: true,
+                hrPermissions: true,
+            },
+        });
+    }
+    if (email) {
+        return prisma.user.findUnique({
+            where: { email },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true,
+                mustChangePassword: true,
+                hrPermissions: true,
+            },
+        });
+    }
+    return null;
 }
 
 export const authOptions: NextAuthOptions = {
@@ -17,64 +43,118 @@ export const authOptions: NextAuthOptions = {
         CredentialsProvider({
             name: "Credentials",
             credentials: {
-                email: { label: "Email", type: "email", placeholder: "arun@nuriek.com" },
+                email: { label: "Email", type: "email" },
                 password: { label: "Password", type: "password" },
             },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) return null;
 
-                // Enforce nuriek.com domain
-                if (!credentials.email.endsWith("@nuriek.com")) {
-                    return null;
+                const email = normalizeWorkEmail(credentials.email);
+                if (!isNuriekWorkEmail(email)) return null;
+
+                const limit = checkRateLimit(`login:${email}`);
+                if (!limit.allowed) {
+                    throw new Error("TooManyAttempts");
                 }
 
-                const user = await prisma.user.findUnique({
-                    where: { email: credentials.email },
-                });
+                try {
+                    const user = await prisma.user.findUnique({
+                        where: { email },
+                    });
 
-                if (!user || !user.password) return null;
+                    if (!user || !user.password) return null;
 
-                // Only accept bcrypt-hashed passwords
-                const isPasswordMatch = await bcrypt.compare(credentials.password, user.password).catch(() => false);
+                    const isPasswordMatch = await bcrypt
+                        .compare(credentials.password, user.password)
+                        .catch(() => false);
 
-                console.log(`[Auth] Login attempt for ${credentials.email}: Match=${isPasswordMatch}`);
+                    if (!isPasswordMatch) return null;
 
-                if (isPasswordMatch) {
+                    resetRateLimit(`login:${email}`);
+
+                    await logAudit({
+                        actorId: user.id,
+                        actorEmail: user.email,
+                        action: "LOGIN",
+                        entity: "User",
+                        entityId: user.id,
+                    });
+
                     return {
                         id: user.id,
                         name: user.name,
                         email: user.email,
-                        role: user.role,
+                        role: normalizeRole(user.role) ?? ROLES.EMPLOYEE,
+                        mustChangePassword: user.mustChangePassword,
+                        hrPermissions: user.hrPermissions,
                     };
+                } catch (err) {
+                    const msg = err instanceof Error ? err.message : "";
+                    const isDbUnreachable =
+                        msg.includes("Can't reach database server") ||
+                        msg.includes("P1001") ||
+                        msg.includes("PrismaClientInitializationError");
+                    if (isDbUnreachable) {
+                        throw new Error("DatabaseUnavailable");
+                    }
+                    if (msg === "TooManyAttempts") throw err;
+                    console.error("Login authorize error:", err);
+                    return null;
                 }
-                return null;
             },
         }),
     ],
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
-                token.role = (user as UserWithRole).role || ROLES.EMPLOYEE;
                 token.id = user.id;
+                token.email = user.email;
+                token.role = user.role || ROLES.EMPLOYEE;
+                token.mustChangePassword = user.mustChangePassword ?? false;
+                token.hrPermissions = user.hrPermissions ?? null;
+                token.lastSync = Date.now();
+                return token;
             }
+
+            const lastSync = (token.lastSync as number | undefined) ?? 0;
+            const SYNC_INTERVAL_MS = 5 * 60 * 1000;
+            if (Date.now() - lastSync < SYNC_INTERVAL_MS) {
+                return token;
+            }
+
+            const dbUser = await loadUserForToken(
+                (token.email as string) ?? null,
+                (token.id as string) ?? null
+            );
+
+            if (dbUser) {
+                token.id = dbUser.id;
+                token.email = dbUser.email;
+                token.role = normalizeRole(dbUser.role) ?? ROLES.EMPLOYEE;
+                token.mustChangePassword = dbUser.mustChangePassword;
+                token.hrPermissions = dbUser.hrPermissions ?? null;
+            }
+
+            token.lastSync = Date.now();
             return token;
         },
         async session({ session, token }) {
             if (session.user) {
-                (session.user as UserWithRole).role = token.role as string;
-                (session.user as UserWithRole).id = token.id as string;
+                session.user.id = token.id as string;
+                session.user.role = (normalizeRole(token.role as string) ?? ROLES.EMPLOYEE) as Role;
+                session.user.mustChangePassword = Boolean(token.mustChangePassword);
+                session.user.hrPermissions =
+                    (token.hrPermissions as string | null | undefined) ?? null;
             }
             return session;
         },
-        async signIn({ user, account }) {
-            return true;
-        }
     },
     pages: {
         signIn: "/login",
     },
     session: {
         strategy: "jwt",
+        maxAge: 30 * 24 * 60 * 60,
     },
     secret: process.env.NEXTAUTH_SECRET,
 };

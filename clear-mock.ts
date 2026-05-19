@@ -11,9 +11,8 @@ async function clearMockData() {
   await prisma.timesheet.deleteMany();
   await prisma.holiday.deleteMany();
   await prisma.orgTask.deleteMany();
-  // using any cast for missing types in generated client if they exist
-  try { await (prisma as any).internPerformance.deleteMany(); } catch (e) {}
-  try { await (prisma as any).document.deleteMany(); } catch (e) {}
+  await prisma.internPerformance.deleteMany();
+  await prisma.document.deleteMany();
   
   // Delete all users except the super admin
   await prisma.user.deleteMany({

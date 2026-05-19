@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import type { Attendance } from "@prisma/client";
 
 export async function GET() {
     const session = await getServerSession(authOptions);
@@ -41,20 +42,21 @@ export async function POST(req: Request) {
         const targetDate = date ? new Date(date) : new Date();
         const todayStr = targetDate.toDateString();
 
-        // 7-hour validation
         const attendanceLogs = await prisma.attendance.findMany({
             where: { userId: user.id }
         });
-        
-        const todaysLogs = attendanceLogs.filter((log: any) => new Date(log.checkIn).toDateString() === todayStr);
-        
+
+        const todaysLogs = attendanceLogs.filter(
+            (log: Attendance) => new Date(log.checkIn).toDateString() === todayStr
+        );
+
         let totalLoggedMs = 0;
         for (const log of todaysLogs) {
             const end = log.checkOut ? new Date(log.checkOut) : new Date();
             const start = new Date(log.checkIn);
             totalLoggedMs += end.getTime() - start.getTime();
         }
-        
+
         const totalLoggedHours = totalLoggedMs / (1000 * 60 * 60);
 
         if (totalLoggedHours < 7) {
@@ -71,12 +73,13 @@ export async function POST(req: Request) {
             }
         });
 
-        // Send HR Notification
         try {
             const hrAdmins = await prisma.user.findMany({
                 where: { role: "HR_ADMIN" }
             });
-            const hrEmails = hrAdmins.map((hr: any) => hr.email).filter(Boolean) as string[];
+            const hrEmails = hrAdmins
+                .map((hr) => hr.email)
+                .filter((email): email is string => Boolean(email));
             if (hrEmails.length > 0) {
                 const { sendTimesheetApprovalEmail } = await import("@/lib/mail");
                 await sendTimesheetApprovalEmail(user.name || user.email || "Employee", todayStr, hrEmails);

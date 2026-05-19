@@ -1,42 +1,114 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
     FileText,
     Folder,
     Search,
     Upload,
-    MoreVertical,
     Star,
     Share2,
     Clock,
     HardDrive,
     Loader2,
-    Trash2
+    Trash2,
+    BookOpen,
+    LayoutTemplate,
+    Palette,
+    Box,
+    Shield,
+    LayoutGrid,
+    List,
+    ExternalLink,
+    FolderInput,
+    RefreshCw,
 } from "lucide-react";
-import "@/styles/dashboard.css";
+import type { LucideIcon } from "lucide-react";
+import { DRIVE_CATEGORIES } from "@/lib/constants";
+import "@/styles/people-hub.css";
+import "../admin/documents/admin-documents.css";
+import "./drive.css";
 import UploadDocumentModal from "@/components/UploadDocumentModal";
 import DeleteDocumentModal from "@/components/DeleteDocumentModal";
 import { useSession } from "next-auth/react";
+import type { DocumentRecord } from "@/lib/api-types";
+
+type DriveDocument = Pick<
+    DocumentRecord,
+    "id" | "title" | "url" | "category" | "size" | "updatedAt" | "description"
+>;
+
+type ViewMode = "ALL" | "SHARED" | "STARRED" | "RECENT";
+type DisplayMode = "grid" | "list";
+
+const FOLDER_META: Record<
+    string,
+    { icon: LucideIcon; color: string; bg: string; hint: string }
+> = {
+    General: {
+        icon: Folder,
+        color: "#4a90e2",
+        bg: "rgba(74, 144, 226, 0.12)",
+        hint: "Shared company files",
+    },
+    Resources: {
+        icon: BookOpen,
+        color: "#5ac8fa",
+        bg: "rgba(90, 200, 250, 0.12)",
+        hint: "Learning & guides",
+    },
+    Templates: {
+        icon: LayoutTemplate,
+        color: "#bf5af2",
+        bg: "rgba(191, 90, 242, 0.12)",
+        hint: "Reusable templates",
+    },
+    "Brand Assets": {
+        icon: Palette,
+        color: "#ff2d55",
+        bg: "rgba(255, 45, 85, 0.12)",
+        hint: "Logos & brand kit",
+    },
+    "Product Specs": {
+        icon: Box,
+        color: "#ff9f0a",
+        bg: "rgba(255, 159, 10, 0.12)",
+        hint: "Product documentation",
+    },
+    Policies: {
+        icon: Shield,
+        color: "#34c759",
+        bg: "rgba(52, 199, 89, 0.12)",
+        hint: "Handbooks & HR policies",
+    },
+};
+
+function formatBytes(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export default function DrivePage() {
     const { data: session } = useSession();
-    const currentUserRole = (session?.user as any)?.role;
+    const currentUserRole = session?.user?.role;
     const isAdmin = currentUserRole === "FOUNDER" || currentUserRole === "HR_ADMIN";
 
-    const [documents, setDocuments] = useState<{ id: string; title: string; url: string; category: string; size: number; updatedAt: string; description?: string }[]>([]);
+    const [documents, setDocuments] = useState<DriveDocument[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [fetchError, setFetchError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-    const [viewingDoc, setViewingDoc] = useState<any | null>(null);
+    const [viewingDoc, setViewingDoc] = useState<DriveDocument | null>(null);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-
-    // Deletion State
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [docToDelete, setDocToDelete] = useState<{ id: string, title: string } | null>(null);
+    const [docToDelete, setDocToDelete] = useState<{ id: string; title: string } | null>(null);
+    const [viewMode, setViewMode] = useState<ViewMode>("ALL");
+    const [displayMode, setDisplayMode] = useState<DisplayMode>("list");
+    const [movingId, setMovingId] = useState<string | null>(null);
+    const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
 
-    // Sidebar View State
-    const [viewMode, setViewMode] = useState<'ALL' | 'SHARED' | 'STARRED' | 'RECENT'>('ALL');
+    const categories = [...DRIVE_CATEGORIES];
 
     useEffect(() => {
         fetchDocs();
@@ -44,58 +116,107 @@ export default function DrivePage() {
 
     const fetchDocs = async () => {
         setIsLoading(true);
+        setFetchError(null);
         try {
-            const res = await fetch("/api/documents?type=DRIVE");
+            const res = await fetch("/api/drive", { cache: "no-store" });
             if (res.ok) {
-                const data = await res.json();
-                setDocuments(data);
+                setDocuments(await res.json());
+            } else {
+                const data = await res.json().catch(() => ({}));
+                setFetchError((data as { error?: string }).error || "Failed to load files");
+                setDocuments([]);
             }
-        } catch (error) {
-            console.error("Failed to fetch drive documents");
+        } catch {
+            setFetchError("Failed to load files. Please refresh the page.");
+            setDocuments([]);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const categories = ["Resources", "Templates", "Brand Assets", "Product Specs", "Policies"];
-
-    // Filter Logic
-    const getFilteredDocs = () => {
+    const filteredDocs = useMemo(() => {
         let docs = [...documents];
 
-        // 1. Filter by View Mode
-        if (viewMode === 'RECENT') {
-            // Sort by updatedAt descending
-            docs.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        } else if (viewMode === 'SHARED' || viewMode === 'STARRED') {
-            // Placeholder: currently show empty or filtered if backend supported
-            // For now, let's just show All but maybe we can mock it
-            // docs = []; // Or filter by some future flag
+        if (viewMode === "RECENT") {
+            docs.sort(
+                (a, b) =>
+                    new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+            );
         }
 
-        // 2. Filter by Category (only if in ALL View)
-        if (viewMode === 'ALL' && selectedCategory) {
-            docs = docs.filter(doc => doc.category === selectedCategory);
+        if (viewMode === "ALL" && selectedCategory) {
+            docs = docs.filter((doc) => (doc.category || "General") === selectedCategory);
         }
 
-        // 3. Search
         if (searchQuery) {
-            docs = docs.filter(doc =>
-                doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                doc.category?.toLowerCase().includes(searchQuery.toLowerCase())
+            const q = searchQuery.toLowerCase();
+            docs = docs.filter(
+                (doc) =>
+                    doc.title.toLowerCase().includes(q) ||
+                    doc.category?.toLowerCase().includes(q) ||
+                    doc.description?.toLowerCase().includes(q)
             );
         }
 
         return docs;
+    }, [documents, viewMode, selectedCategory, searchQuery]);
+
+    const policyDocs = useMemo(
+        () => documents.filter((d) => (d.category || "General") === "Policies"),
+        [documents]
+    );
+
+    const recentCount = useMemo(() => {
+        const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        return documents.filter((d) => new Date(d.updatedAt).getTime() >= weekAgo).length;
+    }, [documents]);
+
+    const totalBytes = documents.reduce((acc, doc) => acc + (doc.size || 0), 0);
+    const totalGB = 10;
+    const usedGB = totalBytes / (1024 * 1024 * 1024);
+    const storagePct = Math.min((usedGB / totalGB) * 100, 100);
+
+    const fileHref = (url: string) => (url.startsWith("http") ? url : url);
+
+    const handleOpenDoc = (doc: DriveDocument) => setViewingDoc(doc);
+
+    const handleDownload = (doc: DriveDocument) => {
+        window.open(fileHref(doc.url), "_blank", "noopener,noreferrer");
     };
 
-    const filteredDocs = getFilteredDocs();
-
-    const handleOpenDoc = (doc: any) => {
-        setViewingDoc(doc);
+    const moveToFolder = async (docId: string, folder: string) => {
+        setMovingId(docId);
+        try {
+            const res = await fetch(`/api/drive/${docId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ category: folder }),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                alert((data as { error?: string }).error || "Failed to move file");
+                return;
+            }
+            const updated = await res.json();
+            setDocuments((prev) =>
+                prev.map((d) =>
+                    d.id === docId
+                        ? { ...d, category: updated.category, updatedAt: updated.updatedAt }
+                        : d
+                )
+            );
+            if (viewingDoc?.id === docId) {
+                setViewingDoc((v) => (v ? { ...v, category: updated.category } : v));
+            }
+        } catch {
+            alert("Failed to move file");
+        } finally {
+            setMovingId(null);
+            setDragOverFolder(null);
+        }
     };
 
-    const confirmDelete = (e: React.MouseEvent, doc: { id: string, title: string }) => {
+    const confirmDelete = (e: React.MouseEvent, doc: { id: string; title: string }) => {
         e.stopPropagation();
         setDocToDelete(doc);
         setDeleteModalOpen(true);
@@ -106,255 +227,566 @@ export default function DrivePage() {
         try {
             const res = await fetch(`/api/drive/${docToDelete.id}`, { method: "DELETE" });
             if (res.ok) {
-                setDocuments(prev => prev.filter(d => d.id !== docToDelete.id));
+                setDocuments((prev) => prev.filter((d) => d.id !== docToDelete.id));
                 setDeleteModalOpen(false);
                 setDocToDelete(null);
+                if (viewingDoc?.id === docToDelete.id) setViewingDoc(null);
             } else {
                 alert("Failed to delete file");
             }
-        } catch (error) {
-            console.error("Delete failed", error);
+        } catch {
             alert("Delete failed");
         }
     };
 
-    // Sidebar Button style helper
-    const getSidebarButtonStyle = (mode: string) => ({
-        border: 'none',
-        background: viewMode === mode ? 'rgba(var(--nuriek-blue-rgb), 0.1)' : 'transparent',
-        color: viewMode === mode ? 'var(--nuriek-blue)' : 'var(--text-secondary)',
-        cursor: 'pointer',
-        justifyContent: 'flex-start',
-        paddingLeft: '1rem'
-    });
+    const navItems: { mode: ViewMode; icon: LucideIcon; label: string; soon?: boolean }[] = [
+        { mode: "ALL", icon: HardDrive, label: "All files" },
+        { mode: "RECENT", icon: Clock, label: "Recent" },
+        { mode: "SHARED", icon: Share2, label: "Shared", soon: true },
+        { mode: "STARRED", icon: Star, label: "Starred", soon: true },
+    ];
+
+    const pageSubtitle = isAdmin
+        ? "Shared files, brand assets, templates, and company handbooks."
+        : "Policies, handbooks, and resources published for your role.";
+
+    const listTitle =
+        viewMode === "RECENT"
+            ? "Recent files"
+            : selectedCategory
+              ? `${selectedCategory}`
+              : "All files";
 
     return (
-        <div className="docContainer">
-            <header className="dashboardHeader">
-                <div className="welcomeSection">
-                    <h1>Company Drive & Handbooks</h1>
-                    <p>Access shared files, assets, and project resources</p>
+        <div className="hubPage driveHub">
+            <header className="hubHero">
+                <div className="hubHeroMain">
+                    <p className="hubEyebrow">{isAdmin ? "Knowledge base" : "Resources"}</p>
+                    <h1>
+                        {isAdmin ? (
+                            <>
+                                Company <span className="text-gradient">Drive</span>
+                            </>
+                        ) : (
+                            <>
+                                Employee <span className="text-gradient">Handbook</span>
+                            </>
+                        )}
+                    </h1>
+                    <p className="hubSubtitle">{pageSubtitle}</p>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <div className="searchBar" style={{ width: '300px' }}>
-                        <Search size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search in drive..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
+                <div className="hubHeroActions">
+                    <button
+                        type="button"
+                        className="hubStatChip"
+                        onClick={() => fetchDocs()}
+                        title="Refresh"
+                    >
+                        <RefreshCw size={16} />
+                        Refresh
+                    </button>
                     {isAdmin && (
-                        <button className="checkInButton" onClick={() => setIsUploadModalOpen(true)}>
+                        <button
+                            type="button"
+                            className="hubBtnPrimary"
+                            onClick={() => setIsUploadModalOpen(true)}
+                        >
                             <Upload size={18} />
-                            <span>Upload File</span>
+                            Upload file
                         </button>
                     )}
                 </div>
             </header>
 
-            <div className="grid" style={{ gridTemplateColumns: '240px 1fr', gap: '2rem' }}>
-                <aside className="card glass" style={{ height: 'fit-content' }}>
-                    <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <button
-                            className={`logItem ${viewMode === 'ALL' ? 'active' : ''}`}
-                            style={getSidebarButtonStyle('ALL')}
-                            onClick={() => { setViewMode('ALL'); setSelectedCategory(null); }}
-                        >
-                            <HardDrive size={18} />
-                            <span>All Files</span>
-                        </button>
-                        <button
-                            className="logItem"
-                            style={getSidebarButtonStyle('SHARED')}
-                            onClick={() => setViewMode('SHARED')}
-                        >
-                            <Share2 size={18} />
-                            <span>Shared with me</span>
-                        </button>
-                        <button
-                            className="logItem"
-                            style={getSidebarButtonStyle('STARRED')}
-                            onClick={() => setViewMode('STARRED')}
-                        >
-                            <Star size={18} />
-                            <span>Starred</span>
-                        </button>
-                        <button
-                            className="logItem"
-                            style={getSidebarButtonStyle('RECENT')}
-                            onClick={() => setViewMode('RECENT')}
-                        >
-                            <Clock size={18} />
-                            <span>Recent</span>
-                        </button>
+            <div className="hubKpiGrid">
+                <div className="hubKpiCard glass">
+                    <span className="hubKpiLabel">Total files</span>
+                    <span className="hubKpiValue hubKpiValue--blue">{documents.length}</span>
+                </div>
+                <div className="hubKpiCard glass">
+                    <span className="hubKpiLabel">Handbooks & policies</span>
+                    <span className="hubKpiValue hubKpiValue--green">{policyDocs.length}</span>
+                </div>
+                <div className="hubKpiCard glass">
+                    <span className="hubKpiLabel">Updated this week</span>
+                    <span className="hubKpiValue hubKpiValue--orange">{recentCount}</span>
+                </div>
+                <div className="hubKpiCard glass">
+                    <span className="hubKpiLabel">Storage used</span>
+                    <span className="hubKpiValue hubKpiValue--default">
+                        {usedGB < 0.01 ? formatBytes(totalBytes) : `${usedGB.toFixed(2)} GB`}
+                    </span>
+                </div>
+            </div>
+
+            {!isAdmin && policyDocs.length > 0 && (
+                <div className="driveFeatured">
+                    <button
+                        type="button"
+                        className="driveFeaturedCard glass"
+                        onClick={() => {
+                            setViewMode("ALL");
+                            setSelectedCategory("Policies");
+                        }}
+                    >
+                        <div className="driveFeaturedIcon">
+                            <Shield size={22} />
+                        </div>
+                        <div>
+                            <div className="driveFeaturedTitle">Policies & handbooks</div>
+                            <p className="driveFeaturedSub">
+                                {policyDocs.length} document{policyDocs.length !== 1 ? "s" : ""} — tap to browse
+                            </p>
+                        </div>
+                    </button>
+                </div>
+            )}
+
+            {isAdmin && (
+                <p className="driveAdminHint">
+                    <strong>Admin:</strong> Drag a file row onto a folder card, or use the folder dropdown in the table to reorganize.
+                    {selectedCategory ? ` New uploads default to “${selectedCategory}”.` : ""}
+                </p>
+            )}
+
+            <div className="driveLayout">
+                <aside className="driveSidebar glass">
+                    <nav>
+                        {navItems.map(({ mode, icon: Icon, label, soon }) => (
+                            <button
+                                key={mode}
+                                type="button"
+                                className={`driveNavBtn ${viewMode === mode ? "driveNavBtn--active" : ""} ${soon ? "driveNavBtn--muted" : ""}`}
+                                onClick={() => {
+                                    if (soon) return;
+                                    setViewMode(mode);
+                                    if (mode !== "ALL") setSelectedCategory(null);
+                                }}
+                                disabled={soon}
+                            >
+                                <Icon size={18} />
+                                {label}
+                                {soon && <span className="driveNavBadge">Soon</span>}
+                            </button>
+                        ))}
                     </nav>
 
-                    <div style={{ marginTop: '2rem' }}>
-                        <span className="statLabel" style={{ paddingLeft: '0.5rem' }}>Storage</span>
-                        <div style={{ padding: '0.5rem' }}>
-                            {(() => {
-                                const totalBytes = documents.reduce((acc, doc) => acc + (doc.size || 0), 0);
-                                const totalGB = 10;
-                                const usedGB = totalBytes / (1024 * 1024 * 1024);
-                                const percentage = Math.min((usedGB / totalGB) * 100, 100);
-                                return (
-                                    <>
-                                        <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-                                            <div style={{ width: `${percentage}%`, height: '100%', background: 'var(--nuriek-blue)' }} />
-                                        </div>
-                                        <p style={{ fontSize: '0.7rem', marginTop: '0.5rem', color: 'var(--text-tertiary)' }}>
-                                            {usedGB.toFixed(2)} GB of {totalGB} GB used
-                                        </p>
-                                    </>
-                                );
-                            })()}
+                    <div className="driveStorage">
+                        <p className="driveStorageLabel">Storage</p>
+                        <div className="driveStorageTrack">
+                            <div
+                                className="driveStorageFill"
+                                style={{ width: `${storagePct}%` }}
+                            />
                         </div>
+                        <p className="driveStorageMeta">
+                            {usedGB.toFixed(2)} GB of {totalGB} GB
+                        </p>
                     </div>
                 </aside>
 
                 <main>
-                    {viewMode === 'ALL' && (
+                    <div className="hubToolbar" style={{ marginBottom: "1rem" }}>
+                        <div className="hubSearchWrap">
+                            <Search size={18} />
+                            <input
+                                type="search"
+                                className="hubSearchInput"
+                                placeholder="Search files, folders, descriptions…"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <div className="driveViewToggle">
+                            <button
+                                type="button"
+                                className={`driveViewBtn ${displayMode === "list" ? "driveViewBtn--active" : ""}`}
+                                onClick={() => setDisplayMode("list")}
+                                aria-label="List view"
+                            >
+                                <List size={18} />
+                            </button>
+                            <button
+                                type="button"
+                                className={`driveViewBtn ${displayMode === "grid" ? "driveViewBtn--active" : ""}`}
+                                onClick={() => setDisplayMode("grid")}
+                                aria-label="Grid view"
+                            >
+                                <LayoutGrid size={18} />
+                            </button>
+                        </div>
+                        <span className="hubResultCount">
+                            {filteredDocs.length} result{filteredDocs.length !== 1 ? "s" : ""}
+                        </span>
+                    </div>
+
+                    {viewMode === "ALL" && (
                         <section>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                <h2 className="cardTitle">Folders</h2>
+                            <div className="driveSectionHead">
+                                <h2 className="driveSectionTitle">Folders</h2>
                                 {selectedCategory && (
                                     <button
+                                        type="button"
+                                        className="driveClearFilter"
                                         onClick={() => setSelectedCategory(null)}
-                                        style={{ background: 'none', color: 'var(--nuriek-blue)', border: 'none', fontSize: '0.85rem', cursor: 'pointer' }}
                                     >
-                                        View All Folders
+                                        Clear folder ×
                                     </button>
                                 )}
                             </div>
-                            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
-                                {categories.map((folder) => (
-                                    <div
-                                        key={folder}
-                                        className={`card glass folderCard ${selectedCategory === folder ? 'selected' : ''}`}
-                                        style={{
-                                            padding: '1rem',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s',
-                                            border: selectedCategory === folder ? '1px solid var(--nuriek-blue)' : '1px solid rgba(255,255,255,0.1)',
-                                            background: selectedCategory === folder ? 'rgba(var(--nuriek-blue-rgb), 0.05)' : 'rgba(255,255,255,0.02)'
-                                        }}
-                                        onClick={() => setSelectedCategory(folder)}
-                                    >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <Folder color={folder === "Policies" ? "#34c759" : "#4a90e2"} fill={folder === "Policies" ? "#34c75922" : "#4a90e222"} />
-                                            <MoreVertical size={16} />
-                                        </div>
-                                        <div style={{ marginTop: '1rem' }}>
-                                            <p style={{ fontWeight: '500' }}>{folder}</p>
-                                            <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
-                                                {documents.filter(d => d.category === folder).length} files
+                            <div className="driveFolderGrid">
+                                {categories.map((folder) => {
+                                    const meta = FOLDER_META[folder] ?? FOLDER_META.General;
+                                    const Icon = meta.icon;
+                                    const count = documents.filter(
+                                        (d) => (d.category || "General") === folder
+                                    ).length;
+                                    return (
+                                        <button
+                                            key={folder}
+                                            type="button"
+                                            className={`driveFolderCard glass ${
+                                                selectedCategory === folder
+                                                    ? "driveFolderCard--selected"
+                                                    : ""
+                                            } ${dragOverFolder === folder ? "driveFolderCard--drag" : ""}`}
+                                            onClick={() =>
+                                                setSelectedCategory(
+                                                    selectedCategory === folder ? null : folder
+                                                )
+                                            }
+                                            onDragOver={(e) => {
+                                                if (!isAdmin) return;
+                                                e.preventDefault();
+                                                setDragOverFolder(folder);
+                                            }}
+                                            onDragLeave={() => setDragOverFolder(null)}
+                                            onDrop={(e) => {
+                                                if (!isAdmin) return;
+                                                e.preventDefault();
+                                                const docId = e.dataTransfer.getData("docId");
+                                                if (docId) moveToFolder(docId, folder);
+                                            }}
+                                        >
+                                            <div
+                                                className="driveFolderIcon"
+                                                style={{ background: meta.bg, color: meta.color }}
+                                            >
+                                                <Icon size={20} />
+                                            </div>
+                                            <p className="driveFolderName">{folder}</p>
+                                            <p className="driveFolderMeta">
+                                                {count} file{count !== 1 ? "s" : ""} · {meta.hint}
                                             </p>
-                                        </div>
-                                    </div>
-                                ))}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </section>
                     )}
 
-                    <section style={{ marginTop: viewMode === 'ALL' ? '3rem' : '0' }}>
-                        <h2 className="cardTitle" style={{ marginBottom: '1rem' }}>
-                            {viewMode === 'RECENT' ? "Recent Files" : selectedCategory ? `${selectedCategory} Files` : "All Documents"}
-                        </h2>
-                        <div className="card glass" style={{ padding: 0 }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                                    <tr>
-                                        <th style={{ textAlign: 'left', padding: '1rem', color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>Name</th>
-                                        <th style={{ textAlign: 'left', padding: '1rem', color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>Category</th>
-                                        <th style={{ textAlign: 'left', padding: '1rem', color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>Last Modified</th>
-                                        <th style={{ textAlign: 'left', padding: '1rem', color: 'var(--text-tertiary)', fontSize: '0.75rem' }}></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {isLoading ? (
+                    <section>
+                        <div className="driveSectionHead">
+                            <h2 className="driveSectionTitle">
+                                {listTitle}
+                                {!isLoading && (
+                                    <span
+                                        style={{
+                                            fontWeight: 400,
+                                            color: "var(--text-tertiary)",
+                                            marginLeft: "0.35rem",
+                                        }}
+                                    >
+                                        ({filteredDocs.length})
+                                    </span>
+                                )}
+                            </h2>
+                        </div>
+
+                        {fetchError && (
+                            <p style={{ color: "#ff3b30", fontSize: "0.88rem", marginBottom: "0.75rem" }}>
+                                {fetchError}
+                            </p>
+                        )}
+
+                        {selectedCategory &&
+                            filteredDocs.length === 0 &&
+                            documents.length > 0 &&
+                            !searchQuery && (
+                                <p style={{ color: "#ff9f0a", fontSize: "0.88rem", marginBottom: "0.75rem" }}>
+                                    No files in “{selectedCategory}”.{" "}
+                                    <button
+                                        type="button"
+                                        className="driveClearFilter"
+                                        style={{ display: "inline", marginLeft: "0.25rem" }}
+                                        onClick={() => setSelectedCategory(null)}
+                                    >
+                                        Show all files
+                                    </button>
+                                </p>
+                            )}
+
+                        <div className="driveFilePanel glass">
+                            {isLoading ? (
+                                <div className="hubLoading">
+                                    <Loader2 className="animate-spin" size={32} />
+                                </div>
+                            ) : filteredDocs.length === 0 ? (
+                                <div className="hubEmpty">
+                                    <FileText size={48} className="hubEmptyIcon" />
+                                    <p>
+                                        {searchQuery
+                                            ? "No matching files found."
+                                            : "No files in this view yet."}
+                                    </p>
+                                    {isAdmin && !searchQuery && (
+                                        <button
+                                            type="button"
+                                            className="hubBtnPrimary"
+                                            style={{ marginTop: "1rem" }}
+                                            onClick={() => setIsUploadModalOpen(true)}
+                                        >
+                                            <Upload size={18} />
+                                            Upload first file
+                                        </button>
+                                    )}
+                                </div>
+                            ) : displayMode === "grid" ? (
+                                <div className="driveFileGrid">
+                                    {filteredDocs.map((doc) => {
+                                        const cat = doc.category || "General";
+                                        const meta = FOLDER_META[cat] ?? FOLDER_META.General;
+                                        const Icon = meta.icon;
+                                        return (
+                                            <div
+                                                key={doc.id}
+                                                className="driveFileCard"
+                                                draggable={isAdmin}
+                                                onDragStart={(e) => {
+                                                    e.dataTransfer.setData("docId", doc.id);
+                                                    e.dataTransfer.effectAllowed = "move";
+                                                }}
+                                                onClick={() => handleOpenDoc(doc)}
+                                                role="button"
+                                                tabIndex={0}
+                                                onKeyDown={(e) =>
+                                                    e.key === "Enter" && handleOpenDoc(doc)
+                                                }
+                                            >
+                                                <div
+                                                    className="driveFileIcon"
+                                                    style={{
+                                                        background: meta.bg,
+                                                        color: meta.color,
+                                                    }}
+                                                >
+                                                    <Icon size={18} />
+                                                </div>
+                                                <p className="driveFileCardTitle">{doc.title}</p>
+                                                <p className="driveFileCardMeta">
+                                                    {cat} · {formatBytes(doc.size || 0)}
+                                                </p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <table className="driveTable">
+                                    <thead>
                                         <tr>
-                                            <td colSpan={4} style={{ textAlign: 'center', padding: '3rem' }}>
-                                                <Loader2 className="animate-spin" />
-                                            </td>
+                                            <th>Name</th>
+                                            <th>Folder</th>
+                                            <th>Size</th>
+                                            <th>Modified</th>
+                                            <th style={{ width: 100 }} />
                                         </tr>
-                                    ) : filteredDocs.length > 0 ? (
-                                        filteredDocs.map((doc) => (
-                                            <tr key={doc.id} className="logItem" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }} onClick={() => handleOpenDoc(doc)}>
-                                                <td style={{ padding: '1rem' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                                                        <FileText size={18} className="text-blue-400" />
-                                                        <span>{doc.title}</span>
+                                    </thead>
+                                    <tbody>
+                                        {filteredDocs.map((doc) => (
+                                            <tr
+                                                key={doc.id}
+                                                className="driveTableRow"
+                                                draggable={isAdmin}
+                                                onDragStart={(e) => {
+                                                    e.dataTransfer.setData("docId", doc.id);
+                                                    e.dataTransfer.effectAllowed = "move";
+                                                }}
+                                                onClick={() => handleOpenDoc(doc)}
+                                            >
+                                                <td>
+                                                    <div className="driveFileName">
+                                                        <div className="driveFileIcon">
+                                                            <FileText size={18} />
+                                                        </div>
+                                                        {doc.title}
                                                     </div>
                                                 </td>
-                                                <td style={{ padding: '1rem', opacity: 0.7 }}>{doc.category || "General"}</td>
-                                                <td style={{ padding: '1rem', opacity: 0.7 }}>{new Date(doc.updatedAt).toLocaleDateString()}</td>
-                                                <td style={{ padding: '1rem', textAlign: 'right' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                                <td onClick={(e) => e.stopPropagation()}>
+                                                    {isAdmin ? (
+                                                        <select
+                                                            className="admInput"
+                                                            style={{
+                                                                minWidth: 130,
+                                                                padding: "0.35rem 0.5rem",
+                                                                fontSize: "0.85rem",
+                                                            }}
+                                                            value={doc.category || "General"}
+                                                            disabled={movingId === doc.id}
+                                                            onChange={(e) =>
+                                                                moveToFolder(doc.id, e.target.value)
+                                                            }
+                                                        >
+                                                            {categories.map((c) => (
+                                                                <option key={c} value={c}>
+                                                                    {c}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    ) : (
+                                                        <span
+                                                            className={`driveCatBadge ${
+                                                                doc.category === "Policies"
+                                                                    ? "driveCatBadge--policies"
+                                                                    : ""
+                                                            }`}
+                                                        >
+                                                            {doc.category || "General"}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td style={{ color: "var(--text-tertiary)" }}>
+                                                    {formatBytes(doc.size || 0)}
+                                                </td>
+                                                <td style={{ color: "var(--text-tertiary)" }}>
+                                                    {new Date(doc.updatedAt).toLocaleDateString()}
+                                                </td>
+                                                <td>
+                                                    <div className="driveRowActions">
                                                         {isAdmin && (
                                                             <button
-                                                                onClick={(e) => confirmDelete(e, { id: doc.id, title: doc.title })}
-                                                                style={{ color: '#ef4444', padding: '0.5rem', borderRadius: '4px', opacity: 0.8, cursor: 'pointer' }}
-                                                                title="Delete File"
+                                                                type="button"
+                                                                className="admIconBtn admIconBtn--danger admIconBtn--iconOnly"
+                                                                onClick={(e) =>
+                                                                    confirmDelete(e, {
+                                                                        id: doc.id,
+                                                                        title: doc.title,
+                                                                    })
+                                                                }
+                                                                title="Delete"
                                                             >
                                                                 <Trash2 size={16} />
                                                             </button>
                                                         )}
-                                                        <button className="text-blue-400" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}>View</button>
+                                                        <button
+                                                            type="button"
+                                                            className="admIconBtn admIconBtn--iconOnly"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDownload(doc);
+                                                            }}
+                                                            title="Open"
+                                                        >
+                                                            <ExternalLink size={16} />
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={4} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-tertiary)' }}>
-                                                {searchQuery ? "No matching files found." : "No files found."}
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
                     </section>
                 </main>
             </div>
 
-            {/* Document Preview Modal */}
             {viewingDoc && (
-                <div className="modalOverlay" style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 1000, backdropFilter: 'blur(5px)'
-                }} onClick={() => setViewingDoc(null)}>
-                    <div className="card glass" style={{ maxWidth: '600px', width: '90%', padding: '2rem', position: 'relative' }} onClick={e => e.stopPropagation()}>
-                        <header style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
-                            <div style={{
-                                width: '64px', height: '64px', borderRadius: '16px',
-                                background: 'rgba(var(--nuriek-blue-rgb), 0.1)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                margin: '0 auto 1rem', color: 'var(--nuriek-blue)'
-                            }}>
+                <div
+                    className="drvModalOverlay"
+                    onClick={() => setViewingDoc(null)}
+                    role="presentation"
+                >
+                    <div
+                        className="drvModal glass drvModal--wide"
+                        onClick={(e) => e.stopPropagation()}
+                        role="dialog"
+                        aria-labelledby="drive-preview-title"
+                    >
+                        <button
+                            type="button"
+                            className="drvModalClose"
+                            onClick={() => setViewingDoc(null)}
+                            aria-label="Close"
+                        >
+                            ×
+                        </button>
+                        <div className="drvModalHero">
+                            <div className="drvModalFileIcon">
                                 <FileText size={32} />
                             </div>
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>{viewingDoc.title}</h2>
-                            <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>{viewingDoc.category}</p>
-                        </header>
-
-                        <div style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '1.5rem' }}>
-                            <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Description</h4>
-                            <p style={{ fontSize: '0.95rem', lineHeight: 1.6 }}>{viewingDoc.description || "Official company document for employee review."}</p>
+                            <h2 id="drive-preview-title" className="drvModalFileTitle">
+                                {viewingDoc.title}
+                            </h2>
+                            <span
+                                className={`driveCatBadge ${
+                                    viewingDoc.category === "Policies"
+                                        ? "driveCatBadge--policies"
+                                        : ""
+                                }`}
+                            >
+                                {viewingDoc.category || "General"}
+                            </span>
                         </div>
 
-                        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <button className="checkInButton" style={{ width: '100%', justifyContent: 'center' }} onClick={() => window.open(viewingDoc.url, '_blank')}>
-                                <span>Download PDF</span>
+                        {isAdmin && (
+                            <div className="admField" style={{ marginBottom: "1rem" }}>
+                                <label className="admLabel">
+                                    <FolderInput
+                                        size={14}
+                                        style={{ verticalAlign: "middle", marginRight: 4 }}
+                                    />
+                                    Move to folder
+                                </label>
+                                <select
+                                    className="admInput"
+                                    value={viewingDoc.category || "General"}
+                                    disabled={movingId === viewingDoc.id}
+                                    onChange={(e) =>
+                                        moveToFolder(viewingDoc.id, e.target.value)
+                                    }
+                                >
+                                    {categories.map((c) => (
+                                        <option key={c} value={c}>
+                                            {c}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        <div className="drvDescBox">
+                            <p className="drvDescLabel">Description</p>
+                            <p className="drvDescText">
+                                {viewingDoc.description ||
+                                    "Official company document for employee review."}
+                            </p>
+                        </div>
+
+                        <div className="drvModalActions">
+                            <button
+                                type="button"
+                                className="admSubmitBtn"
+                                style={{ justifyContent: "center" }}
+                                onClick={() => handleDownload(viewingDoc)}
+                            >
+                                <ExternalLink size={18} />
+                                Open / download
                             </button>
-                            <button style={{
-                                width: '100%', padding: '0.75rem', borderRadius: '12px',
-                                border: '1px solid var(--border)', background: 'none', color: 'white',
-                                cursor: 'pointer', fontWeight: 600
-                            }} onClick={() => setViewingDoc(null)}>
+                            <button
+                                type="button"
+                                className="drvBtnGhost"
+                                onClick={() => setViewingDoc(null)}
+                            >
                                 Close
                             </button>
                         </div>
@@ -365,7 +797,9 @@ export default function DrivePage() {
             <UploadDocumentModal
                 isOpen={isUploadModalOpen}
                 onClose={() => setIsUploadModalOpen(false)}
+                defaultCategory={selectedCategory || "General"}
                 onUploadSuccess={() => {
+                    setViewMode("ALL");
                     fetchDocs();
                 }}
             />

@@ -1,16 +1,12 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     Clock,
     Calendar,
-    Search,
     Filter,
-    Download,
     CheckCircle2,
-    XCircle,
-    AlertCircle,
     Plus,
     History,
     FileText,
@@ -20,6 +16,9 @@ import {
 } from "lucide-react";
 import "@/styles/dashboard.css";
 import { PREDEFINED_TASKS } from "@/lib/constants";
+import type { AttendanceLog, StatsSummary, TimesheetRecord } from "@/lib/api-types";
+
+type OrgTask = { id: string; title: string };
 
 export default function AttendancePage() {
     const { data: session } = useSession();
@@ -27,10 +26,10 @@ export default function AttendancePage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [tasks, setTasks] = useState("");
     const [hours, setHours] = useState("8");
-    const [timesheets, setTimesheets] = useState<any[]>([]);
-    const [logs, setLogs] = useState<any[]>([]);
-    const [orgTasks, setOrgTasks] = useState<any[]>([]);
-    const [stats, setStats] = useState<any>(null);
+    const [timesheets, setTimesheets] = useState<TimesheetRecord[]>([]);
+    const [logs, setLogs] = useState<AttendanceLog[]>([]);
+    const [orgTasks, setOrgTasks] = useState<OrgTask[]>([]);
+    const [stats, setStats] = useState<StatsSummary | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     
     // Org Task Form (For Admins)
@@ -38,12 +37,30 @@ export default function AttendancePage() {
     const [isPublishing, setIsPublishing] = useState(false);
     const [mountDate, setMountDate] = useState("");
 
-    useEffect(() => {
-        setMountDate(new Date().toLocaleDateString('en-GB'));
-        fetchData();
-    }, [activeTab]);
+    const fetchOrgTasks = useCallback(async () => {
+        try {
+            const res = await fetch("/api/org-tasks");
+            if (res.ok) {
+                setOrgTasks(await res.json());
+            }
+        } catch {
+            console.error("Failed to fetch org tasks");
+        }
+    }, []);
 
-    const fetchData = async () => {
+    const fetchTimesheets = useCallback(async () => {
+        try {
+            const res = await fetch("/api/timesheets");
+            if (res.ok) {
+                const data = await res.json();
+                setTimesheets(data);
+            }
+        } catch {
+            console.error("Failed to fetch timesheets");
+        }
+    }, []);
+
+    const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
             if (activeTab === 'attendance') {
@@ -57,35 +74,17 @@ export default function AttendancePage() {
                 fetchTimesheets();
                 fetchOrgTasks();
             }
-        } catch (error) {
+        } catch {
             console.error("Failed to fetch attendance data");
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [activeTab, fetchTimesheets, fetchOrgTasks]);
 
-    const fetchOrgTasks = async () => {
-        try {
-            const res = await fetch("/api/org-tasks");
-            if (res.ok) {
-                setOrgTasks(await res.json());
-            }
-        } catch (error) {
-            console.error("Failed to fetch org tasks");
-        }
-    };
-
-    const fetchTimesheets = async () => {
-        try {
-            const res = await fetch("/api/timesheets");
-            if (res.ok) {
-                const data = await res.json();
-                setTimesheets(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch timesheets");
-        }
-    };
+    useEffect(() => {
+        setMountDate(new Date().toLocaleDateString('en-GB'));
+        fetchData();
+    }, [fetchData]);
 
     const handleTimesheetSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -102,7 +101,7 @@ export default function AttendancePage() {
                 fetchTimesheets();
                 alert("Timesheet submitted successfully!");
             }
-        } catch (error) {
+        } catch {
             alert("Failed to submit timesheet");
         } finally {
             setIsSubmitting(false);
@@ -125,14 +124,14 @@ export default function AttendancePage() {
             } else {
                 alert("Failed to publish task (Unauthorized or Error)");
             }
-        } catch (error) {
+        } catch {
             alert("Failed to publish task");
         } finally {
             setIsPublishing(false);
         }
     };
 
-    const userRole = (session?.user as any)?.role;
+    const userRole = session?.user?.role;
     const isAdmin = userRole === "HR_ADMIN" || userRole === "FOUNDER";
 
     return (
@@ -182,8 +181,8 @@ export default function AttendancePage() {
                                     <span className="statValue" style={{ color: '#ff9f0a' }}>{stats?.lateMarks || 0}</span>
                                 </div>
                                 <div className="statItem">
-                                    <span className="statLabel">Leave Used</span>
-                                    <span className="statValue" style={{ color: 'var(--nuriek-blue)' }}>{stats?.leaveBalanceUsed || 0}</span>
+                                    <span className="statLabel">Leave days (this month)</span>
+                                    <span className="statValue" style={{ color: 'var(--nuriek-blue)' }}>{stats?.leaveDaysThisMonth ?? 0}</span>
                                 </div>
                             </div>
                         </section>
@@ -333,7 +332,7 @@ export default function AttendancePage() {
                                 {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : (
                                     <>
                                         <CheckCircle2 size={18} />
-                                        <span>Submit Today's Timesheet</span>
+                                        <span>Submit Today&apos;s Timesheet</span>
                                     </>
                                 )}
                             </button>

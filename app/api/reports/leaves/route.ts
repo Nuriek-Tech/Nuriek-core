@@ -14,16 +14,26 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const userId = searchParams.get("userId");
+    const type = searchParams.get("type");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
 
     try {
-        const where: { status?: string; userId?: string } = {};
+        const where: {
+            status?: string;
+            userId?: string;
+            type?: string;
+            startDate?: { gte?: Date; lte?: Date };
+        } = {};
 
-        if (status) {
-            where.status = status;
-        }
-
-        if (userId) {
-            where.userId = userId;
+        if (status) where.status = status;
+        if (userId) where.userId = userId;
+        if (type) where.type = type;
+        if (from) where.startDate = { ...where.startDate, gte: new Date(from) };
+        if (to) {
+            const end = new Date(to);
+            end.setHours(23, 59, 59, 999);
+            where.startDate = { ...where.startDate, lte: end };
         }
 
         const leaves = await prisma.leave.findMany({
@@ -34,6 +44,7 @@ export async function GET(req: Request) {
                         name: true,
                         email: true,
                         role: true,
+                        profile: { select: { department: true } },
                     },
                 },
             },

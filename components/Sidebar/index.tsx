@@ -2,51 +2,37 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
 import { signOut, useSession } from "next-auth/react";
-import * as Icons from "lucide-react";
 import { useSidebar } from "@/components/Providers";
-import { NAV_ITEMS, ROLES } from "@/lib/constants";
+import { NavIcon } from "@/lib/nav-icons";
+import { ADMIN_ROLES, ROLES } from "@/lib/constants";
+import { formatRoleLabel } from "@/lib/roles";
+import { filterNavItemsForUser } from "@/lib/nav-filter";
+import { useNavRole } from "@/hooks/useNavRole";
 import "./sidebar.css";
-
-const IconHelper = ({ name, className }: { name: string; className?: string }) => {
-    const Icon = (Icons as any)[name];
-    return Icon ? <Icon className={className} size={20} /> : null;
-};
 
 export default function Sidebar() {
     const pathname = usePathname();
     const { data: session } = useSession();
     const { isOpen, setIsOpen } = useSidebar();
-    const userRole = (session?.user as any)?.role || ROLES.EMPLOYEE;
+    const { role: userRole, hrPermissions, isReady } = useNavRole();
 
-    const filteredNavItems = NAV_ITEMS.filter((item) =>
-        item.roles.includes(userRole)
-    );
+    const filteredNavItems = filterNavItemsForUser(userRole, hrPermissions);
 
     return (
         <nav className={`sidebar glass ${isOpen ? "sidebarOpen" : ""}`}>
             <div className="logoSection">
-                <Image
-                    src="/logo.png"
-                    alt="Nuriek Logo"
-                    width={32}
-                    height={32}
-                    className="logoImage"
-                />
-                <span className="logoText text-gradient">Nuriek Core</span>
+                <span className="logoText">NURIEK CORE</span>
             </div>
 
-            <div className="navSection">
+            <div className={`navSection ${!isReady ? "navSection--settling" : ""}`}>
                 {filteredNavItems.map((item) => {
                     const isActive = pathname.startsWith(item.path);
                     let label = item.label;
 
-                    // Rename "Company Drive" to "Employee Handbook" for non-admins
-                    if (item.path === "/drive" && ![ROLES.FOUNDER, ROLES.HR_ADMIN].includes(userRole)) {
+                    if (item.path === "/drive" && !ADMIN_ROLES.includes(userRole)) {
                         label = "Employee Handbook";
                     }
-                    // Rename "Intern Management" to "My Performance" for interns
                     if (item.path === "/interns" && userRole === ROLES.INTERN) {
                         label = "My Performance";
                     }
@@ -55,10 +41,11 @@ export default function Sidebar() {
                         <Link
                             key={item.path}
                             href={item.path}
+                            prefetch
                             className={`navItem ${isActive ? "navItemActive" : ""}`}
                             onClick={() => setIsOpen(false)}
                         >
-                            <IconHelper name={item.icon} className="icon" />
+                            <NavIcon name={item.icon} className="icon" />
                             <span>{label}</span>
                         </Link>
                     );
@@ -71,13 +58,13 @@ export default function Sidebar() {
                         {session?.user?.name?.charAt(0) || "U"}
                     </div>
                     <div className="userDetails">
-                        <span className="userName">{session?.user?.name}</span>
-                        <span className="userRole">{userRole.replace("_", " ").toLowerCase()}</span>
+                        <span className="userName">{session?.user?.name ?? "…"}</span>
+                        <span className="userRole">{formatRoleLabel(userRole)}</span>
                     </div>
                 </div>
 
                 <button onClick={() => signOut()} className="logoutButton">
-                    <IconHelper name="LogOut" />
+                    <NavIcon name="LogOut" />
                     <span>Logout</span>
                 </button>
             </div>

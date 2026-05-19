@@ -1,0 +1,429 @@
+/* Portal & HR settings */
+.setHub {
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+  gap: 1rem;
+}
+
+.setHero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.setHeroMain {
+  flex: 1;
+  min-width: 200px;
+}
+
+.setHeroMain h1 {
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  margin-bottom: 0.25rem;
+}
+
+.setHeroSubtitle {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.setLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.setSideCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .setLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.setPanel {
+  padding: 1.35rem;
+  border-radius: var(--radius-lg);
+}
+
+.setPanel--compact {
+  padding: 1rem 1.15rem;
+}
+
+.setPanel--compact .setPanelHeader {
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.5rem;
+}
+
+.setLoadingText {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.setPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.setPanelTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.setPanelIcon {
+  color: var(--nuriek-blue);
+  background: rgba(var(--nuriek-blue-rgb), 0.1);
+  padding: 0.4rem;
+  border-radius: var(--radius-sm);
+}
+
+.setWarn {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 159, 10, 0.1);
+  border: 1px solid rgba(255, 159, 10, 0.25);
+  color: #ff9f0a;
+  font-size: 0.88rem;
+  margin-bottom: 1rem;
+}
+
+.setForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 420px;
+}
+
+.setForm--wide {
+  max-width: none;
+  gap: 0.75rem;
+}
+
+.setGrid2--tight {
+  gap: 0.75rem;
+}
+
+.setHint--inline {
+  margin: -0.25rem 0 0.25rem;
+}
+
+.setMsg {
+  font-size: 0.85rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+}
+
+.setMsg--error {
+  background: rgba(255, 59, 48, 0.1);
+  border: 1px solid rgba(255, 59, 48, 0.22);
+  color: #ff3b30;
+}
+
+.setMsg--success {
+  background: rgba(52, 199, 89, 0.1);
+  border: 1px solid rgba(52, 199, 89, 0.22);
+  color: #34c759;
+}
+
+.setTimeRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.setTimeInput {
+  width: 72px;
+  text-align: center;
+}
+
+.setGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 600px) {
+  .setGrid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.setHint {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+  margin-top: 0.25rem;
+}
+
+.setSaveRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.setAccountCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.setAccountAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--nuriek-blue), var(--nuriek-accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.setAccountBody {
+  min-width: 0;
+}
+
+.setAccountName {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.setAccountMeta {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.setAccountRole {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  text-transform: capitalize;
+  margin-top: 0.15rem;
+}
+
+.setPrefsToggles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1rem;
+}
+
+@media (max-width: 520px) {
+  .setPrefsToggles {
+    grid-template-columns: 1fr;
+  }
+}
+
+.setToggleRow--compact {
+  padding: 0.5rem 0;
+  border-bottom: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.setToggleRow--compact .setToggle {
+  align-self: flex-end;
+}
+
+.setToggleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.setToggleRow:last-child {
+  border-bottom: none;
+}
+
+.setToggleLabel {
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.setToggleHint {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  margin-top: 0.15rem;
+}
+
+.setToggle {
+  width: 44px;
+  height: 24px;
+  border-radius: var(--radius-xl);
+  background: var(--surface-lighter);
+  border: 1px solid var(--border);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+.setToggle--on {
+  background: var(--nuriek-blue);
+  border-color: var(--nuriek-blue);
+}
+
+.setToggleKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform var(--transition-fast);
+}
+
+.setToggle--on .setToggleKnob {
+  transform: translateX(20px);
+}
+
+.hrAccessPanel {
+  margin-bottom: 0;
+}
+
+.hrAccessList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hrAccessCard {
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: rgba(var(--nuriek-blue-rgb), 0.03);
+}
+
+.hrAccessCardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.hrAccessRole {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 0.15rem;
+}
+
+.hrAccessCardActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.hrAccessGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.5rem;
+}
+
+.hrAccessCheck {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.hrAccessCheck input {
+  margin-top: 0.2rem;
+}
+
+.hrAccessAddRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.hrAccessAddRow .admSelect {
+  flex: 1;
+  min-width: 220px;
+}
+
+.setAdminLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--nuriek-blue);
+}
+
+.setAdminLink:hover {
+  text-decoration: underline;
+}
+
+.setAdminBlock {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  scroll-margin-top: 1rem;
+}
+
+.setAdminBlockHead {
+  margin-bottom: 1rem;
+}
+
+.setAdminBlockTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0.25rem 0 0.35rem;
+}
+
+.setAdminBlockIcon {
+  color: var(--nuriek-blue);
+}
+
+.setAdminBlockDesc {
+  margin: 0;
+}
+
+.setAdminFormGap {
+  margin-top: 1rem;
+}

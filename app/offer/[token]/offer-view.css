@@ -1,0 +1,226 @@
+.offerViewPage {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #ebe8e1;
+}
+
+.offerViewBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-shrink: 0;
+  padding: 0.75rem 1.25rem;
+  background: #fdfcfa;
+  border-bottom: 1px solid rgba(26, 25, 23, 0.1);
+}
+
+.offerViewBrand {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+  font-weight: 500;
+  color: #3d5248;
+  letter-spacing: 0.04em;
+}
+
+.offerViewBarActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.offerViewBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.offerViewBtn--ghost {
+  background: transparent;
+  border: 1px solid rgba(26, 25, 23, 0.15);
+  color: #1a1917;
+}
+
+.offerViewBtn--primary {
+  background: #3d5248;
+  color: #f4f1eb;
+}
+
+.offerViewFrame {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: none;
+  background: #f0ede8;
+}
+
+.offerViewCard {
+  max-width: 420px;
+  margin: 4rem auto;
+  padding: 2rem;
+  background: #fdfcfa;
+  border-radius: 16px;
+  text-align: center;
+  border: 1px solid rgba(26, 25, 23, 0.08);
+}
+
+.offerViewCard h1 {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.offerViewCard p {
+  color: #6f6a63;
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+.offerViewLink {
+  color: #3d5248;
+  font-weight: 600;
+}
+
+.offerViewMain {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.offerViewMain .offerViewFrame {
+  flex: 1;
+  min-height: 50vh;
+}
+
+/* Signature panel */
+.offerSignPanel {
+  flex-shrink: 0;
+  background: #fdfcfa;
+  border-top: 1px solid rgba(26, 25, 23, 0.1);
+  padding: 1.25rem 1.5rem 1.5rem;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.offerSignPanel--done {
+  text-align: center;
+  padding: 2rem 1.5rem;
+}
+
+.offerSignDoneIcon {
+  color: #34c759;
+  margin-bottom: 0.5rem;
+}
+
+.offerSignPanel--done h2 {
+  font-family: Georgia, serif;
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.offerSignPanel--done p {
+  color: #6f6a63;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.offerSignHead {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  color: #3d5248;
+}
+
+.offerSignHead h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+.offerSignHead p {
+  font-size: 0.85rem;
+  color: #6f6a63;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.offerSignForm label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6f6a63;
+}
+
+.offerSignForm input {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(26, 25, 23, 0.12);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #fff;
+}
+
+.offerSignSigInput {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.1rem;
+  font-style: italic;
+}
+
+.offerSignGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.offerSignSigField {
+  grid-column: 1 / -1;
+}
+
+.offerSignError {
+  color: #ff3b30;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.offerSignSubmit {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  background: #3d5248;
+  color: #f4f1eb;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.offerSignSubmit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+@media (max-width: 560px) {
+  .offerSignGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -2,20 +2,80 @@
 
 import { useState } from "react";
 import {
-    User, Mail, Shield, FileText, MessageSquare, Award, Zap, TrendingUp, Edit2, Check, X, Star, Calendar
+    User,
+    FileText,
+    Award,
+    Zap,
+    TrendingUp,
+    Edit2,
+    Check,
+    X,
+    Star,
+    Trash2,
+    AlertTriangle,
 } from "lucide-react";
+import type { Role } from "@/lib/constants";
+import { BadgeIcon } from "@/lib/nav-icons";
 import "@/styles/directory.css";
 import Link from "next/link";
-import * as Icons from "lucide-react";
+import EmployeeDocumentsPanel from "@/components/EmployeeDocumentsPanel";
+import ReportingManagerSelect from "@/components/ReportingManagerSelect";
+import { reportingManagerDisplayName } from "@/lib/reporting-manager";
+import { formatRoleLabel } from "@/lib/roles";
 
-const IconHelper = ({ name, className }: { name: string; className?: string }) => {
-    const Icon = (Icons as any)[name] || Icons.Award;
-    return <Icon className={className || ""} size={16} />;
+type ProfileBadge = { id: string; name: string; icon: string };
+type ProfileReview = {
+    id: string;
+    rating: number;
+    feedback: string;
+    createdAt: string | Date;
+    reviewer: { name: string | null };
+};
+type ProfileSignature = {
+    id: string;
+    signedAt: string | Date;
+    document: { title: string };
+};
+type ProfileManager = {
+    id: string;
+    name: string | null;
+    email: string | null;
+    role: string;
 };
 
-export default function ClientProfileWrapper({ user, viewerRole, isHrOrAdmin, analytics }: any) {
+type ProfileUser = {
+    id: string;
+    name: string | null;
+    email: string | null;
+    role: Role;
+    reportsToId?: string | null;
+    reportsTo?: ProfileManager | null;
+    profile?: { department?: string | null; joinDate?: string | Date | null } | null;
+    badges?: ProfileBadge[];
+    reviews?: ProfileReview[];
+    signatures?: ProfileSignature[];
+};
+type ProfileAnalytics = {
+    attendanceRate: number;
+    lateArrivals: number;
+    approvedLeaves: number;
+};
+
+export default function ClientProfileWrapper({
+    user,
+    isHrOrAdmin,
+    analytics,
+}: {
+    user: ProfileUser;
+    viewerRole?: Role;
+    isHrOrAdmin: boolean;
+    analytics: ProfileAnalytics;
+}) {
     const [isEditingDate, setIsEditingDate] = useState(false);
     const [joinDate, setJoinDate] = useState(user.profile?.joinDate ? new Date(user.profile.joinDate).toISOString().split('T')[0] : "");
+    const [isEditingManager, setIsEditingManager] = useState(false);
+    const [reportsToId, setReportsToId] = useState(user.reportsToId || "");
+    const [managerSaving, setManagerSaving] = useState(false);
     const [showReviewModal, setShowReviewModal] = useState(false);
 
     // Review State
@@ -29,6 +89,27 @@ export default function ClientProfileWrapper({ user, viewerRole, isHrOrAdmin, an
 
     // Delete State
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const handleManagerUpdate = async () => {
+        setManagerSaving(true);
+        try {
+            const res = await fetch(`/api/admin/users/${user.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reportsToId: reportsToId || null }),
+            });
+            if (res.ok) {
+                setIsEditingManager(false);
+                window.location.reload();
+            } else {
+                const data = await res.json().catch(() => ({}));
+                alert(data.error || "Failed to update reporting manager");
+            }
+        } catch {
+            alert("Failed to update reporting manager");
+        } finally {
+            setManagerSaving(false);
+        }
+    };
 
     const handleDateUpdate = async () => {
         try {
@@ -41,7 +122,7 @@ export default function ClientProfileWrapper({ user, viewerRole, isHrOrAdmin, an
                 setIsEditingDate(false);
                 window.location.reload();
             }
-        } catch (error) {
+        } catch {
             alert("Failed to update date");
         }
     };
@@ -56,7 +137,7 @@ export default function ClientProfileWrapper({ user, viewerRole, isHrOrAdmin, an
                 body: JSON.stringify({ userId: user.id, rating, feedback })
             });
             window.location.reload();
-        } catch (error) {
+        } catch {
             alert("Failed to submit review");
         }
     };
@@ -70,7 +151,7 @@ export default function ClientProfileWrapper({ user, viewerRole, isHrOrAdmin, an
                 body: JSON.stringify({ userId: user.id, name: badgeName })
             });
             window.location.reload();
-        } catch (error) {
+        } catch {
             alert("Failed to award badge");
         }
     };
@@ -88,7 +169,7 @@ export default function ClientProfileWrapper({ user, viewerRole, isHrOrAdmin, an
                 const msg = await res.text();
                 alert(`Failed to delete: ${msg}`);
             }
-        } catch (error) {
+        } catch {
             alert("Delete failed");
         }
     };
@@ -120,7 +201,7 @@ export default function ClientProfileWrapper({ user, viewerRole, isHrOrAdmin, an
                                 className="profileAction"
                                 style={{ color: '#ff453a', borderColor: 'rgba(255, 69, 58, 0.3)' }}
                             >
-                                <Icons.Trash2 size={18} />
+                                <Trash2 size={18} />
                                 <span>Delete Employee</span>
                             </button>
                         </div>
@@ -155,11 +236,11 @@ export default function ClientProfileWrapper({ user, viewerRole, isHrOrAdmin, an
                         <Award size={18} />
                         <span>Badges & Achievements</span>
                     </div>
-                    {user.badges?.length > 0 ? (
+                    {user.badges && user.badges.length > 0 ? (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem' }}>
-                            {user.badges.map((badge: any) => (
+                            {user.badges.map((badge) => (
                                 <div key={badge.id} style={{ background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.3)', padding: '0.5rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <IconHelper name={badge.icon} className="text-yellow-500" />
+                                    <BadgeIcon name={badge.icon} className="text-yellow-500" size={20} />
                                     <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>{badge.name}</span>
                                 </div>
                             ))}
@@ -188,6 +269,54 @@ export default function ClientProfileWrapper({ user, viewerRole, isHrOrAdmin, an
                         <div className="detailItem">
                             <span className="detailLabel">Department</span>
                             <span className="detailValue">{user.profile?.department || "Core Team"}</span>
+                        </div>
+                        <div className="detailItem">
+                            <span className="detailLabel" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                Reporting manager
+                                {isHrOrAdmin && !isEditingManager && (
+                                    <Edit2
+                                        size={12}
+                                        style={{ cursor: "pointer", opacity: 0.5 }}
+                                        onClick={() => setIsEditingManager(true)}
+                                    />
+                                )}
+                            </span>
+                            {isEditingManager ? (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                                    <ReportingManagerSelect
+                                        value={reportsToId}
+                                        onChange={setReportsToId}
+                                        excludeUserId={user.id}
+                                    />
+                                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                                        <button type="button" onClick={handleManagerUpdate} disabled={managerSaving}>
+                                            <Check size={16} color="#34c759" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setReportsToId(user.reportsToId || "");
+                                                setIsEditingManager(false);
+                                            }}
+                                        >
+                                            <X size={16} color="#ff453a" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : user.reportsTo ? (
+                                <span className="detailValue">
+                                    <Link href={`/profile/${user.reportsTo.id}`} style={{ color: "var(--nuriek-blue)" }}>
+                                        {reportingManagerDisplayName(user.reportsTo)}
+                                    </Link>
+                                    <span style={{ opacity: 0.65, marginLeft: "0.35rem" }}>
+                                        · {formatRoleLabel(user.reportsTo.role)}
+                                    </span>
+                                </span>
+                            ) : (
+                                <span className="detailValue" style={{ opacity: 0.6 }}>
+                                    Not assigned
+                                </span>
+                            )}
                         </div>
                         <div className="detailItem">
                             <span className="detailLabel" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -221,9 +350,9 @@ export default function ClientProfileWrapper({ user, viewerRole, isHrOrAdmin, an
                         <Zap size={20} />
                         <span>Performance History</span>
                     </div>
-                    {user.reviews?.length > 0 ? (
+                    {user.reviews && user.reviews.length > 0 ? (
                         <div className="recentLogs">
-                            {user.reviews.map((review: any) => (
+                            {user.reviews.map((review) => (
                                 <div key={review.id} className="logItem" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                                         <div style={{ display: 'flex', gap: '0.25rem' }}>
@@ -233,7 +362,7 @@ export default function ClientProfileWrapper({ user, viewerRole, isHrOrAdmin, an
                                         </div>
                                         <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{new Date(review.createdAt).toLocaleDateString()}</span>
                                     </div>
-                                    <p style={{ fontSize: '0.9rem' }}>"{review.feedback}"</p>
+                                    <p style={{ fontSize: '0.9rem' }}>&quot;{review.feedback}&quot;</p>
                                     <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Reviewed by {review.reviewer.name}</span>
                                 </div>
                             ))}
@@ -243,14 +372,20 @@ export default function ClientProfileWrapper({ user, viewerRole, isHrOrAdmin, an
                     )}
                 </section>
 
+                <EmployeeDocumentsPanel
+                    userId={user.id}
+                    employeeName={user.name || "Employee"}
+                    canManage={isHrOrAdmin}
+                />
+
                 <section className="infoSection glass">
                     <div className="sectionHeader">
                         <FileText size={20} />
-                        <span>Documents & Contracts</span>
+                        <span>Signed company documents</span>
                     </div>
                     <div className="recentLogs">
-                        {user.signatures?.length > 0 ? (
-                            user.signatures.map((sig: any) => (
+                        {user.signatures && user.signatures.length > 0 ? (
+                            user.signatures.map((sig) => (
                                 <div key={sig.id} className="logItem">
                                     <div className="logInfo">
                                         <span className="logTitle">{sig.document.title}</span>
@@ -260,13 +395,9 @@ export default function ClientProfileWrapper({ user, viewerRole, isHrOrAdmin, an
                                 </div>
                             ))
                         ) : (
-                            <div className="logItem">
-                                <div className="logInfo">
-                                    <span className="logTitle">Employee Contract</span>
-                                    <span className="logTime">Pending Signature</span>
-                                </div>
-                                <span className="logStatus statusPending">Pending</span>
-                            </div>
+                            <p style={{ padding: "0.5rem 0", color: "var(--text-secondary)", fontSize: "0.88rem" }}>
+                                No signed company-wide documents yet.
+                            </p>
                         )}
                         <Link href="/documents" className="logItem" style={{ textDecoration: 'none', color: 'inherit' }}>
                             <div className="logInfo">
@@ -333,7 +464,7 @@ export default function ClientProfileWrapper({ user, viewerRole, isHrOrAdmin, an
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
                     <div className="glass" style={{ width: '400px', padding: '2rem', background: 'white', borderRadius: '12px', border: '1px solid rgba(255, 69, 58, 0.3)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: '#ff453a' }}>
-                            <Icons.AlertTriangle size={24} />
+                            <AlertTriangle size={24} />
                             <h3 style={{ margin: 0, color: '#ff453a' }}>Delete User?</h3>
                         </div>
                         <p style={{ color: '#555', marginBottom: '1.5rem', lineHeight: '1.5' }}>

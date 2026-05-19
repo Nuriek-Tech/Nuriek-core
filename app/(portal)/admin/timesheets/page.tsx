@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import {
     CheckCircle,
     XCircle,
@@ -12,10 +11,14 @@ import {
     FileText
 } from "lucide-react";
 import "@/styles/dashboard.css";
+import type { TimesheetRecord } from "@/lib/api-types";
+
+type AdminTimesheetRecord = TimesheetRecord & {
+    user?: { name?: string | null; email?: string | null };
+};
 
 export default function AdminTimesheetsPage() {
-    const { data: session } = useSession();
-    const [timesheets, setTimesheets] = useState<any[]>([]);
+    const [timesheets, setTimesheets] = useState<AdminTimesheetRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -29,7 +32,7 @@ export default function AdminTimesheetsPage() {
             if (res.ok) {
                 setTimesheets(await res.json());
             }
-        } catch (error) {
+        } catch {
             console.error("Failed to fetch timesheets");
         } finally {
             setIsLoading(false);
@@ -49,7 +52,7 @@ export default function AdminTimesheetsPage() {
             } else {
                 alert("Failed to update status");
             }
-        } catch (error) {
+        } catch {
             alert("Error updating status");
         }
     };

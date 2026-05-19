@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { ROLES } from "@/lib/constants";
+import { requireHrPermission, isNextResponse } from "@/lib/rbac";
 
 export async function GET() {
-    const session = await getServerSession(authOptions);
-    const userRole = (session?.user as { role: string })?.role;
-
-    if (!([ROLES.FOUNDER, ROLES.HR_ADMIN] as string[]).includes(userRole)) {
-        return new NextResponse("Unauthorized", { status: 401 });
+    const user = await requireHrPermission("admin_settings");
+    if (isNextResponse(user)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
@@ -36,16 +32,22 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-    const userRole = (session?.user as { role: string })?.role;
-
-    if (!([ROLES.FOUNDER, ROLES.HR_ADMIN] as string[]).includes(userRole)) {
-        return new NextResponse("Unauthorized", { status: 401 });
+    const user = await requireHrPermission("admin_settings");
+    if (isNextResponse(user)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
         const body = await req.json();
-        const { workStartHour, workStartMin, workEndHour, workEndMin, flexibleRoles } = body;
+        const {
+            workStartHour,
+            workStartMin,
+            workEndHour,
+            workEndMin,
+            flexibleRoles,
+            officeName,
+            lateGraceMinutes,
+        } = body;
 
         const config = await prisma.systemConfig.upsert({
             where: { id: "global" },
@@ -54,7 +56,9 @@ export async function POST(req: Request) {
                 workStartMin,
                 workEndHour,
                 workEndMin,
-                flexibleRoles
+                flexibleRoles,
+                officeName,
+                ...(lateGraceMinutes !== undefined && { lateGraceMinutes }),
             },
             create: {
                 id: "global",
@@ -62,8 +66,10 @@ export async function POST(req: Request) {
                 workStartMin,
                 workEndHour,
                 workEndMin,
-                flexibleRoles
-            }
+                flexibleRoles,
+                officeName: officeName || "Bangalore (HQ)",
+                lateGraceMinutes: lateGraceMinutes ?? 15,
+            },
         });
 
         return NextResponse.json(config);

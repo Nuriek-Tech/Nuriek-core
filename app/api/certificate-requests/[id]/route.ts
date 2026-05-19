@@ -1,31 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireRoles, isNextResponse } from "@/lib/rbac";
+import { ADMIN_ROLES } from "@/lib/constants";
 
-const ADMIN_ROLES = ["FOUNDER", "HR_ADMIN"];
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+    const user = await requireRoles(ADMIN_ROLES);
+    if (isNextResponse(user)) return user;
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) return new NextResponse("Unauthorized", { status: 401 });
-
-    const userRole = (session.user as any).role;
-    const approverName = (session?.user as any)?.name || "HR Admin";
-
-    if (!ADMIN_ROLES.includes(userRole)) {
-        return new NextResponse("Forbidden — Super Admin only", { status: 403 });
-    }
+    const { id } = await props.params;
+    const approverName = user.name || "HR Admin";
 
     try {
         const body = await req.json();
-        const { action, rejectionNote } = body; // action: "approve" | "reject"
+        const { action, rejectionNote } = body;
 
         if (!["approve", "reject"].includes(action)) {
             return new NextResponse("Invalid action", { status: 400 });
         }
 
-        const request = await (prisma as any).certificateRequest.findUnique({
-            where: { id: params.id }
+        const request = await prisma.certificateRequest.findUnique({
+            where: { id }
         });
 
         if (!request) return new NextResponse("Not Found", { status: 404 });
@@ -33,8 +27,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
             return new NextResponse("Request is already processed", { status: 409 });
         }
 
-        const updated = await (prisma as any).certificateRequest.update({
-            where: { id: params.id },
+        const updated = await prisma.certificateRequest.update({
+            where: { id },
             data: {
                 status: action === "approve" ? "APPROVED" : "REJECTED",
                 approvedBy: action === "approve" ? approverName : null,

@@ -1,0 +1,866 @@
+/* Offer Letter Generator — full-width form + preview modal */
+.olDocs .olFormPanel {
+  max-width: 1200px;
+}
+
+.olFormColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .olFormColumns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.olFormCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.olFieldSpan2 {
+  grid-column: 1 / -1;
+}
+
+.olFieldHint {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  line-height: 1.35;
+}
+
+.olTextareaCompact {
+  min-height: 56px;
+  resize: vertical;
+}
+
+.olRefBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--nuriek-blue);
+  background: rgba(var(--nuriek-blue-rgb), 0.1);
+  border: 1px solid rgba(var(--nuriek-blue-rgb), 0.22);
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 0.75rem;
+}
+
+.olRefBadge--inline {
+  margin: 0.35rem 0 0;
+}
+
+.olSection {
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.olSectionTitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  margin: 0;
+}
+
+.olSectionTitle svg {
+  color: var(--nuriek-blue);
+}
+
+.olGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 560px) {
+  .olGrid2 {
+    grid-template-columns: 1fr;
+  }
+
+  .olFieldSpan2 {
+    grid-column: auto;
+  }
+}
+
+.olActions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.olFormStatus {
+  width: 100%;
+  margin: 0 0 0.25rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  padding: 0.5rem 0.75rem;
+  background: rgba(var(--nuriek-blue-rgb), 0.08);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(var(--nuriek-blue-rgb), 0.15);
+}
+
+.olActions .admSubmitBtn,
+.olActions .olBtnSecondary {
+  flex: 1;
+  min-width: 160px;
+}
+
+.olBtnSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.olBtnSecondary:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  background: var(--surface-hover);
+}
+
+.olBtnSecondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Preview modal — full viewport */
+.olModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background: var(--background);
+}
+
+.olModal {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
+  overflow: hidden;
+  box-shadow: none;
+  background: var(--background);
+}
+
+.olModalHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-shrink: 0;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--glass-bg);
+}
+
+.olModalTitle {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.olModalClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.olModalClose:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.olPreviewBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-hover);
+}
+
+.olPreviewFrame {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  border: none;
+  background: #ffffff;
+}
+
+.olModalFoot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border);
+  background: var(--glass-bg);
+}
+
+.olModalFoot .olBtnSecondary,
+.olModalFoot .olModalPrimary {
+  flex: 1;
+  min-width: 120px;
+}
+
+.olModalPrimary {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.olLoadingWrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+  color: var(--text-secondary);
+}
+
+.olBtnEmail {
+  border-color: rgba(var(--nuriek-blue-rgb), 0.35);
+  color: var(--nuriek-blue);
+}
+
+/* Email send modal */
+.olEmailBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(20, 19, 18, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.olEmailModal {
+  width: min(480px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.olEmailModal--wide {
+  width: min(640px, 100%);
+}
+
+.olEmailPreviewSection {
+  padding: 0 1.15rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.olEmailPreviewLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  margin: 0 0 0.35rem;
+}
+
+.olEmailSubject {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.5rem;
+}
+
+.olEmailPreviewFrameWrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface-hover);
+  min-height: 280px;
+}
+
+.olEmailPreviewFrame {
+  width: 100%;
+  height: 320px;
+  border: none;
+  background: var(--surface-hover);
+}
+
+.olEmailPreviewLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+/* Workflow table */
+.olWorkflow {
+  margin-top: 1.25rem;
+}
+
+.olWorkflowHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.olWorkflowLead {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 0 0 1rem;
+}
+
+.olWorkflowEmpty {
+  font-size: 0.88rem;
+  color: var(--text-tertiary);
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.olWorkflowTableWrap {
+  overflow-x: auto;
+}
+
+.olWorkflowTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.olWorkflowTable th {
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.olWorkflowTable td {
+  padding: 0.65rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.olRefCode {
+  font-size: 0.75rem;
+  background: rgba(var(--nuriek-blue-rgb), 0.08);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.olWorkflowSub {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  margin-top: 0.15rem;
+}
+
+.olStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-xl);
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--surface-lighter);
+  color: var(--text-secondary);
+}
+
+.olStatus--sent {
+  background: rgba(var(--nuriek-blue-rgb), 0.12);
+  color: var(--nuriek-blue);
+}
+
+.olStatus--viewed {
+  background: rgba(255, 159, 10, 0.12);
+  color: #c93400;
+}
+
+.olStatus--signed {
+  background: rgba(52, 199, 89, 0.12);
+  color: #248a3d;
+}
+
+.olStatus--expired {
+  background: rgba(255, 59, 48, 0.1);
+  color: #ff3b30;
+}
+
+.olWorkflowLink {
+  color: var(--nuriek-blue);
+  display: inline-flex;
+  padding: 0.25rem;
+}
+
+.olWorkflowLink--danger {
+  color: #ef4444;
+}
+
+.olWorkflowToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.olWorkflowActions {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.olPortalCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 8.5rem;
+}
+
+.olPortalLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--nuriek-blue);
+  font-size: 0.72rem;
+}
+
+.olOnboardBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--nuriek-blue-rgb), 0.35);
+  background: rgba(var(--nuriek-blue-rgb), 0.08);
+  color: var(--nuriek-blue);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.olOnboardBtn:hover {
+  background: rgba(var(--nuriek-blue-rgb), 0.15);
+}
+
+.olModal--wide {
+  max-width: 720px;
+  width: min(96vw, 720px);
+}
+
+/* Onboarding send modal */
+.olOnboardBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(20, 19, 18, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.olOnboardModal {
+  width: min(720px, 96vw);
+  max-height: min(92vh, 920px);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.olOnboardModalHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-shrink: 0;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.olOnboardModalTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.olOnboardModalBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.olOnboardLead {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.olOnboardPreviewSection {
+  margin-top: 0.25rem;
+}
+
+.olOnboardPreviewFrameWrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: auto;
+  background: #ffffff;
+  max-height: min(50vh, 480px);
+  min-height: 280px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.olOnboardPreviewIframe {
+  display: block;
+  width: 100%;
+  min-height: 480px;
+  border: none;
+  background: #ffffff;
+}
+
+.olOnboardModalFoot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--border);
+  background: var(--glass-bg);
+}
+
+.olOnboardModalFoot .olBtnSecondary,
+.olOnboardModalFoot .admSubmitBtn {
+  flex: 1;
+  min-width: 140px;
+}
+
+.olOnboardPreviewActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.olOnboardPreviewActions .olEmailPreviewLabel {
+  margin: 0;
+}
+
+.olEmailPreviewLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 200px;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.olOnboardHint {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(var(--nuriek-blue-rgb), 0.06);
+  border-radius: var(--radius-md);
+}
+
+.olOnboardForm {
+  margin-bottom: 1rem;
+}
+
+.olFieldHint {
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.olOnboardSubject {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.5rem;
+}
+
+.olMsg {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+}
+
+.olMsg--ok {
+  color: #248a3d;
+}
+
+.olMsg--err {
+  color: #ef4444;
+}
+
+.olBtnDanger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.olBtnDanger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.olBtnDangerOutline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  background: transparent;
+  color: #ef4444;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.olPurgeBox {
+  margin: 0 0 1rem;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  font-size: 0.88rem;
+}
+
+.olPurgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  align-items: center;
+}
+
+.olPurgeRow .admInput {
+  flex: 1;
+  min-width: 200px;
+}
+
+.olEmailHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.15rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.olEmailTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.olEmailBody {
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.olEmailLead {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.olEmailRef {
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.olEmailRef a {
+  color: var(--nuriek-blue);
+  font-weight: 600;
+}
+
+.olEmailMsg {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  margin: 0;
+}
+
+.olEmailMsg--ok {
+  background: rgba(52, 199, 89, 0.1);
+  color: #248a3d;
+  border: 1px solid rgba(52, 199, 89, 0.25);
+}
+
+.olEmailMsg--err {
+  background: rgba(255, 59, 48, 0.08);
+  color: #ff3b30;
+  border: 1px solid rgba(255, 59, 48, 0.2);
+}
+
+.olEmailFoot {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.85rem 1.15rem;
+  border-top: 1px solid var(--border);
+}
+
+.olEmailFoot .olBtnSecondary,
+.olEmailFoot .admSubmitBtn {
+  flex: 1;
+}
+
+.olInternTypeRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+@media (max-width: 640px) {
+  .olInternTypeRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.olInternTypeOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.olInternTypeOption:has(input:checked) {
+  border-color: var(--nuriek-blue);
+  background: rgba(var(--nuriek-blue-rgb), 0.06);
+}
+
+.olInternTypeOption input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.olInternTypeOption span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.olInternTypeOption small {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+.olHrSigPreview {
+  margin-top: 0.65rem;
+  padding: 0.65rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.olHrSigPreview img {
+  display: block;
+  max-height: 56px;
+  max-width: 220px;
+  object-fit: contain;
+}
+
+.olSectionTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.olSectionTitleRow .olSectionTitle {
+  margin: 0;
+}
+
+.olBtnSecondary--sm {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+}
+
+.olHrPrefsNote {
+  margin: 0 0 0.75rem;
+}

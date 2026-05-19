@@ -1,0 +1,270 @@
+.internDetailPage {
+  max-width: 1100px;
+}
+
+.internDetailBack {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  text-decoration: none;
+}
+
+.internDetailBack:hover {
+  color: var(--nuriek-blue);
+}
+
+.internDetailHero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  margin-top: 0.5rem;
+}
+
+.internDetailHeroMain {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.internAvatar--lg {
+  width: 72px;
+  height: 72px;
+  font-size: 1.75rem;
+}
+
+.internDetailSubtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0.25rem 0 0;
+}
+
+.internDetailEmail {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  margin: 0.35rem 0 0;
+}
+
+.internDetailBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.internDetailBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+}
+
+.internDetailBadge--intern {
+  background: rgba(var(--nuriek-blue-rgb), 0.12);
+  color: var(--nuriek-blue);
+}
+
+.internDetailBadge--employee {
+  background: rgba(52, 199, 89, 0.12);
+  color: #248a3d;
+}
+
+.internDetailBadge--muted {
+  background: var(--surface-elevated);
+  color: var(--text-secondary);
+}
+
+.internDetailConvertBtn {
+  flex-shrink: 0;
+}
+
+.internDetailKpis {
+  margin-top: 1.25rem;
+}
+
+.internDetailKpiSub {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  margin-top: 0.2rem;
+}
+
+.internDetailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.internDetailPanel {
+  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+}
+
+.internDetailPanel--wide {
+  grid-column: 1 / -1;
+}
+
+.internDetailPanelTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+}
+
+.internDetailMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-top: 0.75rem;
+}
+
+.internDetailLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--nuriek-blue);
+  margin-top: 1rem;
+  text-decoration: none;
+}
+
+.internDetailLink:hover {
+  text-decoration: underline;
+}
+
+.internDetailEmpty {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+}
+
+.internChecklist--detail {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.internOfferTableWrap {
+  overflow-x: auto;
+}
+
+.internOfferTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.internOfferTable th,
+.internOfferTable td {
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.internOfferTable th {
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.internOfferDept {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+}
+
+.internOfferStatus {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.internOfferStatus--signed {
+  color: #248a3d;
+}
+
+.internOfferStatus--emailed,
+.internOfferStatus--viewed {
+  color: var(--nuriek-blue);
+}
+
+.internConvertOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.internConvertModal {
+  width: 100%;
+  max-width: 420px;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.internConvertDesc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.75rem;
+  line-height: 1.45;
+}
+
+.internProfileLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--nuriek-blue);
+  margin-top: 0.35rem;
+  text-decoration: none;
+}
+
+.internProfileLink:hover {
+  text-decoration: underline;
+}
+
+.internTenurePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--nuriek-blue);
+  background: rgba(var(--nuriek-blue-rgb), 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  margin-top: 0.35rem;
+}
+
+@media (max-width: 768px) {
+  .internDetailGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .internDetailHero {
+    flex-direction: column;
+  }
+}

@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { ROLES } from "@/lib/constants";
+import { requireRoles, isNextResponse } from "@/lib/rbac";
+import { ADMIN_ROLES } from "@/lib/constants";
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-    const role = (session?.user as any)?.role;
-
-    // Only Admin/HR can award badges
-    if (![ROLES.FOUNDER, ROLES.HR_ADMIN].includes(role)) {
-        return new NextResponse("Unauthorized", { status: 403 });
-    }
+    const user = await requireRoles(ADMIN_ROLES);
+    if (isNextResponse(user)) return user;
 
     try {
         const body = await req.json();
@@ -22,12 +16,12 @@ export async function POST(req: Request) {
                 userId,
                 name,
                 icon: icon || "Award",
-                awardedBy: session?.user?.name || "Admin"
+                awardedBy: user.name || "Admin"
             }
         });
 
         return NextResponse.json(badge);
-    } catch (error) {
+    } catch {
         return new NextResponse("Internal Error", { status: 500 });
     }
 }

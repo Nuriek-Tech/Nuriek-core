@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16
+    container_name: nuriek-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: nuriek_core
+    volumes:
+      - nuriek_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nuriek_core"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  nuriek_pg_data:

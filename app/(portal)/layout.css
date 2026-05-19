@@ -1,6 +1,7 @@
 .portalWrapper {
     display: flex;
     min-height: 100vh;
+    background: var(--background);
 }
 
 .mainContent {
@@ -8,6 +9,7 @@
     margin-left: 280px;
     display: flex;
     flex-direction: column;
+    background: var(--background);
     transition: var(--transition-base);
 }
 

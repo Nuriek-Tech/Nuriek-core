@@ -1,73 +1,93 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
-    Clock,
     Search,
-    Download,
     Loader2,
     Calendar,
     User,
     FileSpreadsheet,
     FileText,
-    Eye
+    Eye,
+    ArrowLeft,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XL from "xlsx";
 import ReportDetailModal from "@/components/ReportDetailModal";
+import "@/styles/people-hub.css";
 import "@/styles/reports.css";
+import "../../admin/documents/admin-documents.css";
+import type { AttendanceLog, UserSummary } from "@/lib/api-types";
+
+type AttendanceReportRow = AttendanceLog & {
+    user: Pick<UserSummary, "name" | "email" | "role"> & {
+        profile?: { department?: string | null; position?: string | null } | null;
+    };
+};
+
+function statusClass(status: string): string {
+    if (status === "PRESENT" || status === "ON_TIME") return "repStatusBadge--present";
+    if (status === "LATE") return "repStatusBadge--late";
+    return "repStatusBadge--absent";
+}
 
 export default function AttendanceReportPage() {
-    const [data, setData] = useState<{ id: string; checkIn: string; checkOut: string | null; status: string; user: { name: string; email: string; role: string } }[]>([]);
+    const [data, setData] = useState<AttendanceReportRow[]>([]);
     const [loading, setLoading] = useState(true);
-    const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // Current month YYYY-MM
+    const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
     const [searchTerm, setSearchTerm] = useState("");
-
-    // Modal State
-    const [selectedUser, setSelectedUser] = useState<any>(null);
+    const [statusFilter, setStatusFilter] = useState("");
+    const [roleFilter, setRoleFilter] = useState("");
+    const [selectedUser, setSelectedUser] = useState<
+        Pick<UserSummary, "id" | "name" | "email" | "role"> | null
+    >(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalData, setModalData] = useState<any[]>([]);
+    const [modalData, setModalData] = useState<AttendanceLog[]>([]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/reports/attendance?month=${month}`);
+            const params = new URLSearchParams({ month });
+            if (statusFilter) params.set("status", statusFilter);
+            if (roleFilter) params.set("role", roleFilter);
+            const res = await fetch(`/api/reports/attendance?${params}`);
             const result = await res.json();
-            if (Array.isArray(result)) {
-                setData(result);
-            } else {
-                console.error("API returned non-array:", result);
-                setData([]);
-            }
-        } catch (error) {
-            console.error("Failed to fetch attendance report", error);
+            setData(Array.isArray(result) ? result : []);
+        } catch {
             setData([]);
         } finally {
             setLoading(false);
         }
-    }, [month]);
+    }, [month, statusFilter, roleFilter]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
 
-    const filteredData = data.filter(item =>
-        item.user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredData = data.filter(
+        (item) =>
+            item.user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.user.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const exportToExcel = () => {
-        const headers = ["Date", "Employee", "Role", "Check In", "Check Out", "Status"];
-        const rows = filteredData.map(item => ({
-            "Date": new Date(item.checkIn).toLocaleDateString(),
-            "Employee": item.user.name,
-            "Role": item.user.role,
-            "Check In": new Date(item.checkIn).toLocaleTimeString(),
-            "Check Out": item.checkOut ? new Date(item.checkOut).toLocaleTimeString() : "N/A",
-            "Status": item.status
-        }));
+    const lateCount = filteredData.filter((d) => d.status === "LATE").length;
+    const onTimeCount = filteredData.filter(
+        (d) => d.status === "ON_TIME" || d.status === "PRESENT"
+    ).length;
 
+    const exportToExcel = () => {
+        const rows = filteredData.map((item) => ({
+            Date: new Date(item.checkIn).toLocaleDateString(),
+            Employee: item.user.name,
+            Role: item.user.role,
+            "Check In": new Date(item.checkIn).toLocaleTimeString(),
+            "Check Out": item.checkOut
+                ? new Date(item.checkOut).toLocaleTimeString()
+                : "N/A",
+            Status: item.status,
+        }));
         const ws = XL.utils.json_to_sheet(rows);
         const wb = XL.utils.book_new();
         XL.utils.book_append_sheet(wb, ws, "Attendance");
@@ -77,120 +97,218 @@ export default function AttendanceReportPage() {
     const exportToPDF = () => {
         const doc = new jsPDF();
         doc.text(`Attendance Report - ${month}`, 14, 15);
-
-        const tableData = filteredData.map(item => [
-            new Date(item.checkIn).toLocaleDateString(),
-            item.user.name,
-            new Date(item.checkIn).toLocaleTimeString(),
-            item.checkOut ? new Date(item.checkOut).toLocaleTimeString() : "—",
-            item.status
-        ]);
-
         autoTable(doc, {
             head: [["Date", "Employee", "Check In", "Check Out", "Status"]],
-            body: tableData,
+            body: filteredData.map((item) => [
+                new Date(item.checkIn).toLocaleDateString(),
+                item.user.name ?? "",
+                new Date(item.checkIn).toLocaleTimeString(),
+                item.checkOut ? new Date(item.checkOut).toLocaleTimeString() : "—",
+                item.status,
+            ]),
             startY: 20,
         });
-
         doc.save(`Attendance_Report_${month}.pdf`);
     };
 
-    const handleViewDetails = (user: any) => {
-        // Filter data for this specific user
-        const userHistory = data.filter(d => d.user.email === user.email);
-        setSelectedUser(user);
+    const handleViewDetails = (user: Pick<UserSummary, "name" | "email" | "role">) => {
+        const userHistory = data
+            .filter((d) => d.user.email === user.email)
+            .map(({ id, checkIn, checkOut, status, breakStart, breakEnd, note }) => ({
+                id,
+                checkIn,
+                checkOut,
+                status,
+                breakStart,
+                breakEnd,
+                note,
+            }));
+        setSelectedUser({ id: user.email ?? "", ...user });
         setModalData(userHistory);
         setIsModalOpen(true);
     };
 
     return (
-        <div className="reportsContent">
-            <header className="reportsHeader">
-                <div>
-                    <h1>Attendance <span className="text-gradient">Report</span></h1>
-                    <p className="subtitle">Detailed view of workforce punctuality and working hours.</p>
+        <div className="hubPage repHub">
+            <header className="hubHero">
+                <div className="hubHeroMain">
+                    <Link href="/reports" className="admBackLink" aria-label="Back to reports">
+                        <ArrowLeft size={18} />
+                    </Link>
+                    <p className="hubEyebrow">Attendance</p>
+                    <h1>
+                        Attendance <span className="text-gradient">Report</span>
+                    </h1>
+                    <p className="hubSubtitle">
+                        Punctuality and working hours for {month}.
+                    </p>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="actionBtn checkInBtn ghost" onClick={exportToPDF} disabled={loading || data.length === 0} style={{ padding: '0.5rem 1rem' }}>
+                <div className="repExportGroup">
+                    <button
+                        type="button"
+                        className="repExportBtn repExportBtn--ghost"
+                        onClick={exportToPDF}
+                        disabled={loading || filteredData.length === 0}
+                    >
                         <FileText size={18} />
-                        <span>PDF</span>
+                        PDF
                     </button>
-                    <button className="actionBtn checkInBtn" onClick={exportToExcel} disabled={loading || data.length === 0}>
+                    <button
+                        type="button"
+                        className="repExportBtn repExportBtn--primary"
+                        onClick={exportToExcel}
+                        disabled={loading || filteredData.length === 0}
+                    >
                         <FileSpreadsheet size={18} />
-                        <span>Excel</span>
+                        Excel
                     </button>
                 </div>
             </header>
 
-            <div className="card glass" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
-                <div className="filters">
-                    <div className="filterGroup">
-                        <label><Calendar size={14} /> Select Month</label>
+            <section className="repPanel glass">
+                <div className="repMiniStats">
+                    <span className="repMiniStat">
+                        Records<strong>{filteredData.length}</strong>
+                    </span>
+                    <span className="repMiniStat">
+                        On time<strong>{onTimeCount}</strong>
+                    </span>
+                    <span className="repMiniStat">
+                        Late<strong>{lateCount}</strong>
+                    </span>
+                </div>
+                <div className="repToolbar">
+                    <div className="repFilterGroup">
+                        <label className="repFilterLabel">
+                            <Calendar size={14} />
+                            Month
+                        </label>
                         <input
                             type="month"
+                            className="repFilterInput"
                             value={month}
                             onChange={(e) => setMonth(e.target.value)}
                         />
                     </div>
-                    <div className="filterGroup" style={{ flex: 1 }}>
-                        <label><User size={14} /> Search Employee</label>
-                        <div style={{ position: 'relative' }}>
-                            <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} size={16} />
+                    <div className="repFilterGroup">
+                        <label className="repFilterLabel">Status</label>
+                        <select
+                            className="repFilterSelect"
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                        >
+                            <option value="">All</option>
+                            <option value="ON_TIME">On time</option>
+                            <option value="LATE">Late</option>
+                            <option value="PRESENT">Present</option>
+                        </select>
+                    </div>
+                    <div className="repFilterGroup">
+                        <label className="repFilterLabel">Role</label>
+                        <select
+                            className="repFilterSelect"
+                            value={roleFilter}
+                            onChange={(e) => setRoleFilter(e.target.value)}
+                        >
+                            <option value="">All</option>
+                            <option value="EMPLOYEE">Employee</option>
+                            <option value="INTERN">Intern</option>
+                            <option value="MANAGER">Manager</option>
+                            <option value="HR_ADMIN">HR Admin</option>
+                        </select>
+                    </div>
+                    <div className="repFilterGroup repFilterGroup--grow">
+                        <label className="repFilterLabel">
+                            <User size={14} />
+                            Search
+                        </label>
+                        <div className="repSearchWrap">
+                            <Search size={16} />
                             <input
-                                type="text"
-                                placeholder="Search by name or email..."
-                                style={{ paddingLeft: '2.5rem', width: '100%' }}
+                                type="search"
+                                className="repFilterInput"
+                                placeholder="Name or email…"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                     </div>
+                    <span className="hubResultCount" style={{ marginLeft: "auto" }}>
+                        {filteredData.length} records
+                    </span>
                 </div>
 
                 {loading ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+                    <div className="repLoading">
                         <Loader2 className="animate-spin" size={32} />
                     </div>
                 ) : (
-                    <div className="reportsTableSection">
-                        <table className="dataTable">
+                    <div className="repTableWrap">
+                        <table className="repDataTable">
                             <thead>
                                 <tr>
                                     <th>Date</th>
                                     <th>Employee</th>
-                                    <th>Check In</th>
-                                    <th>Check Out</th>
+                                    <th>Check in</th>
+                                    <th>Check out</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredData.length > 0 ? filteredData.map((item) => (
-                                    <tr key={item.id}>
-                                        <td>{new Date(item.checkIn).toLocaleDateString()}</td>
-                                        <td>
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                <span style={{ fontWeight: '500' }}>{item.user.name}</span>
-                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{item.user.email}</span>
-                                            </div>
-                                        </td>
-                                        <td>{new Date(item.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                                        <td>{item.checkOut ? new Date(item.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "—"}</td>
-                                        <td>
-                                            <span className={`statusBadge status-${item.status}`}>
-                                                {item.status}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <button onClick={() => handleViewDetails(item.user)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--nuriek-blue)' }}>
-                                                <Eye size={18} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                )) : (
+                                {filteredData.length > 0 ? (
+                                    filteredData.map((item) => (
+                                        <tr key={item.id}>
+                                            <td>
+                                                {new Date(item.checkIn).toLocaleDateString()}
+                                            </td>
+                                            <td>
+                                                <div className="repCellName">
+                                                    {item.user.name}
+                                                </div>
+                                                <div className="repCellEmail">
+                                                    {item.user.email}
+                                                    {item.user.profile?.department &&
+                                                        ` · ${item.user.profile.department}`}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {new Date(item.checkIn).toLocaleTimeString([], {
+                                                    hour: "2-digit",
+                                                    minute: "2-digit",
+                                                })}
+                                            </td>
+                                            <td>
+                                                {item.checkOut
+                                                    ? new Date(item.checkOut).toLocaleTimeString(
+                                                          [],
+                                                          { hour: "2-digit", minute: "2-digit" }
+                                                      )
+                                                    : "—"}
+                                            </td>
+                                            <td>
+                                                <span
+                                                    className={`repStatusBadge ${statusClass(item.status)}`}
+                                                >
+                                                    {item.status.replace("_", " ")}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <button
+                                                    type="button"
+                                                    className="repViewBtn"
+                                                    onClick={() => handleViewDetails(item.user)}
+                                                    aria-label="View details"
+                                                >
+                                                    <Eye size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
                                     <tr>
-                                        <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                                            No attendance records found for this selection.
+                                        <td colSpan={6} className="repEmptyRow">
+                                            No attendance records for this selection.
                                         </td>
                                     </tr>
                                 )}
@@ -198,7 +316,7 @@ export default function AttendanceReportPage() {
                         </table>
                     </div>
                 )}
-            </div>
+            </section>
 
             <ReportDetailModal
                 isOpen={isModalOpen}
@@ -207,6 +325,6 @@ export default function AttendanceReportPage() {
                 data={modalData}
                 type="ATTENDANCE"
             />
-        </div >
+        </div>
     );
 }

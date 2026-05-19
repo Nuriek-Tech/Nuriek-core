@@ -9,9 +9,12 @@ async function main() {
     // Don't log password, but check if it exists
     console.log(`Password present: ${!!process.env.ZOHO_PASSWORD}`);
 
+    const host = process.env.ZOHO_SMTP_HOST || "smtp.zoho.in";
+    console.log(`SMTP host: ${host}`);
+
     const transporter = nodemailer.createTransport({
-        host: "smtp.zoho.com",
-        port: 465,
+        host,
+        port: Number(process.env.ZOHO_SMTP_PORT || "465"),
         secure: true,
         auth: {
             user: process.env.ZOHO_USER,

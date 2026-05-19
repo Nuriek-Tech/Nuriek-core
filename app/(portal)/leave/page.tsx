@@ -14,11 +14,15 @@ import {
 } from "lucide-react";
 import "@/styles/dashboard.css";
 import { useSession } from "next-auth/react";
+import type { HolidayRecord, LeaveBalance, LeaveRecord } from "@/lib/api-types";
+
+type LeaveApiResponse = { leaves: LeaveRecord[]; balance: LeaveBalance };
 
 export default function LeavePage() {
     const { data: session } = useSession();
-    const [leaves, setLeaves] = useState<any[]>([]);
-    const [holidays, setHolidays] = useState<any[]>([]);
+    const [leaves, setLeaves] = useState<LeaveRecord[]>([]);
+    const [balance, setBalance] = useState<LeaveBalance | null>(null);
+    const [holidays, setHolidays] = useState<HolidayRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showApplyModal, setShowApplyModal] = useState(false);
     const [showHolidayModal, setShowHolidayModal] = useState(false);
@@ -42,7 +46,7 @@ export default function LeavePage() {
         type: "PUBLIC",
     });
 
-    const userRole = (session?.user as any)?.role;
+    const userRole = session?.user?.role;
     const isAdmin = userRole === "HR_ADMIN" || userRole === "FOUNDER";
 
     useEffect(() => {
@@ -56,9 +60,17 @@ export default function LeavePage() {
                 fetch("/api/leave"),
                 fetch("/api/holidays")
             ]);
-            if (leavesRes.ok) setLeaves(await leavesRes.json());
+            if (leavesRes.ok) {
+                const data: LeaveRecord[] | LeaveApiResponse = await leavesRes.json();
+                if (Array.isArray(data)) {
+                    setLeaves(data);
+                } else {
+                    setLeaves(data.leaves ?? []);
+                    setBalance(data.balance ?? null);
+                }
+            }
             if (holidaysRes.ok) setHolidays(await holidaysRes.json());
-        } catch (error) {
+        } catch {
             console.error("Failed to fetch data");
         } finally {
             setIsLoading(false);
@@ -162,13 +174,10 @@ export default function LeavePage() {
         }
     });
 
-    // Leave balance
-    const role = (session?.user as any)?.role || "EMPLOYEE";
-    const totalLeaves = role === "INTERN" ? 10 : 22;
-    const usedCasual = leaves.filter(l => l.type === "CASUAL" && l.status === "APPROVED").length;
-    const usedSick = leaves.filter(l => l.type === "SICK" && l.status === "APPROVED").length;
-    const usedLeaves = usedCasual + usedSick;
-    const pendingLeaves = leaves.filter(l => l.status === "PENDING").length;
+    const totalLeaves = balance?.total ?? 22;
+    const usedLeaves = balance?.used ?? 0;
+    const remainingLeaves = balance?.remaining ?? totalLeaves - usedLeaves;
+    const pendingLeaves = balance?.pending ?? leaves.filter(l => l.status === "PENDING").length;
 
     // Upcoming holidays (next 5)
     const upcomingHolidays = holidays
@@ -290,7 +299,7 @@ export default function LeavePage() {
                         </div>
                         <div className="statItem">
                             <span className="statLabel">Remaining</span>
-                            <span className="statValue" style={{ color: "#34c759" }}>{Math.max(0, totalLeaves - usedLeaves)}</span>
+                            <span className="statValue" style={{ color: "#34c759" }}>{remainingLeaves}</span>
                         </div>
                         <div className="statItem">
                             <span className="statLabel">Pending Review</span>

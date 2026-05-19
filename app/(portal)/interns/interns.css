@@ -1,152 +1,472 @@
 .internGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-    gap: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1rem;
 }
 
 .internCard {
-    padding: 1.5rem;
-    border-radius: var(--radius-lg);
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
+  padding: 1.35rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  transition: border-color var(--transition-fast);
+}
+
+.internCard--saved {
+  border-color: rgba(52, 199, 89, 0.45) !important;
 }
 
 .internHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
 }
 
 .internIdentity {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
 }
 
 .internAvatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: var(--surface-lighter);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    color: var(--nuriek-blue);
-    border: 2px solid var(--border);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(var(--nuriek-blue-rgb), 0.2), rgba(var(--nuriek-accent-rgb), 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--nuriek-blue);
+  border: 2px solid rgba(var(--nuriek-blue-rgb), 0.25);
+  flex-shrink: 0;
 }
 
 .internIntro {
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
 }
 
 .internName {
-    font-size: 1.05rem;
-    font-weight: 700;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
-.internDuration {
-    font-size: 0.75rem;
-    color: var(--text-tertiary);
+.internMeta {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
 }
 
-.scoreCircle {
-    width: 54px;
-    height: 54px;
-    border-radius: 50%;
-    border: 3px solid var(--nuriek-blue);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
+.internScoreRing {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid var(--nuriek-blue);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(var(--nuriek-blue-rgb), 0.06);
 }
 
-.scoreValue {
-    font-size: 0.9rem;
-    font-weight: 800;
-    color: var(--text-primary);
+.internScoreValue {
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
-.scoreLabel {
-    font-size: 0.6rem;
-    color: var(--text-secondary);
-    text-transform: uppercase;
+.internScoreLabel {
+  font-size: 0.58rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.metricsGrid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+.internHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.metricItem {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+.internEditBtn {
+  background: rgba(var(--nuriek-blue-rgb), 0.1);
+  border: 1px solid rgba(var(--nuriek-blue-rgb), 0.28);
+  border-radius: var(--radius-md);
+  padding: 0.45rem;
+  color: var(--nuriek-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
 }
 
-.metricTitle {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
+.internEditBtn:hover {
+  background: rgba(var(--nuriek-blue-rgb), 0.18);
 }
 
-.progressBar {
-    height: 6px;
-    background: var(--surface-lighter);
-    border-radius: var(--radius-xl);
-    overflow: hidden;
+/* Metrics */
+.internMetrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
 }
 
-.progressFill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--nuriek-blue), var(--nuriek-accent));
+.internMetric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
-.checklist {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+.internMetricLabel {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
-.checkItem {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
+.internProgressTrack {
+  height: 6px;
+  background: var(--surface-lighter);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
 }
 
-.checkItemDone {
-    color: var(--text-primary);
+.internProgressFill {
+  height: 100%;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(90deg, var(--nuriek-blue), var(--nuriek-accent));
+  transition: width 0.4s ease;
 }
 
-.checkIcon {
-    color: var(--text-tertiary);
+.internProgressFill--tasks {
+  background: linear-gradient(90deg, #34c759, #30d158);
 }
 
-.checkIconDone {
-    color: #34c759;
+.internMetricPct {
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
-.conversionSection {
-    margin-top: auto;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.internMetricPct--learn { color: var(--nuriek-blue); }
+.internMetricPct--tasks { color: #34c759; }
+
+/* Checklist toggle */
+.internCheckToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
 }
 
-.conversionTag {
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 0.2rem 0.6rem;
-    border-radius: var(--radius-xl);
-    background: rgba(var(--nuriek-blue-rgb), 0.1);
-    color: var(--nuriek-blue);
+.internCheckToggle:hover {
+  border-color: var(--border-hover);
+  background: var(--surface-hover);
+}
+
+.internCheckToggleLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.internChecklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.internCheckItem {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 0.4rem 0;
+}
+
+.internCheckItem--done {
+  color: var(--text-primary);
+}
+
+.internCheckItem--done span {
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+.internCheckIcon { color: var(--text-tertiary); flex-shrink: 0; }
+.internCheckIcon--done { color: #34c759; flex-shrink: 0; }
+
+.internFooter {
+  padding-top: 0.85rem;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.internRiskBadge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-xl);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid transparent;
+}
+
+.internRiskBadge--low {
+  background: rgba(52, 199, 89, 0.12);
+  color: #34c759;
+  border-color: rgba(52, 199, 89, 0.25);
+}
+
+.internRiskBadge--medium {
+  background: rgba(255, 159, 10, 0.12);
+  color: #ff9f0a;
+  border-color: rgba(255, 159, 10, 0.25);
+}
+
+.internRiskBadge--high {
+  background: rgba(255, 59, 48, 0.12);
+  color: #ff3b30;
+  border-color: rgba(255, 59, 48, 0.25);
+}
+
+.internSavedMsg {
+  font-size: 0.8rem;
+  color: #34c759;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* Edit form */
+.internForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  margin-top: 0.5rem;
+}
+
+.internFormLabel {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.45rem;
+}
+
+.internFormInput,
+.internFormSelect {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.internFormInput:focus,
+.internFormSelect:focus {
+  border-color: rgba(var(--nuriek-blue-rgb), 0.45);
+  outline: none;
+}
+
+.internFormRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 480px) {
+  .internFormRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.internRangeRow {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.internRangeRow input[type="range"] {
+  flex: 1;
+  accent-color: var(--nuriek-blue);
+}
+
+.internRangeVal {
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+.internRangeVal--tasks { color: #34c759; }
+
+.internChecklistEdit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.internChecklistEditItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+}
+
+.internChecklistEditItem span {
+  flex: 1;
+  font-size: 0.85rem;
+}
+
+.internChecklistEditItem span.done {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+
+.internChecklistToggle {
+  background: none;
+  border: none;
+  padding: 0;
+  display: flex;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.internChecklistToggle.done { color: #34c759; }
+
+.internChecklistRemove {
+  background: none;
+  border: none;
+  color: #ff3b30;
+  display: flex;
+  padding: 0;
+  cursor: pointer;
+}
+
+.internAddRow {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.internAddBtn {
+  background: var(--nuriek-blue);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.internFormActions {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 0.25rem;
+}
+
+.internSaveBtn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--nuriek-blue), var(--nuriek-blue-dark));
+  color: #fff;
+}
+
+.internSaveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.internCancelBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 1.1rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.internEmpty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 4rem 1.5rem;
+}
+
+.internEmpty p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+}
+
+.internTenurePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--nuriek-blue);
+  background: rgba(var(--nuriek-blue-rgb), 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  margin-top: 0.35rem;
+  width: fit-content;
+}
+
+.internProfileLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--nuriek-blue);
+  margin-top: 0.35rem;
+  text-decoration: none;
+}
+
+.internProfileLink:hover {
+  text-decoration: underline;
 }

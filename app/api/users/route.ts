@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { ROLES } from "@/lib/constants";
+import { ADMIN_ROLES, DIRECTORY_ROLES, ROLES } from "@/lib/constants";
+import { requireRoles, isNextResponse } from "@/lib/rbac";
+import { logAudit } from "@/lib/audit";
 
 export async function GET() {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-        return new NextResponse("Unauthorized", { status: 401 });
-    }
+    const user = await requireRoles(DIRECTORY_ROLES);
+    if (isNextResponse(user)) return user;
 
     try {
         const users = await prisma.user.findMany({
@@ -18,16 +15,20 @@ export async function GET() {
                 name: true,
                 email: true,
                 role: true,
+                createdAt: true,
+                reportsToId: true,
+                reportsTo: {
+                    select: { id: true, name: true, email: true, role: true },
+                },
                 profile: {
                     select: {
                         position: true,
                         department: true,
-                    }
-                }
+                        joinDate: true,
+                    },
+                },
             },
-            orderBy: {
-                name: 'asc'
-            }
+            orderBy: { name: "asc" },
         });
 
         return NextResponse.json(users);
@@ -38,13 +39,8 @@ export async function GET() {
 }
 
 export async function DELETE(req: Request) {
-    const session = await getServerSession(authOptions);
-    const currentUserRole = (session?.user as any)?.role;
-
-    // Strict Authorization: Only FOUNDER and HR_ADMIN can delete
-    if (![ROLES.FOUNDER, ROLES.HR_ADMIN].includes(currentUserRole)) {
-        return new NextResponse("Unauthorized", { status: 403 });
-    }
+    const current = await requireRoles(ADMIN_ROLES);
+    if (isNextResponse(current)) return current;
 
     try {
         const body = await req.json();
@@ -54,26 +50,36 @@ export async function DELETE(req: Request) {
             return new NextResponse("User ID required", { status: 400 });
         }
 
-        // Prevent self-deletion
-        const currentUserEmail = session?.user?.email;
-        const userToDelete = await prisma.user.findUnique({ where: { id: userId } });
-
-        if (userToDelete?.email === currentUserEmail) {
-            return new NextResponse("Cannot delete yourself", { status: 400 });
-        }
-
-        // Prevent deleting other Admins by HR_ADMIN (optional logic, but good practice)
-        if (currentUserRole === ROLES.HR_ADMIN && [ROLES.FOUNDER, ROLES.HR_ADMIN].includes(userToDelete?.role as any)) {
-            return new NextResponse("HR Admins cannot delete other Admins", { status: 403 });
-        }
-
-        await prisma.user.delete({
-            where: { id: userId }
+        const userToDelete = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { role: true, email: true },
         });
 
-        return NextResponse.json({ message: "User deleted successfully" });
+        if (!userToDelete) {
+            return new NextResponse("User not found", { status: 404 });
+        }
+
+        if (
+            current.role === ROLES.HR_ADMIN &&
+            ADMIN_ROLES.includes(userToDelete.role as (typeof ADMIN_ROLES)[number])
+        ) {
+            return new NextResponse("Cannot delete admin users", { status: 403 });
+        }
+
+        await prisma.user.delete({ where: { id: userId } });
+
+        await logAudit({
+            actorId: current.id,
+            actorEmail: current.email,
+            action: "USER_DELETE",
+            entity: "User",
+            entityId: userId,
+            metadata: { deletedEmail: userToDelete.email },
+        });
+
+        return NextResponse.json({ success: true });
     } catch (error) {
-        console.error("Delete User Error:", error);
+        console.error("Delete user error:", error);
         return new NextResponse("Internal Server Error", { status: 500 });
     }
 }

@@ -1,0 +1,224 @@
+.iwOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+  animation: iwFadeIn 0.35s ease;
+}
+
+@keyframes iwFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.iwModal {
+  width: 100%;
+  max-width: 520px;
+  max-height: min(90vh, 680px);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: iwSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes iwSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.iwHero {
+  padding: 1.5rem 1.5rem 1rem;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--nuriek-blue-rgb), 0.18),
+    rgba(var(--nuriek-accent-rgb), 0.08)
+  );
+  border-bottom: 1px solid var(--border);
+}
+
+.iwEyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--nuriek-blue);
+  margin-bottom: 0.35rem;
+}
+
+.iwTitle {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 0.5rem;
+}
+
+.iwLead {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.iwBody {
+  padding: 1.25rem 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.iwPillarGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.iwPillar {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.iwPillarIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.iwPillarTitle {
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.iwPillarSub {
+  font-size: 0.72rem;
+  color: var(--nuriek-blue);
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+}
+
+.iwPillarDesc {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.iwToolkitList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.iwToolkitItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-lighter);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.iwToolkitItem strong {
+  display: block;
+  font-size: 0.88rem;
+  margin-bottom: 0.1rem;
+}
+
+.iwToolkitItem span {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.iwSteps {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0 1.5rem 0.75rem;
+}
+
+.iwStepDot {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-lighter);
+  transition: background 0.3s ease;
+}
+
+.iwStepDot--active {
+  background: linear-gradient(90deg, var(--nuriek-blue), var(--nuriek-accent));
+}
+
+.iwFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.iwSkip {
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.35rem;
+}
+
+.iwSkip:hover {
+  color: var(--text-secondary);
+}
+
+.iwPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.88rem;
+  background: linear-gradient(135deg, var(--nuriek-blue), var(--nuriek-blue-dark));
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(var(--nuriek-blue-rgb), 0.35);
+}
+
+.iwPrimary:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.iwBeginIcon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(52, 199, 89, 0.12);
+  color: #34c759;
+}

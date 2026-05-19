@@ -1,0 +1,22 @@
+.portalLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40vh;
+  padding: 2rem;
+}
+
+.portalLoadingSpinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border);
+  border-top-color: var(--nuriek-blue);
+  border-radius: 50%;
+  animation: portalSpin 0.65s linear infinite;
+}
+
+@keyframes portalSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

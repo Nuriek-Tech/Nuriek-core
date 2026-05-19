@@ -1,3 +1,5 @@
+import type { HrPermission } from "@/lib/hr-permissions";
+
 export const ROLES = {
     FOUNDER: "FOUNDER",
     HR_ADMIN: "HR_ADMIN",
@@ -8,11 +10,54 @@ export const ROLES = {
     CONTRACTOR: "CONTRACTOR",
 } as const;
 
-export type Role = keyof typeof ROLES;
+export type Role = (typeof ROLES)[keyof typeof ROLES];
 
-export const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
+export const ADMIN_ROLES: Role[] = [ROLES.FOUNDER, ROLES.HR_ADMIN];
 
-export const NAV_ITEMS = [
+export function isAdminRole(role?: Role): boolean {
+    return role === ROLES.FOUNDER || role === ROLES.HR_ADMIN;
+}
+
+/** Full-access Super Admin (stored as FOUNDER in the database). */
+export function isSuperAdminRole(role?: Role): boolean {
+    return role === ROLES.FOUNDER;
+}
+
+export function isReportRole(role?: Role): boolean {
+    return role === ROLES.FOUNDER || role === ROLES.HR_ADMIN || role === ROLES.MANAGER;
+}
+
+/** Contact HR is for individual contributors only — not admin or HR staff. */
+export const CONTACT_HR_ROLES: Role[] = [ROLES.EMPLOYEE, ROLES.INTERN];
+
+export function canAccessContactHr(role?: Role): boolean {
+    return role === ROLES.EMPLOYEE || role === ROLES.INTERN;
+}
+
+export const DIRECTORY_ROLES: Role[] = [
+    ROLES.FOUNDER,
+    ROLES.HR_ADMIN,
+    ROLES.MANAGER,
+];
+
+export const REPORT_ROLES: Role[] = [
+    ROLES.FOUNDER,
+    ROLES.HR_ADMIN,
+    ROLES.MANAGER,
+];
+
+export const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
+
+export type NavItem = {
+    label: string;
+    path: string;
+    roles: Role[];
+    icon: string;
+    /** When set, HR Admin / Manager need this grant (Super Admin always has access). */
+    hrPermission?: HrPermission;
+};
+
+export const NAV_ITEMS: NavItem[] = [
     {
         label: "Dashboard",
         path: "/dashboard",
@@ -30,17 +75,19 @@ export const NAV_ITEMS = [
         path: "/directory",
         roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER],
         icon: "Users",
+        hrPermission: "directory",
     },
     {
         label: "Intern Management",
         path: "/interns",
         roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER, ROLES.TEAM_LEAD, ROLES.INTERN],
         icon: "GraduationCap",
+        hrPermission: "interns",
     },
     {
         label: "Documents & Legal",
         path: "/documents",
-        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER, ROLES.TEAM_LEAD, ROLES.EMPLOYEE, ROLES.CONTRACTOR],
+        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER, ROLES.TEAM_LEAD, ROLES.EMPLOYEE, ROLES.INTERN, ROLES.CONTRACTOR],
         icon: "FileText",
     },
     {
@@ -58,20 +105,36 @@ export const NAV_ITEMS = [
     {
         label: "Admin Timesheets",
         path: "/admin/timesheets",
-        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN],
+        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER],
         icon: "FileCheck",
+        hrPermission: "admin_timesheets",
+    },
+    {
+        label: "Admin Documents",
+        path: "/admin/documents",
+        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER],
+        icon: "FileUp",
+        hrPermission: "admin_documents",
+    },
+    {
+        label: "Offer Letter",
+        path: "/admin/offer-letter",
+        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER],
+        icon: "FileSignature",
+        hrPermission: "offer_letter",
     },
     {
         label: "Reports",
         path: "/reports",
         roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER],
         icon: "BarChart3",
+        hrPermission: "reports",
     },
     {
-        label: "Settings",
-        path: "/settings",
-        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN],
-        icon: "Settings",
+        label: "Contact HR",
+        path: "/contact-hr",
+        roles: CONTACT_HR_ROLES,
+        icon: "Mail",
     },
     {
         label: "My Certificates",
@@ -79,7 +142,22 @@ export const NAV_ITEMS = [
         roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER, ROLES.TEAM_LEAD, ROLES.EMPLOYEE, ROLES.INTERN, ROLES.CONTRACTOR],
         icon: "BadgeCheck",
     },
+    {
+        label: "Settings",
+        path: "/settings",
+        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER, ROLES.TEAM_LEAD, ROLES.EMPLOYEE, ROLES.INTERN, ROLES.CONTRACTOR],
+        icon: "Settings",
+    },
 ];
+
+export const DRIVE_CATEGORIES = [
+    "General",
+    "Resources",
+    "Templates",
+    "Brand Assets",
+    "Product Specs",
+    "Policies",
+] as const;
 
 export const PREDEFINED_TASKS = [
     "Project Development & Coding",

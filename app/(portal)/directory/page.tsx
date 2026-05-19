@@ -1,61 +1,44 @@
-import Link from "next/link";
-import { User, Mail, Shield, ChevronRight, UserPlus, Trash2, Loader2 } from "lucide-react";
-import "@/styles/directory.css";
-import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ROLES } from "@/lib/constants";
-import DeleteUserButton from "./DeleteUserButton";
+import { prisma } from "@/lib/prisma";
+import DirectoryClient from "./DirectoryClient";
 
 export default async function DirectoryPage() {
     const session = await getServerSession(authOptions);
-    const canOnboard = session?.user && [ROLES.FOUNDER, ROLES.HR_ADMIN].includes((session.user as any).role);
+    const canOnboard =
+        session?.user?.role === ROLES.FOUNDER || session?.user?.role === ROLES.HR_ADMIN;
     const isSuperAdmin = canOnboard;
 
     const employees = await prisma.user.findMany({
-        orderBy: {
-            name: "asc",
+        include: {
+            profile: true,
+            reportsTo: { select: { id: true, name: true, email: true } },
         },
+        orderBy: { name: "asc" },
     });
 
-    return (
-        <div className="directoryContainer">
-            <header className="dashboardHeader">
-                <div className="welcomeSection">
-                    <h1>Employee Directory</h1>
-                    <p>Browse and connect with the Nuriek team</p>
-                </div>
-                {canOnboard && (
-                    <Link href="/directory/onboard" className="checkInButton">
-                        <UserPlus size={18} />
-                        <span>Onboard New Employee</span>
-                    </Link>
-                )}
-            </header>
+    const serialized = employees.map((e) => ({
+        id: e.id,
+        name: e.name,
+        email: e.email,
+        role: e.role,
+        reportsTo: e.reportsTo
+            ? { id: e.reportsTo.id, name: e.reportsTo.name, email: e.reportsTo.email }
+            : null,
+        profile: e.profile
+            ? {
+                  position: e.profile.position,
+                  department: e.profile.department,
+              }
+            : null,
+    }));
 
-            <div className="employeeGrid">
-                {employees.map((employee) => (
-                    <div key={employee.id} className="employeeCard glass">
-                        <div className="profilePic">
-                            {employee.name?.charAt(0) || "U"}
-                        </div>
-                        <div className="employeeInfo">
-                            <span className="name">{employee.name}</span>
-                            <span className="role">{employee.role.replace("_", " ")}</span>
-                            <span className="email">{employee.email}</span>
-                        </div>
-                        <div className="cardFooter">
-                            <Link href={`/profile/${employee.id}`} className="viewProfileBtn">
-                                <span>View Profile</span>
-                                <ChevronRight size={16} />
-                            </Link>
-                            {isSuperAdmin && (
-                                <DeleteUserButton userId={employee.id} />
-                            )}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
+    return (
+        <DirectoryClient
+            employees={serialized}
+            canOnboard={canOnboard}
+            isSuperAdmin={isSuperAdmin}
+        />
     );
 }

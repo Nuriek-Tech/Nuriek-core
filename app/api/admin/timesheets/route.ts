@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireRoles, isNextResponse } from "@/lib/rbac";
+import { ADMIN_ROLES } from "@/lib/constants";
 
 export async function GET() {
-    const session = await getServerSession(authOptions);
-    
-    // Only FOUNDER and HR_ADMIN can access
-    if (!session?.user || !["FOUNDER", "HR_ADMIN"].includes((session.user as any).role)) {
-        return new NextResponse("Unauthorized", { status: 403 });
-    }
+    const user = await requireRoles(ADMIN_ROLES);
+    if (isNextResponse(user)) return user;
 
     try {
         const timesheets = await prisma.timesheet.findMany({

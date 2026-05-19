@@ -3,43 +3,102 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  FOUNDER
+  HR_ADMIN
+  MANAGER
+  TEAM_LEAD
+  EMPLOYEE
+  INTERN
+  CONTRACTOR
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  personalEmail String?   @unique
-  password      String?
-  role          String    @default("EMPLOYEE")
-  onboardingStatus String @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
-  emailVerified DateTime?
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  profile       Profile?
-  attendance    Attendance[]
-  leaves        Leave[]
-  timesheets    Timesheet[]
-  reviews       PerformanceReview[] @relation("UserReviews")
-  reviewed      PerformanceReview[] @relation("Reviewer")
-  badges        Badge[]
-  signatures    Signature[]
-  internPerformance InternPerformance?
+  id                 String    @id @default(cuid())
+  name               String?
+  email              String?   @unique
+  personalEmail      String?   @unique
+  password           String?
+  role               UserRole  @default(EMPLOYEE)
+  onboardingStatus   String    @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
+  mustChangePassword Boolean   @default(false)
+  /** JSON array of HR permission keys; null = role defaults (see lib/hr-permissions.ts) */
+  hrPermissions      String?
+  emailVerified      DateTime?
+  image              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  profile            Profile?
+  attendance         Attendance[]
+  leaves             Leave[]
+  timesheets         Timesheet[]
+  reviews            PerformanceReview[] @relation("UserReviews")
+  reviewed           PerformanceReview[] @relation("Reviewer")
+  badges             Badge[]
+  signatures         Signature[]
+  internPerformance  InternPerformance?
   certificateRequests CertificateRequest[]
+  offerLettersCreated OfferLetter[] @relation("OfferLetterCreator")
+  offerLettersProvisioned OfferLetter[] @relation("OfferLetterProvisioned")
+  employeeDocuments   Document[]    @relation("EmployeeDocuments")
+  reportsToId         String?
+  reportsTo           User?         @relation("UserReportsTo", fields: [reportsToId], references: [id], onDelete: SetNull)
+  directReports       User[]        @relation("UserReportsTo")
+}
+
+model OfferLetter {
+  id              String    @id @default(cuid())
+  token           String    @unique
+  refNumber       String
+  candidateName   String
+  candidateEmail  String?
+  position        String
+  department      String    @default("General")
+  employmentType  String    @default("Full-time")
+  internshipType     String?
+  internshipMonths   Int?
+  stipendAfterMonths Int?
+  html               String    @db.Text
+  signedHtml      String?   @db.Text
+  status          String    @default("GENERATED")
+  createdById     String?
+  createdBy       User?     @relation("OfferLetterCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  emailedAt       DateTime?
+  viewedAt        DateTime?
+  signedAt        DateTime?
+  signedName      String?
+  signedPlace     String?
+  signatureText   String?
+  expiresAt       DateTime?
+  provisionedUserId   String?
+  provisionedUser     User?     @relation("OfferLetterProvisioned", fields: [provisionedUserId], references: [id], onDelete: SetNull)
+  provisionedAt       DateTime?
+  onboardingEmailedAt DateTime?
+  onboardingWorkEmail String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+
+  @@index([refNumber])
+  @@index([provisionedUserId])
+  @@index([candidateEmail])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model PerformanceReview {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation("UserReviews", fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation("UserReviews", fields: [userId], references: [id], onDelete: Cascade)
   reviewerId String
-  reviewer  User     @relation("Reviewer", fields: [reviewerId], references: [id])
-  rating    Int
-  feedback  String
-  createdAt DateTime @default(now())
+  reviewer   User     @relation("Reviewer", fields: [reviewerId], references: [id])
+  rating     Int
+  feedback   String
+  createdAt  DateTime @default(now())
 }
 
 model Badge {
@@ -47,21 +106,21 @@ model Badge {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
-  icon      String   // Lucide icon name
+  icon      String
   awardedBy String
   awardedAt DateTime @default(now())
 }
 
 model Timesheet {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date        DateTime @default(now())
-  tasks       String   // JSON string or long text of tasks
-  hours       Float    @default(8.0)
-  status      String   @default("SUBMITTED") // SUBMITTED, APPROVED, REJECTED
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @default(now())
+  tasks     String
+  hours     Float    @default(8.0)
+  status    String   @default("SUBMITTED") // SUBMITTED, APPROVED, REJECTED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Profile {
@@ -78,99 +137,120 @@ model Profile {
 }
 
 model Attendance {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  checkIn    DateTime @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkIn    DateTime  @default(now())
   checkOut   DateTime?
-  status     String   @default("PRESENT") // PRESENT, LATE, ABSENT, ON_LEAVE
+  breakStart DateTime?
+  breakEnd   DateTime?
+  status     String    @default("PRESENT") // PRESENT, LATE, ABSENT, ON_LEAVE
   location   String?
   note       String?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
 }
 
 model Leave {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String   // SICK, CASUAL, MATERNITY, PATERNITY, UNPAID
+  type      String
   startDate DateTime
   endDate   DateTime
-  status    String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  status    String   @default("PENDING")
   reason    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Document {
-  id           String   @id @default(cuid())
-  title        String
-  description  String?
-  url          String   // URL to the PDF
-  type         String   // POLICY, LEGAL, DRIVE
-  category     String?  // Folder name for Drive
-  size         Int      @default(0) // File size in bytes
-  allowedRoles String   @default("ALL") // Comma separated roles
-  targetUserId String?  // Specific user this doc is for (e.g. Offer Letter)
-  status       String   @default("PENDING") // PENDING, PARTIALLY_SIGNED, COMPLETED
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  signatures   Signature[]
+  id              String           @id @default(cuid())
+  title           String
+  description     String?
+  url             String
+  type            String
+  category        String?
+  size            Int              @default(0)
+  allowedRoles    String           @default("ALL")
+  targetUserId    String?
+  targetUser      User?            @relation("EmployeeDocuments", fields: [targetUserId], references: [id], onDelete: Cascade)
+  status          String           @default("PENDING")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  signatures      Signature[]
   requiredSigners RequiredSigner[]
+  reads           DocumentRead[]
+
+  @@index([targetUserId])
+}
+
+model DocumentRead {
+  id          String   @id @default(cuid())
+  userId      String
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
+
+  @@unique([userId, documentId])
 }
 
 model Holiday {
   id        String   @id @default(cuid())
   name      String
   date      DateTime
-  type      String   @default("PUBLIC") // PUBLIC, OPTIONAL, COMPANY
+  type      String   @default("PUBLIC")
   createdAt DateTime @default(now())
 }
 
 model InternPerformance {
-  id                String   @id @default(cuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  learningProgress  Int      @default(0)
-  taskCompletion    Int      @default(0)
-  score             Int      @default(0)
-  duration          String?  // e.g., "Month 2 of 6"
-  conversionRisk    String   @default("LOW") // LOW, MEDIUM, HIGH
-  onboardingData    String   @default("[]") // JSON string for checklist
-  updatedAt         DateTime @updatedAt
+  id                      String    @id @default(cuid())
+  userId                  String    @unique
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  learningProgress        Int       @default(0)
+  taskCompletion          Int       @default(0)
+  score                   Int       @default(0)
+  duration                String?
+  conversionRisk          String    @default("LOW")
+  onboardingData          String    @default("[]")
+  convertedAt             DateTime?
+  conversionOfferLetterId String?
+  updatedAt               DateTime  @updatedAt
 }
 
 model RequiredSigner {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   documentId String
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  userId     String?  // Optional if the user isn't in the portal yet
-  email      String   // Required for identification
-  role       String   @default("SIGNER") // e.g., HR_HEAD, DIRECTOR, EMPLOYEE
+  document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId     String?
+  email      String
+  role       String    @default("SIGNER")
   signedAt   DateTime?
-  order      Int      @default(0) // If you want a specific order of signing
+  order      Int       @default(0)
 }
 
 model Signature {
   id         String   @id @default(cuid())
-  userId     String?  // Optional for guests
+  userId     String?
   user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  email      String?  // Identify the signer by email if userId is missing
+  email      String?
   documentId String
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  signature  String   // Base64 string of the signature image
+  signature  String
   signedAt   DateTime @default(now())
-  
+
   @@unique([userId, documentId])
 }
+
 model SystemConfig {
-  id            String   @id @default("global")
-  workStartHour Int      @default(9)
-  workStartMin  Int      @default(0)
-  workEndHour   Int      @default(18)
-  workEndMin    Int      @default(0)
-  flexibleRoles String   @default("INTERN") // Comma separated roles
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default("global")
+  workStartHour    Int      @default(9)
+  workStartMin     Int      @default(0)
+  workEndHour      Int      @default(18)
+  workEndMin       Int      @default(0)
+  flexibleRoles    String   @default("INTERN")
+  officeName       String   @default("Bangalore (HQ)")
+  lateGraceMinutes Int      @default(15)
+  updatedAt        DateTime @updatedAt
 }
 
 model OrgTask {
@@ -182,16 +262,31 @@ model OrgTask {
 }
 
 model CertificateRequest {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        String   // EXPERIENCE | BONAFIDE
-  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  purpose     String?  // Optional reason / purpose stated by user
-  approvedBy  String?  // Name of approver
-  approvedAt  DateTime?
-  rejectedAt  DateTime?
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String
+  status        String    @default("PENDING")
+  purpose       String?
+  approvedBy    String?
+  approvedAt    DateTime?
+  rejectedAt    DateTime?
   rejectionNote String?
-  requestedAt DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  requestedAt   DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorEmail String?
+  action     String
+  entity     String
+  entityId   String?
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entity, entityId])
+  @@index([createdAt])
 }

@@ -1,21 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-
-const ADMIN_ROLES = ["FOUNDER", "HR_ADMIN"];
+import { requireSession, isNextResponse } from "@/lib/rbac";
+import { ADMIN_ROLES } from "@/lib/constants";
 
 export async function GET() {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) return new NextResponse("Unauthorized", { status: 401 });
+    const user = await requireSession();
+    if (isNextResponse(user)) return user;
 
-    const userId = (session.user as any).id;
-    const userRole = (session.user as any).role;
-    const isAdmin = ADMIN_ROLES.includes(userRole);
+    const isAdmin = ADMIN_ROLES.includes(user.role);
 
     try {
-        const requests = await (prisma as any).certificateRequest.findMany({
-            where: isAdmin ? {} : { userId },
+        const requests = await prisma.certificateRequest.findMany({
+            where: isAdmin ? {} : { userId: user.id },
             include: {
                 user: {
                     select: {
@@ -40,10 +36,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) return new NextResponse("Unauthorized", { status: 401 });
-
-    const userId = (session.user as any).id;
+    const user = await requireSession();
+    if (isNextResponse(user)) return user;
 
     try {
         const body = await req.json();
@@ -53,18 +47,17 @@ export async function POST(req: Request) {
             return new NextResponse("Invalid certificate type", { status: 400 });
         }
 
-        // Check for existing pending request of the same type
-        const existing = await (prisma as any).certificateRequest.findFirst({
-            where: { userId, type, status: "PENDING" }
+        const existing = await prisma.certificateRequest.findFirst({
+            where: { userId: user.id, type, status: "PENDING" }
         });
 
         if (existing) {
             return new NextResponse("You already have a pending request for this certificate type.", { status: 409 });
         }
 
-        const request = await (prisma as any).certificateRequest.create({
+        const request = await prisma.certificateRequest.create({
             data: {
-                userId,
+                userId: user.id,
                 type,
                 purpose: purpose || null,
                 status: "PENDING"

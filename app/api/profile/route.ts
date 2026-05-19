@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ROLES } from "@/lib/constants";
+import { requireRoles, isNextResponse } from "@/lib/rbac";
+import { ADMIN_ROLES } from "@/lib/constants";
 
 export async function GET() {
     try {
@@ -14,9 +15,7 @@ export async function GET() {
 
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            include: {
-                profile: true,
-            },
+            include: { profile: true },
         });
 
         if (!user) {
@@ -30,29 +29,60 @@ export async function GET() {
     }
 }
 
+/** Admin: update join date. Self: update phone, bio, address. */
 export async function PATCH(req: Request) {
-    const session = await getServerSession(authOptions);
-    const currentUserRole = (session?.user as any)?.role;
-
-    // Only Admin/HR can edit other profiles
-    if (![ROLES.FOUNDER, ROLES.HR_ADMIN].includes(currentUserRole)) {
-        return new NextResponse("Unauthorized", { status: 403 });
-    }
-
     try {
-        const body = await req.json();
-        const { userId, joinDate } = body;
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.email) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
 
-        const updatedProfile = await prisma.profile.update({
-            where: { userId },
-            data: {
-                joinDate: joinDate ? new Date(joinDate) : undefined
-            }
+        const body = await req.json();
+
+        if (body.userId && body.joinDate !== undefined) {
+            const admin = await requireRoles(ADMIN_ROLES);
+            if (isNextResponse(admin)) return admin;
+
+            const updatedProfile = await prisma.profile.update({
+                where: { userId: body.userId },
+                data: {
+                    joinDate: body.joinDate ? new Date(body.joinDate) : undefined,
+                },
+            });
+            return NextResponse.json(updatedProfile);
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+        });
+        if (!user) {
+            return NextResponse.json({ error: "User not found" }, { status: 404 });
+        }
+
+        const { phoneNumber, bio, address } = body as {
+            phoneNumber?: string;
+            bio?: string;
+            address?: string;
+        };
+
+        const profile = await prisma.profile.upsert({
+            where: { userId: user.id },
+            update: {
+                ...(phoneNumber !== undefined && { phoneNumber }),
+                ...(bio !== undefined && { bio }),
+                ...(address !== undefined && { address }),
+            },
+            create: {
+                userId: user.id,
+                phoneNumber: phoneNumber ?? null,
+                bio: bio ?? null,
+                address: address ?? null,
+            },
         });
 
-        return NextResponse.json(updatedProfile);
+        return NextResponse.json(profile);
     } catch (error) {
         console.error("Profile Update Error:", error);
-        return new NextResponse("Internal Server Error", { status: 500 });
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

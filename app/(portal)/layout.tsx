@@ -1,5 +1,6 @@
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
+import InternOnboardingGate from "@/components/InternOnboardingGate";
 import "./layout.css";
 
 export default function PortalLayout({
@@ -14,6 +15,7 @@ export default function PortalLayout({
                 <Header />
                 <main className="page">{children}</main>
             </div>
+            <InternOnboardingGate />
         </div>
     );
 }

@@ -1,24 +1,26 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireRoles, isNextResponse } from "@/lib/rbac";
 import { ROLES } from "@/lib/constants";
+import type { Role } from "@/lib/constants";
+
+const REVIEWER_ROLES: Role[] = [
+    ROLES.FOUNDER,
+    ROLES.HR_ADMIN,
+    ROLES.MANAGER,
+    ROLES.TEAM_LEAD,
+];
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-    const role = (session?.user as any)?.role;
-
-    if (![ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER, ROLES.TEAM_LEAD].includes(role)) {
-        return new NextResponse("Unauthorized", { status: 403 });
-    }
+    const user = await requireRoles(REVIEWER_ROLES);
+    if (isNextResponse(user)) return user;
 
     try {
         const body = await req.json();
         const { userId, rating, feedback } = body;
 
-        // Use non-null assertion for email since we checked session exists
         const reviewer = await prisma.user.findUnique({
-            where: { email: session!.user!.email! }
+            where: { email: user.email! }
         });
 
         if (!reviewer) return new NextResponse("Reviewer not found", { status: 404 });

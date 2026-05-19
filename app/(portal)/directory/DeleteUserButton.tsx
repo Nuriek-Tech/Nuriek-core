@@ -35,23 +35,13 @@ export default function DeleteUserButton({ userId }: { userId: string }) {
     };
 
     return (
-        <button 
+        <button
+            type="button"
             onClick={handleDelete}
             disabled={isDeleting}
-            style={{
-                background: "rgba(255, 69, 58, 0.1)",
-                color: "#ff453a",
-                border: "1px solid rgba(255, 69, 58, 0.2)",
-                borderRadius: "var(--radius-full)",
-                width: "32px",
-                height: "32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: isDeleting ? "not-allowed" : "pointer",
-                transition: "all 0.2s ease",
-            }}
-            title="Delete Employee"
+            className="dirDeleteBtn"
+            title="Delete employee"
+            aria-label="Delete employee"
         >
             {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
         </button>

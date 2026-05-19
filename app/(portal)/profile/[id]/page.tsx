@@ -1,29 +1,24 @@
-import {
-    User,
-    Mail,
-    Shield,
-    FileText,
-    MessageSquare,
-    Award,
-    Zap,
-    TrendingUp
-} from "lucide-react";
 import "@/styles/directory.css";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { ROLES } from "@/lib/constants";
+import { isAdminRole } from "@/lib/constants";
+import ClientProfileWrapper from "./client-profile";
+
+type AttendanceEntry = { status: string };
+type LeaveEntry = { status: string };
 
 export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
     const session = await getServerSession(authOptions);
-    const viewerRole = (session?.user as any)?.role;
-    const isHrOrAdmin = [ROLES.HR_ADMIN, ROLES.FOUNDER].includes(viewerRole);
+    const viewerRole = session?.user?.role;
+    const isHrOrAdmin = isAdminRole(viewerRole);
 
     const user = await prisma.user.findUnique({
         where: { id },
         include: {
+            reportsTo: { select: { id: true, name: true, email: true, role: true } },
             profile: true,
             attendance: isHrOrAdmin ? true : false,
             leaves: isHrOrAdmin ? true : false,
@@ -42,14 +37,13 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
         return notFound();
     }
 
-    // Analytics Calculation
-    const attendance = (user as any).attendance || [];
-    const leaves = (user as any).leaves || [];
+    const attendance: AttendanceEntry[] = isHrOrAdmin && "attendance" in user ? user.attendance : [];
+    const leaves: LeaveEntry[] = isHrOrAdmin && "leaves" in user ? user.leaves : [];
 
     const totalAttendance = attendance.length;
-    const lateArrivals = attendance.filter((a: any) => a.status === 'LATE').length;
+    const lateArrivals = attendance.filter((a) => a.status === "LATE").length;
     const attendanceRate = totalAttendance > 0 ? Math.round(((totalAttendance - lateArrivals) / totalAttendance) * 100) : 100;
-    const approvedLeaves = leaves.filter((l: any) => l.status === 'APPROVED').length;
+    const approvedLeaves = leaves.filter((l) => l.status === "APPROVED").length;
 
     return (
         <ClientProfileWrapper
@@ -60,6 +54,3 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
         />
     );
 }
-
-// Client Component Wrapper
-import ClientProfileWrapper from "./client-profile";

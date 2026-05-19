@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Newsreader, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 
@@ -13,12 +13,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const nuriekDisplay = Newsreader({
+  subsets: ["latin"],
+  variable: "--font-nuriek-display",
+  weight: ["400", "500", "600"],
+});
+
+const nuriekBody = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-nuriek-body",
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: "Nuriek Core – Company Operating System",
   description: "Internal Portal | Web-first | Mobile-ready | Role-based",
-  icons: {
-    icon: "/logo.png",
-  },
 };
 
 export default function RootLayout({
@@ -27,8 +36,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("nuriek-theme");document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light");}catch(e){document.documentElement.setAttribute("data-theme","light");}})();`,
+          }}
+        />
+      </head>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} ${nuriekDisplay.variable} ${nuriekBody.variable}`}
+      >
         <Providers>{children}</Providers>
       </body>
     </html>

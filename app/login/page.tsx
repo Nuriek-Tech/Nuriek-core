@@ -3,8 +3,16 @@
 import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
-import { Mail, Lock, LogIn, AlertCircle, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
+import {
+    NURIEK_SITE_URL,
+    NURIEK_MISSION,
+    NURIEK_TAGLINE,
+    NURIEK_HERO_LINE,
+    NURIEK_SITE_PILLARS,
+} from "@/lib/nuriek-brand";
+import { isNuriekWorkEmail, WORK_EMAIL_ERROR } from "@/lib/email-policy";
 import "@/styles/login.css";
 
 function LoginForm() {
@@ -22,8 +30,8 @@ function LoginForm() {
         setIsLoading(true);
         setError("");
 
-        if (!email.trim().toLowerCase().endsWith("@nuriek.com")) {
-            setError("Only @nuriek.com email addresses are allowed.");
+        if (!isNuriekWorkEmail(email)) {
+            setError(WORK_EMAIL_ERROR);
             setIsLoading(false);
             return;
         }
@@ -36,12 +44,20 @@ function LoginForm() {
             });
 
             if (result?.error) {
-                setError("Invalid email or password. Please try again.");
+                if (result.error === "DatabaseUnavailable") {
+                    setError(
+                        "Cannot reach the database right now. Open your Neon dashboard, resume the project if it is paused, then try again."
+                    );
+                } else if (result.error === "TooManyAttempts") {
+                    setError("Too many sign-in attempts. Please wait about 15 minutes and try again.");
+                } else {
+                    setError("Invalid email or password. Please try again.");
+                }
             } else {
                 router.push(callbackUrl);
                 router.refresh();
             }
-        } catch (err) {
+        } catch {
             setError("An unexpected error occurred. Please try again later.");
         } finally {
             setIsLoading(false);
@@ -49,91 +65,131 @@ function LoginForm() {
     };
 
     return (
-        <form className="form" onSubmit={handleSubmit}>
-            {error && (
-                <div className="errorBox">
-                    <AlertCircle size={18} />
-                    <span>{error}</span>
-                </div>
-            )}
+        <div className="loginFormWrap">
+            <header className="loginFormHeader">
+                <p className="loginFormEyebrow">nuriek core</p>
+                <h1 className="loginFormTitle">Sign in</h1>
+                <p className="loginFormLead">
+                    Your team workspace for time, documents, and people.
+                </p>
+            </header>
 
-            <div className="inputGroup">
-                <label className="label">Work Email</label>
-                <div className="inputWrapper">
-                    <Mail className="inputIcon" size={18} />
+            <form className="loginForm" onSubmit={handleSubmit}>
+                {error && (
+                    <div className="loginError" role="alert">
+                        <AlertCircle size={17} />
+                        <span>{error}</span>
+                    </div>
+                )}
+
+                <div className="loginField">
+                    <label htmlFor="email">Work email</label>
                     <input
+                        id="email"
+                        name="nuriek-work-email"
                         type="email"
-                        className="input"
-                        placeholder="email@nuriek.com"
+                        placeholder="user@nuriek.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         disabled={isLoading}
+                        autoComplete="username"
+                        inputMode="email"
+                        spellCheck={false}
+                        data-1p-ignore
                     />
                 </div>
-            </div>
 
-            <div className="inputGroup">
-                <label className="label">Password</label>
-                <div className="inputWrapper">
-                    <Lock className="inputIcon" size={18} />
+                <div className="loginField">
+                    <label htmlFor="password">Password</label>
                     <input
+                        id="password"
                         type="password"
-                        className="input"
-                        placeholder="••••••••"
+                        placeholder="Your password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         disabled={isLoading}
+                        autoComplete="current-password"
                     />
                 </div>
-            </div>
 
-            <button type="submit" className="loginButton" disabled={isLoading}>
-                {isLoading ? (
-                    <Loader2 className="animate-spin" size={20} />
-                ) : (
-                    <>
-                        <LogIn size={20} />
-                        <span>Sign In</span>
-                    </>
-                )}
-            </button>
-        </form>
+                <button type="submit" className="loginSubmit" disabled={isLoading}>
+                    {isLoading ? (
+                        <Loader2 size={20} className="loginSpin" />
+                    ) : (
+                        <>
+                            Sign in
+                            <ArrowRight size={18} />
+                        </>
+                    )}
+                </button>
+            </form>
+
+            <p className="loginFormHelp">
+                Trouble signing in? <Link href="/contact-hr">Contact HR</Link>
+            </p>
+        </div>
     );
 }
 
 export default function LoginPage() {
+    const [lineA, lineB] = (() => {
+        const parts = NURIEK_HERO_LINE.split(". ");
+        if (parts.length < 2) return [NURIEK_HERO_LINE, ""];
+        return [`${parts[0]}.`, parts.slice(1).join(". ").replace(/\.$/, "") + "."];
+    })();
 
     return (
-        <main className="loginContainer">
-            <div className="loginBackground">
-                <div className="blob"></div>
-                <div className="blob"></div>
-            </div>
-            <div className="loginCard glass">
-                <header className="loginHeader">
-                    <Image
-                        src="/logo.png"
-                        alt="Nuriek Logo"
-                        width={64}
-                        height={64}
-                        className="logo"
-                    />
-                    <h1 className="title text-gradient">Nuriek Core</h1>
-                    <p className="subtitle">Company Operating System</p>
+        <main className="loginPage">
+            <div className="loginShell">
+                <header className="loginTopBar">
+                    <span className="loginMark">nuriek</span>
+                    <a href={NURIEK_SITE_URL} className="loginTopLink" target="_blank" rel="noopener noreferrer">
+                        nuriek.com
+                    </a>
                 </header>
 
-                <Suspense fallback={<div className="loading" style={{ textAlign: 'center', padding: '2rem' }}><Loader2 className="animate-spin" /></div>}>
-                    <LoginForm />
-                </Suspense>
+                <div className="loginGrid">
+                    <section className="loginNarrative" aria-label="About nuriek">
+                        <h2 className="loginNarrativeHeadline">
+                            {lineA}
+                            {lineB && (
+                                <>
+                                    <br />
+                                    <span className="loginNarrativeEm">{lineB}</span>
+                                </>
+                            )}
+                        </h2>
+                        <p className="loginNarrativeMission">{NURIEK_MISSION}</p>
 
-                <footer className="footer">
-                    <p>
-                        Secure access for Nuriek teams. <br />
-                        Having trouble? <a href="#">Contact Support</a>
-                    </p>
-                </footer>
+                        <ul className="loginValues">
+                            {NURIEK_SITE_PILLARS.map((p) => (
+                                <li key={p.num}>
+                                    <span className="loginValuesNum">{p.num}</span>
+                                    <span>
+                                        <strong>{p.title}</strong>
+                                        <small>{p.description}</small>
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+
+                        <p className="loginNarrativeFoot">{NURIEK_TAGLINE}</p>
+                    </section>
+
+                    <section className="loginPanel" aria-label="Sign in">
+                        <Suspense
+                            fallback={
+                                <div className="loginFormWrap loginFormWrap--loading">
+                                    <Loader2 size={28} className="loginSpin" />
+                                </div>
+                            }
+                        >
+                            <LoginForm />
+                        </Suspense>
+                    </section>
+                </div>
             </div>
         </main>
     );
