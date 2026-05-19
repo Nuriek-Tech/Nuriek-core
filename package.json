@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:neon": "node scripts/test-neon.mjs",
-    "test:zoho": "node scripts/test-zoho-smtp.mjs"
+    "test:zoho": "node scripts/test-zoho-smtp.mjs",
+    "db:baseline": "bash scripts/baseline-and-migrate.sh"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
