@@ -10,7 +10,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:neon": "node scripts/test-neon.mjs"
+    "test:neon": "node scripts/test-neon.mjs",
+    "test:zoho": "node scripts/test-zoho-smtp.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
