@@ -17,7 +17,7 @@ function portalUrl(path = "") {
     return portalAppUrl(path);
 }
 
-/** Links in outbound emails — always a public URL (www.core.nuriek.com in production). */
+/** Links in outbound emails — always a public URL (core.nuriek.com in production). */
 function emailPortalUrl(path = "") {
     return portalEmailUrl(path);
 }

@@ -1,5 +1,5 @@
-/** Production Nuriek Core portal — used in emails when env points at localhost. */
-export const NURIEK_PORTAL_URL = "https://www.core.nuriek.com";
+/** Production Nuriek Core portal (apex — www.core.nuriek.com has no DNS unless you add it). */
+export const NURIEK_PORTAL_URL = "https://core.nuriek.com";
 
 function isLocalDevUrl(url: string): boolean {
     return /localhost|127\.0\.0\.1/i.test(url);
