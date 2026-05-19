@@ -40,7 +40,8 @@ jobs:
 
       - run: npm ci
 
-      - run: npx prisma migrate deploy
+      # Fresh CI DB has no baseline migration; push schema for tests.
+      - run: npx prisma db push --skip-generate
 
       - run: npm test
 
