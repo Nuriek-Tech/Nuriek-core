@@ -1,15 +1,19 @@
 import { prisma } from "@/lib/prisma";
+import { isPrismaMissingColumnError } from "@/lib/prisma-errors";
 import {
     isValidHrSignatureDataUrl,
     loadHrSignatureDataUrlFromDisk,
 } from "@/lib/offer-hr-signature-asset";
 import { resolveHrSignatureSrc } from "@/lib/offer-hr-signature";
 import type { HrSignatoryPrefs } from "@/lib/offer-hr-signatory-prefs";
+import { findSystemConfigSafe } from "@/lib/system-config-safe";
 
-export type OrgHrSignatory = HrSignatoryPrefs;
+export type OrgHrSignatory = HrSignatoryPrefs & {
+    migrationPending?: boolean;
+};
 
 export async function getOrgHrSignatory(): Promise<OrgHrSignatory> {
-    const config = await prisma.systemConfig.findUnique({ where: { id: "global" } });
+    const config = await findSystemConfigSafe();
     const fromDb = config?.hrSignatureDataUrl?.trim();
     const signature =
         (fromDb && isValidHrSignatureDataUrl(fromDb) ? fromDb : null) ||
@@ -20,6 +24,7 @@ export async function getOrgHrSignatory(): Promise<OrgHrSignatory> {
         hrSignatory: config?.hrSignatory?.trim() || "",
         hrSignatoryTitle: config?.hrSignatoryTitle?.trim() || "Human Resources",
         hrSignatureDataUrl: signature,
+        migrationPending: config ? !config.hrSignatoryColumnsAvailable : false,
     };
 }
 
@@ -35,6 +40,13 @@ export async function resolveHrSignatureForOffer(
 }
 
 export async function saveOrgHrSignatory(prefs: Partial<OrgHrSignatory>): Promise<OrgHrSignatory> {
+    const config = await findSystemConfigSafe();
+    if (config && !config.hrSignatoryColumnsAvailable) {
+        throw new Error(
+            "HR signatory storage is not ready on the database. Run: npx prisma migrate deploy"
+        );
+    }
+
     const data: {
         hrSignatory?: string | null;
         hrSignatoryTitle?: string | null;
@@ -55,14 +67,23 @@ export async function saveOrgHrSignatory(prefs: Partial<OrgHrSignatory>): Promis
         data.hrSignatureDataUrl = sig || null;
     }
 
-    await prisma.systemConfig.upsert({
-        where: { id: "global" },
-        create: {
-            id: "global",
-            ...data,
-        },
-        update: data,
-    });
+    try {
+        await prisma.systemConfig.upsert({
+            where: { id: "global" },
+            create: {
+                id: "global",
+                ...data,
+            },
+            update: data,
+        });
+    } catch (error) {
+        if (isPrismaMissingColumnError(error)) {
+            throw new Error(
+                "HR signatory storage is not ready on the database. Run: npx prisma migrate deploy"
+            );
+        }
+        throw error;
+    }
 
     return getOrgHrSignatory();
 }

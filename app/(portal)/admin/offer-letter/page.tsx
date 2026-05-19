@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { isValidHrSignatureDataUrl } from "@/lib/offer-hr-signature-validate";
 import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -126,6 +127,8 @@ export default function OfferLetterPage() {
     });
 
     const [hrPrefsLoaded, setHrPrefsLoaded] = useState(false);
+    const [hrMigrationPending, setHrMigrationPending] = useState(false);
+    const hrServerSaveReady = useRef(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -141,7 +144,12 @@ export default function OfferLetterPage() {
 
             try {
                 const res = await fetch("/api/admin/offer-letter/hr-signatory");
-                if (res.ok) server = await res.json();
+                if (res.ok) {
+                    server = await res.json();
+                    if (res.headers.get("X-Nuriek-Migration-Pending")) {
+                        setHrMigrationPending(true);
+                    }
+                }
             } catch {
                 /* offline */
             }
@@ -167,6 +175,9 @@ export default function OfferLetterPage() {
                     f.hrSignatureDataUrl,
             }));
             setHrPrefsLoaded(true);
+            window.setTimeout(() => {
+                hrServerSaveReady.current = true;
+            }, 0);
         };
 
         void loadPrefs();
@@ -183,6 +194,11 @@ export default function OfferLetterPage() {
             hrSignatureDataUrl: form.hrSignatureDataUrl,
         });
 
+        if (!hrServerSaveReady.current || hrMigrationPending) return;
+
+        const sig = form.hrSignatureDataUrl.trim();
+        if (sig && !isValidHrSignatureDataUrl(sig)) return;
+
         const timer = window.setTimeout(() => {
             void fetch("/api/admin/offer-letter/hr-signatory", {
                 method: "PUT",
@@ -192,12 +208,22 @@ export default function OfferLetterPage() {
                     hrSignatoryTitle: form.hrSignatoryTitle,
                     hrSignatureDataUrl: form.hrSignatureDataUrl,
                 }),
-            }).catch(() => undefined);
-        }, 600);
+            })
+                .then(async (res) => {
+                    if (!res.ok) {
+                        const data = await res.json().catch(() => ({}));
+                        if (data?.error?.includes("migrate deploy")) {
+                            setHrMigrationPending(true);
+                        }
+                    }
+                })
+                .catch(() => undefined);
+        }, 800);
 
         return () => window.clearTimeout(timer);
     }, [
         hrPrefsLoaded,
+        hrMigrationPending,
         form.hrSignatory,
         form.hrSignatoryTitle,
         form.hrSignatureDataUrl,
@@ -1033,10 +1059,15 @@ export default function OfferLetterPage() {
                                     </button>
                                 )}
                             </div>
+                            {hrMigrationPending && (
+                                <p className="olFieldHint olHrPrefsNote" role="status">
+                                    Database migration pending — signature is saved in this browser only.
+                                    Run <code>npx prisma migrate deploy</code> on production, then redeploy.
+                                </p>
+                            )}
                             <p className="olFieldHint olHrPrefsNote">
                                 Name, title, and signature are saved to the server (and this browser) and
-                                reused for every
-                                offer letter until you clear them.
+                                reused for every offer letter until you clear them.
                             </p>
                             <div className="olGrid2">
                                 <div className="admField">

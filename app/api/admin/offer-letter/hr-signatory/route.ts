@@ -10,10 +10,22 @@ export async function GET() {
 
     try {
         const prefs = await getOrgHrSignatory();
-        return NextResponse.json(prefs);
+        return NextResponse.json(prefs, {
+            headers: prefs.migrationPending
+                ? { "X-Nuriek-Migration-Pending": "hr-signatory" }
+                : undefined,
+        });
     } catch (error) {
         console.error("HR signatory GET error:", error);
-        return NextResponse.json({ error: "Failed to load signatory settings" }, { status: 500 });
+        return NextResponse.json(
+            {
+                hrSignatory: "",
+                hrSignatoryTitle: "Human Resources",
+                hrSignatureDataUrl: "",
+                error: "Failed to load signatory settings",
+            },
+            { status: 200 }
+        );
     }
 }
 

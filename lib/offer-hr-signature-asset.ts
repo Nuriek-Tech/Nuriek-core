@@ -40,9 +40,7 @@ export function loadHrSignatureDataUrlFromDisk(): string | null {
     return cachedDiskDataUrl;
 }
 
-export function isValidHrSignatureDataUrl(value: string | null | undefined): boolean {
-    const v = value?.trim();
-    if (!v) return false;
-    if (!v.startsWith("data:image/")) return false;
-    return v.length <= MAX_SIGNATURE_BYTES * 1.4;
-}
+export {
+    isValidHrSignatureDataUrl,
+    hrSignatureDataUrlByteLength,
+} from "@/lib/offer-hr-signature-validate";
