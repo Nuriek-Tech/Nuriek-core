@@ -76,7 +76,7 @@ export async function POST(
 
         await logAudit({
             actorEmail: offer.candidateEmail,
-            action: "DOCUMENT_SIGN",
+            action: "OFFER_SIGNED",
             entity: "OfferLetter",
             entityId: offer.id,
             metadata: {

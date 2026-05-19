@@ -141,9 +141,20 @@ export type ReportRow = Record<string, string | number | boolean | null | undefi
 
 export type PortalNotification = {
     id: string;
-    kind: "leave" | "timesheet" | "certificate" | "document" | "attendance" | "account";
+    kind:
+        | "leave"
+        | "timesheet"
+        | "certificate"
+        | "document"
+        | "attendance"
+        | "account"
+        | "offer"
+        | "onboard"
+        | "people";
     title: string;
     body: string;
     href: string;
     createdAt: string;
+    /** action = needs review now; activity = recent HR events (last 14 days) */
+    tier?: "action" | "activity";
 };

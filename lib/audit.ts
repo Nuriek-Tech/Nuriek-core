@@ -9,6 +9,8 @@ export type AuditAction =
     | "DOCUMENT_UPLOAD"
     | "DOCUMENT_DELETE"
     | "DOCUMENT_SIGN"
+    | "OFFER_EMAIL_SENT"
+    | "OFFER_SIGNED"
     | "LEAVE_REQUEST"
     | "LEAVE_APPROVE"
     | "TIMESHEET_SUBMIT"

@@ -11,6 +11,8 @@ type NotifyUser = {
     mustChangePassword: boolean;
 };
 
+const ACTIVITY_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
 function item(
     partial: Omit<PortalNotification, "createdAt"> & { createdAt?: Date | string }
 ): PortalNotification {
@@ -19,7 +21,216 @@ function item(
             ? partial.createdAt.toISOString()
             : partial.createdAt ?? new Date().toISOString();
     const { createdAt: _c, ...rest } = partial;
-    return { ...rest, createdAt };
+    return {
+        tier: "action",
+        ...rest,
+        createdAt,
+    };
+}
+
+function parseAuditMetadata(raw: string | null): Record<string, unknown> {
+    if (!raw) return {};
+    try {
+        return JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+        return {};
+    }
+}
+
+function profileHref(userId: string, role?: string | null): string {
+    if (role === ROLES.INTERN) return `/interns/${userId}`;
+    return `/profile/${userId}`;
+}
+
+function auditLogToActivityNotification(log: {
+    id: string;
+    action: string;
+    entity: string;
+    entityId: string | null;
+    metadata: string | null;
+    actorEmail: string | null;
+    createdAt: Date;
+}): PortalNotification | null {
+    const meta = parseAuditMetadata(log.metadata);
+    const who = log.actorEmail ? String(log.actorEmail).split("@")[0] : "Someone";
+
+    if (log.action === "USER_ONBOARD" && log.entityId) {
+        const email = String(meta.email ?? "new user");
+        const role = String(meta.role ?? "EMPLOYEE");
+        return item({
+            id: `audit-${log.id}`,
+            kind: "onboard",
+            tier: "activity",
+            title: "Employee onboarded",
+            body: `${email} added as ${role.replace(/_/g, " ").toLowerCase()}${log.actorEmail ? ` by ${who}` : ""}.`,
+            href: profileHref(log.entityId, role),
+            createdAt: log.createdAt,
+        });
+    }
+
+    if (log.action === "OFFER_ONBOARDING_SENT") {
+        const ref = String(meta.ref ?? "offer");
+        const workEmail = String(meta.workEmail ?? meta.sentTo ?? "");
+        return item({
+            id: `audit-${log.id}`,
+            kind: "onboard",
+            tier: "activity",
+            title: "Onboarding email sent",
+            body: `Portal credentials sent to ${workEmail || "candidate"} (${ref}).`,
+            href: "/admin/offer-letter",
+            createdAt: log.createdAt,
+        });
+    }
+
+    if (
+        (log.action === "OFFER_SIGNED" || log.action === "DOCUMENT_SIGN") &&
+        log.entity === "OfferLetter"
+    ) {
+        const candidate = String(meta.candidate ?? meta.candidateName ?? "Candidate");
+        const ref = String(meta.ref ?? "");
+        return item({
+            id: `audit-${log.id}`,
+            kind: "offer",
+            tier: "activity",
+            title: "Offer accepted",
+            body: `${candidate} signed${ref ? ` (${ref})` : ""}.`,
+            href: meta.token ? `/offer/${meta.token}` : "/admin/offer-letter",
+            createdAt: log.createdAt,
+        });
+    }
+
+    if (log.action === "DOCUMENT_UPLOAD" && log.entity === "OfferLetter" && meta.emailedTo) {
+        const ref = String(meta.ref ?? "");
+        return item({
+            id: `audit-${log.id}`,
+            kind: "offer",
+            tier: "activity",
+            title: "Offer email sent",
+            body: `Sent to ${meta.emailedTo}${ref ? ` · ${ref}` : ""}.`,
+            href: meta.token ? `/offer/${meta.token}` : "/admin/offer-letter",
+            createdAt: log.createdAt,
+        });
+    }
+
+    if (log.action === "INTERN_CONVERT" && log.entityId) {
+        return item({
+            id: `audit-${log.id}`,
+            kind: "people",
+            tier: "activity",
+            title: "Intern converted",
+            body: `Intern promoted to employee${log.actorEmail ? ` · ${who}` : ""}.`,
+            href: profileHref(log.entityId, ROLES.EMPLOYEE),
+            createdAt: log.createdAt,
+        });
+    }
+
+    if (log.action === "USER_DELETE") {
+        const email = String(meta.deletedEmail ?? "user");
+        return item({
+            id: `audit-${log.id}`,
+            kind: "people",
+            tier: "activity",
+            title: "User removed",
+            body: `${email} removed from directory${log.actorEmail ? ` by ${who}` : ""}.`,
+            href: "/directory",
+            createdAt: log.createdAt,
+        });
+    }
+
+    return null;
+}
+
+async function adminRecentActivityNotifications(): Promise<PortalNotification[]> {
+    const since = new Date(Date.now() - ACTIVITY_WINDOW_MS);
+    const list: PortalNotification[] = [];
+    const seen = new Set<string>();
+
+    const push = (n: PortalNotification) => {
+        if (seen.has(n.id)) return;
+        seen.add(n.id);
+        list.push(n);
+    };
+
+    try {
+        const logs = await prisma.auditLog.findMany({
+            where: {
+                createdAt: { gte: since },
+                OR: [
+                    { action: { in: ["USER_ONBOARD", "OFFER_ONBOARDING_SENT", "INTERN_CONVERT", "USER_DELETE", "OFFER_SIGNED"] } },
+                    { action: "DOCUMENT_SIGN", entity: "OfferLetter" },
+                    { action: "DOCUMENT_UPLOAD", entity: "OfferLetter" },
+                ],
+            },
+            orderBy: { createdAt: "desc" },
+            take: 25,
+        });
+
+        for (const log of logs) {
+            const n = auditLogToActivityNotification(log);
+            if (n) push(n);
+        }
+    } catch (error) {
+        console.error("[notifications] audit activity:", error);
+    }
+
+    try {
+        const recentUsers = await prisma.user.findMany({
+            where: { createdAt: { gte: since } },
+            orderBy: { createdAt: "desc" },
+            take: 12,
+            select: { id: true, name: true, email: true, role: true, createdAt: true },
+        });
+
+        for (const u of recentUsers) {
+            push(
+                item({
+                    id: `user-created-${u.id}`,
+                    kind: "onboard",
+                    tier: "activity",
+                    title: "New portal account",
+                    body: `${u.name || u.email} · ${String(u.role).replace(/_/g, " ").toLowerCase()}`,
+                    href: profileHref(u.id, u.role),
+                    createdAt: u.createdAt,
+                })
+            );
+        }
+    } catch (error) {
+        console.error("[notifications] user activity:", error);
+    }
+
+    try {
+        const signedOffers = await prisma.offerLetter.findMany({
+            where: { signedAt: { gte: since } },
+            orderBy: { signedAt: "desc" },
+            take: 10,
+            select: {
+                id: true,
+                token: true,
+                candidateName: true,
+                refNumber: true,
+                signedAt: true,
+                onboardingEmailedAt: true,
+            },
+        });
+
+        for (const o of signedOffers) {
+            push(
+                item({
+                    id: `offer-signed-${o.id}`,
+                    kind: "offer",
+                    tier: "activity",
+                    title: "Offer signed",
+                    body: `${o.candidateName} · ${o.refNumber}${o.onboardingEmailedAt ? " · onboarding sent" : ""}`,
+                    href: `/offer/${o.token}`,
+                    createdAt: o.signedAt!,
+                })
+            );
+        }
+    } catch (error) {
+        console.error("[notifications] offer activity:", error);
+    }
+
+    return list;
 }
 
 async function adminActionNotifications(): Promise<PortalNotification[]> {
@@ -271,26 +482,32 @@ async function managerNotifications(): Promise<PortalNotification[]> {
 export async function buildNotificationsForUser(
     user: NotifyUser
 ): Promise<PortalNotification[]> {
-    const items: PortalNotification[] = [];
+    const actionItems: PortalNotification[] = [];
+    const activityItems: PortalNotification[] = [];
 
     if (isAdminRole(user.role)) {
-        items.push(...(await adminActionNotifications()));
+        actionItems.push(...(await adminActionNotifications()));
+        activityItems.push(...(await adminRecentActivityNotifications()));
     } else if (user.role === ROLES.MANAGER) {
-        items.push(...(await managerNotifications()));
+        actionItems.push(...(await managerNotifications()));
     }
 
-    items.push(...(await personalNotifications(user)));
+    actionItems.push(...(await personalNotifications(user)));
 
     const seen = new Set<string>();
-    const unique = items.filter((n) => {
-        if (seen.has(n.id)) return false;
-        seen.add(n.id);
-        return true;
-    });
+    const dedupe = (list: PortalNotification[]) =>
+        list.filter((n) => {
+            if (seen.has(n.id)) return false;
+            seen.add(n.id);
+            return true;
+        });
 
-    unique.sort(
+    const actions = dedupe(actionItems).sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    const activity = dedupe(activityItems).sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    return unique;
+    return [...actions, ...activity];
 }

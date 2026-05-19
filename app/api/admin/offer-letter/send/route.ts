@@ -88,8 +88,9 @@ export async function POST(req: Request) {
         await logAudit({
             actorId: user.id,
             actorEmail: user.email,
-            action: "DOCUMENT_UPLOAD",
+            action: "OFFER_EMAIL_SENT",
             entity: "OfferLetter",
+            entityId: offer.id,
             metadata: { ref: offer.refNumber, emailedTo: to, token: offer.token },
         });
 

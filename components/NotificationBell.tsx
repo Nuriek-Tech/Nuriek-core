@@ -11,6 +11,9 @@ import {
     Activity,
     Shield,
     Loader2,
+    FileSignature,
+    UserPlus,
+    Users,
 } from "lucide-react";
 import type { PortalNotification } from "@/lib/api-types";
 import type { LucideIcon } from "lucide-react";
@@ -22,6 +25,9 @@ const KIND_ICONS: Record<PortalNotification["kind"], LucideIcon> = {
     document: FileText,
     attendance: Activity,
     account: Shield,
+    offer: FileSignature,
+    onboard: UserPlus,
+    people: Users,
 };
 
 function timeAgo(iso: string): string {
@@ -95,7 +101,36 @@ export default function NotificationBell() {
         };
     }, [open]);
 
-    const unreadCount = notifications.length;
+    const actionItems = notifications.filter((n) => n.tier !== "activity");
+    const activityItems = notifications.filter((n) => n.tier === "activity");
+    const unreadCount = actionItems.length;
+
+    const renderList = (items: PortalNotification[]) => (
+        <ul className="notifList">
+            {items.map((n) => {
+                const Icon = KIND_ICONS[n.kind] ?? Bell;
+                return (
+                    <li key={n.id}>
+                        <Link
+                            href={n.href}
+                            className={`notifItem${n.tier === "activity" ? " notifItem--activity" : ""}`}
+                            role="menuitem"
+                            onClick={() => setOpen(false)}
+                        >
+                            <span className={`notifItemIcon notifItemIcon--${n.kind}`}>
+                                <Icon size={16} />
+                            </span>
+                            <span className="notifItemContent">
+                                <span className="notifItemTitle">{n.title}</span>
+                                <span className="notifItemBody">{n.body}</span>
+                                <span className="notifItemTime">{timeAgo(n.createdAt)}</span>
+                            </span>
+                        </Link>
+                    </li>
+                );
+            })}
+        </ul>
+    );
 
     return (
         <div className="notifWrap" ref={panelRef}>
@@ -127,9 +162,11 @@ export default function NotificationBell() {
                 <div className="notifPanel glass" role="menu">
                     <div className="notifPanelHead">
                         <span className="notifPanelTitle">Notifications</span>
-                        {unreadCount > 0 && (
-                            <span className="notifPanelCount">{unreadCount} active</span>
-                        )}
+                        {unreadCount > 0 ? (
+                            <span className="notifPanelCount">{unreadCount} to review</span>
+                        ) : activityItems.length > 0 ? (
+                            <span className="notifPanelCount notifPanelCount--muted">Activity</span>
+                        ) : null}
                     </div>
 
                     <div className="notifPanelBody">
@@ -141,39 +178,25 @@ export default function NotificationBell() {
                             <div className="notifEmpty">
                                 <Bell size={28} className="notifEmptyIcon" />
                                 <p>You&apos;re all caught up</p>
-                                <span className="notifEmptySub">No pending items right now</span>
+                                <span className="notifEmptySub">
+                                    No pending items or recent activity
+                                </span>
                             </div>
                         ) : (
-                            <ul className="notifList">
-                                {notifications.map((n) => {
-                                    const Icon = KIND_ICONS[n.kind] ?? Bell;
-                                    return (
-                                        <li key={n.id}>
-                                            <Link
-                                                href={n.href}
-                                                className="notifItem"
-                                                role="menuitem"
-                                                onClick={() => setOpen(false)}
-                                            >
-                                                <span
-                                                    className={`notifItemIcon notifItemIcon--${n.kind}`}
-                                                >
-                                                    <Icon size={16} />
-                                                </span>
-                                                <span className="notifItemContent">
-                                                    <span className="notifItemTitle">
-                                                        {n.title}
-                                                    </span>
-                                                    <span className="notifItemBody">{n.body}</span>
-                                                    <span className="notifItemTime">
-                                                        {timeAgo(n.createdAt)}
-                                                    </span>
-                                                </span>
-                                            </Link>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
+                            <>
+                                {actionItems.length > 0 && (
+                                    <>
+                                        <p className="notifSectionLabel">Needs attention</p>
+                                        {renderList(actionItems)}
+                                    </>
+                                )}
+                                {activityItems.length > 0 && (
+                                    <>
+                                        <p className="notifSectionLabel">Recent activity (14 days)</p>
+                                        {renderList(activityItems)}
+                                    </>
+                                )}
+                            </>
                         )}
                     </div>
 
