@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import OfferSignPanel from "./OfferSignPanel";
+import OfferLetterDocument from "./OfferLetterDocument";
 
 type Props = {
     html: string;
@@ -21,21 +22,12 @@ export default function OfferViewClient({
     signedAt,
     isIntern = false,
 }: Props) {
-    const frameRef = useRef<HTMLIFrameElement>(null);
     const [displayHtml, setDisplayHtml] = useState(initialHtml);
     const signInHref = `/login?callbackUrl=${encodeURIComponent(`/offer/${token}`)}`;
 
     useEffect(() => {
         fetch(`/api/offer/${token}/view`, { method: "POST" }).catch(() => undefined);
     }, [token]);
-
-    const handlePrint = () => {
-        try {
-            frameRef.current?.contentWindow?.print();
-        } catch {
-            window.print();
-        }
-    };
 
     return (
         <main className="offerViewPage">
@@ -45,19 +37,18 @@ export default function OfferViewClient({
                     <Link href={signInHref} className="offerViewBtn offerViewBtn--ghost">
                         Sign in to Nuriek Core
                     </Link>
-                    <button type="button" className="offerViewBtn offerViewBtn--primary" onClick={handlePrint}>
+                    <button
+                        type="button"
+                        className="offerViewBtn offerViewBtn--primary"
+                        onClick={() => window.print()}
+                    >
                         Print / Save PDF
                     </button>
                 </div>
             </div>
 
             <div className="offerViewMain">
-                <iframe
-                    ref={frameRef}
-                    title={`Offer letter — ${candidateName}`}
-                    srcDoc={displayHtml}
-                    className="offerViewFrame"
-                />
+                <OfferLetterDocument html={displayHtml} className="offerViewFrame" />
 
                 <OfferSignPanel
                     token={token}
