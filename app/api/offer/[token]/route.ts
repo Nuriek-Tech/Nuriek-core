@@ -20,10 +20,10 @@ export async function GET(
         return NextResponse.json({ error: "This offer has expired" }, { status: 410 });
     }
 
-    const { getOfferDisplayHtml } = await import("@/lib/offer-letter-workflow");
+    const { getOfferDisplayHtmlHydrated } = await import("@/lib/offer-letter-workflow");
 
     return NextResponse.json({
-        html: getOfferDisplayHtml(offer),
+        html: await getOfferDisplayHtmlHydrated(offer),
         refNumber: offer.refNumber,
         candidateName: offer.candidateName,
         position: offer.position,

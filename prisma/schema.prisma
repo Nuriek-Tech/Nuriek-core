@@ -248,9 +248,12 @@ model SystemConfig {
   workEndHour      Int      @default(18)
   workEndMin       Int      @default(0)
   flexibleRoles    String   @default("INTERN")
-  officeName       String   @default("Bangalore (HQ)")
-  lateGraceMinutes Int      @default(15)
-  updatedAt        DateTime @updatedAt
+  officeName         String   @default("Bangalore (HQ)")
+  lateGraceMinutes   Int      @default(15)
+  hrSignatory        String?
+  hrSignatoryTitle   String?
+  hrSignatureDataUrl String?  @db.Text
+  updatedAt          DateTime @updatedAt
 }
 
 model OrgTask {

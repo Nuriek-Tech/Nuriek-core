@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { applyOfferSignature, OFFER_STATUS } from "@/lib/offer-letter-workflow";
+import {
+    applyOfferSignature,
+    getOfferDisplayHtmlHydrated,
+    OFFER_STATUS,
+} from "@/lib/offer-letter-workflow";
 import { logAudit } from "@/lib/audit";
 import { provisionUserFromSignedOffer } from "@/lib/offer-provision";
 
@@ -49,7 +53,8 @@ export async function POST(
             );
         }
 
-        const signedHtml = applyOfferSignature(offer.html, {
+        const baseHtml = await getOfferDisplayHtmlHydrated(offer);
+        const signedHtml = applyOfferSignature(baseHtml, {
             signedName,
             signedPlace,
             signedDate,

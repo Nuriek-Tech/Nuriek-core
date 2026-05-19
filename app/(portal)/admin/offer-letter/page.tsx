@@ -128,22 +128,51 @@ export default function OfferLetterPage() {
     const [hrPrefsLoaded, setHrPrefsLoaded] = useState(false);
 
     useEffect(() => {
-        const saved = loadHrSignatoryPrefs();
-        const legacySig = loadLegacySignatureOnly();
-        if (saved || legacySig) {
+        let cancelled = false;
+
+        const loadPrefs = async () => {
+            const saved = loadHrSignatoryPrefs();
+            const legacySig = loadLegacySignatureOnly();
+            let server: {
+                hrSignatory?: string;
+                hrSignatoryTitle?: string;
+                hrSignatureDataUrl?: string;
+            } | null = null;
+
+            try {
+                const res = await fetch("/api/admin/offer-letter/hr-signatory");
+                if (res.ok) server = await res.json();
+            } catch {
+                /* offline */
+            }
+
+            if (cancelled) return;
+
             setForm((f) => ({
                 ...f,
-                hrSignatory: saved?.hrSignatory ?? f.hrSignatory,
-                hrSignatoryTitle: saved?.hrSignatoryTitle ?? f.hrSignatoryTitle,
+                hrSignatory:
+                    saved?.hrSignatory ||
+                    server?.hrSignatory ||
+                    f.hrSignatory ||
+                    session?.user?.name ||
+                    "",
+                hrSignatoryTitle:
+                    saved?.hrSignatoryTitle ||
+                    server?.hrSignatoryTitle ||
+                    f.hrSignatoryTitle,
                 hrSignatureDataUrl:
-                    saved?.hrSignatureDataUrl || legacySig || f.hrSignatureDataUrl,
+                    saved?.hrSignatureDataUrl ||
+                    legacySig ||
+                    server?.hrSignatureDataUrl ||
+                    f.hrSignatureDataUrl,
             }));
-        } else if (session?.user?.name) {
-            setForm((f) =>
-                f.hrSignatory ? f : { ...f, hrSignatory: session.user?.name || "" }
-            );
-        }
-        setHrPrefsLoaded(true);
+            setHrPrefsLoaded(true);
+        };
+
+        void loadPrefs();
+        return () => {
+            cancelled = true;
+        };
     }, [session?.user?.name]);
 
     useEffect(() => {
@@ -153,6 +182,20 @@ export default function OfferLetterPage() {
             hrSignatoryTitle: form.hrSignatoryTitle,
             hrSignatureDataUrl: form.hrSignatureDataUrl,
         });
+
+        const timer = window.setTimeout(() => {
+            void fetch("/api/admin/offer-letter/hr-signatory", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    hrSignatory: form.hrSignatory,
+                    hrSignatoryTitle: form.hrSignatoryTitle,
+                    hrSignatureDataUrl: form.hrSignatureDataUrl,
+                }),
+            }).catch(() => undefined);
+        }, 600);
+
+        return () => window.clearTimeout(timer);
     }, [
         hrPrefsLoaded,
         form.hrSignatory,
@@ -168,6 +211,15 @@ export default function OfferLetterPage() {
             hrSignatoryTitle: "Human Resources",
             hrSignatureDataUrl: "",
         }));
+        void fetch("/api/admin/offer-letter/hr-signatory", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                hrSignatory: "",
+                hrSignatoryTitle: "Human Resources",
+                hrSignatureDataUrl: "",
+            }),
+        }).catch(() => undefined);
     };
 
     const savedHrSignatoryActive = hasSavedHrSignatoryPrefs({
@@ -982,7 +1034,8 @@ export default function OfferLetterPage() {
                                 )}
                             </div>
                             <p className="olFieldHint olHrPrefsNote">
-                                Name, title, and signature are saved in this browser and reused for every
+                                Name, title, and signature are saved to the server (and this browser) and
+                                reused for every
                                 offer letter until you clear them.
                             </p>
                             <div className="olGrid2">
@@ -1049,9 +1102,10 @@ export default function OfferLetterPage() {
                                         </div>
                                     ) : (
                                         <span className="olFieldHint">
-                                            Upload PNG/JPG (transparent background works best). Or add{" "}
-                                            <code>public/images/nuriek-hr-signature.png</code> as the
-                                            default for all offers.
+                                            Upload PNG/JPG (transparent background works best). Saved to
+                                            the server for production — or place{" "}
+                                            <code>public/images/nuriek-hr-signature.png</code> in the
+                                            repo as a fallback.
                                         </span>
                                     )}
                                 </div>

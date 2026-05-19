@@ -15,6 +15,7 @@ import {
     resolveInternshipMonths,
     resolveStipendAfterMonths,
 } from "@/lib/internship-offer";
+import { getOrgHrSignatory, resolveHrSignatureForOffer } from "@/lib/offer-hr-signature-org";
 
 function isOfferLetterModelMissing(error: unknown): boolean {
     if (!(error instanceof Error)) return false;
@@ -44,7 +45,10 @@ export async function POST(req: Request) {
         const reportingTo = String(body.reportingTo || "HR / Reporting Manager").trim();
         const workLocation = String(body.workLocation || "Bangalore (HQ)").trim();
         const offerValidUntil = String(body.offerValidUntil || "").trim();
-        const hrSignatory = String(body.hrSignatory || user.name || "HR Manager").trim();
+        const orgHr = await getOrgHrSignatory();
+        const hrSignatory = String(
+            body.hrSignatory || orgHr.hrSignatory || user.name || "HR Manager"
+        ).trim();
 
         if (!candidateName || !position || !compensation || !joiningDate || !offerValidUntil) {
             return NextResponse.json(
@@ -90,11 +94,12 @@ export async function POST(req: Request) {
             hrSignatory,
             hrSignatoryTitle: body.hrSignatoryTitle
                 ? String(body.hrSignatoryTitle).trim()
-                : "Human Resources",
+                : orgHr.hrSignatoryTitle || "Human Resources",
             additionalTerms: body.additionalTerms ? String(body.additionalTerms) : undefined,
-            hrSignatureDataUrl: body.hrSignatureDataUrl
-                ? String(body.hrSignatureDataUrl).trim()
-                : undefined,
+            hrSignatureDataUrl:
+                (await resolveHrSignatureForOffer(
+                    body.hrSignatureDataUrl ? String(body.hrSignatureDataUrl).trim() : null
+                )) || undefined,
             refNumber: buildOfferLetterRef(),
             issueDate: new Date().toISOString(),
         };

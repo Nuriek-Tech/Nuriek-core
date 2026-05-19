@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getOfferDisplayHtml, OFFER_STATUS } from "@/lib/offer-letter-workflow";
+import { getOfferDisplayHtmlHydrated, OFFER_STATUS } from "@/lib/offer-letter-workflow";
 import { isInternEmploymentType, resolveOfferEmploymentType } from "@/lib/offer-letter";
 import OfferViewClient from "./OfferViewClient";
 import "./offer-view.css";
@@ -28,7 +28,7 @@ export default async function OfferLetterViewPage({ params }: Props) {
         );
     }
 
-    const displayHtml = getOfferDisplayHtml(offer);
+    const displayHtml = await getOfferDisplayHtmlHydrated(offer);
     const isSigned = offer.status === OFFER_STATUS.SIGNED || Boolean(offer.signedAt);
     const isIntern = isInternEmploymentType(resolveOfferEmploymentType(offer));
 

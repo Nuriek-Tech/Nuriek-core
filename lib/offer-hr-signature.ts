@@ -1,20 +1,13 @@
 /** HR signatory image for offer / internship letters */
 
+import { loadHrSignatureDataUrlFromDisk } from "@/lib/offer-hr-signature-asset";
+
 export function escapeAttr(s: string): string {
     return s
         .replace(/&/g, "&amp;")
         .replace(/"/g, "&quot;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
-}
-
-/** Public default signature (place file at public/images/nuriek-hr-signature.png). */
-export function defaultHrSignatureImageUrl(): string | null {
-    const base =
-        process.env.NEXTAUTH_URL ||
-        process.env.NEXT_PUBLIC_APP_URL ||
-        "http://localhost:3000";
-    return `${base.replace(/\/$/, "")}/images/nuriek-hr-signature.png`;
 }
 
 export function resolveHrSignatureSrc(
@@ -24,12 +17,26 @@ export function resolveHrSignatureSrc(
     const uploaded = uploadedDataUrl?.trim();
     if (uploaded) {
         if (uploaded.startsWith("data:image/")) return uploaded;
-        if (uploaded.startsWith("http://") || uploaded.startsWith("https://") || uploaded.startsWith("/")) {
+        if (
+            uploaded.startsWith("http://") ||
+            uploaded.startsWith("https://") ||
+            uploaded.startsWith("/")
+        ) {
             return uploaded;
         }
     }
-    if (useDefault) return defaultHrSignatureImageUrl();
+    if (useDefault) return loadHrSignatureDataUrlFromDisk();
     return null;
+}
+
+/** Replace HR signatory signature row (fixes prod offers with missing /images/ URLs). */
+export function patchHrSignatureInOfferHtml(html: string, sigSrc: string | null): string {
+    if (!sigSrc) return html;
+    const cell = sigValueCell(hrSignatureCellHtml(sigSrc));
+    return html.replace(
+        /(<div class="hr-sig-block accept-block">[\s\S]*?<tr><td>Signature<\/td>)<td class="sig-value">[\s\S]*?<\/td>(\s*<\/tr>)/i,
+        `$1${cell}$2`
+    );
 }
 
 function sigValueCell(inner: string): string {

@@ -79,6 +79,20 @@ export function getOfferDisplayHtml(offer: {
     return offer.html;
 }
 
+/** Apply org HR signature to stored HTML (fixes broken prod image URLs). */
+export async function getOfferDisplayHtmlHydrated(offer: {
+    html: string;
+    signedHtml?: string | null;
+    status?: string | null;
+}): Promise<string> {
+    const { patchHrSignatureInOfferHtml } = await import("@/lib/offer-hr-signature");
+    const { resolveHrSignatureForOffer } = await import("@/lib/offer-hr-signature-org");
+
+    const base = getOfferDisplayHtml(offer);
+    const sigSrc = await resolveHrSignatureForOffer(null);
+    return patchHrSignatureInOfferHtml(base, sigSrc);
+}
+
 export function offerStatusLabel(status: string): string {
     switch (status) {
         case OFFER_STATUS.SENT:
