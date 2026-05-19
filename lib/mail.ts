@@ -7,6 +7,7 @@ import {
     isZohoConfigured,
     zohoMailFrom,
 } from "@/lib/zoho-smtp";
+import { NURIEK_EMAIL, nuriekEmailSimple } from "@/lib/nuriek-email-theme";
 
 function getTransporter() {
     return createZohoTransporter();
@@ -106,13 +107,20 @@ export async function sendDocumentNotification(
             from: zohoMailFrom(),
             bcc: recipients,
             subject: `New Document: ${docTitle}`,
-            html: `
-        <div style="font-family: sans-serif; padding: 20px;">
-          <h2>New Document Available</h2>
-          <p><strong>${docTitle}</strong> was uploaded to the Company Drive.</p>
-          <a href="${fullUrl}">Open in portal</a>
-        </div>
-      `,
+            html: nuriekEmailSimple({
+                title: `New document — ${docTitle}`,
+                eyebrow: "Nuriek Core · Documents",
+                headline: "New document available",
+                bodyHtml: `
+              <p style="margin: 0 0 12px; font-size: 15px; color: ${NURIEK_EMAIL.textMuted}; line-height: 1.6;">
+                <strong style="color: ${NURIEK_EMAIL.text};">${docTitle}</strong> was uploaded to the Company Drive.
+              </p>
+              <p style="margin: 0; font-size: 14px; color: ${NURIEK_EMAIL.textSoft}; line-height: 1.55;">
+                Sign in to the portal to view and acknowledge if required.
+              </p>`,
+                ctaHref: fullUrl,
+                ctaLabel: "Open in portal",
+            }),
         });
         return { success: true };
     });
@@ -138,23 +146,26 @@ export async function sendSignatureRequestEmail(params: {
             from: zohoMailFrom(),
             to,
             subject: `Action required: Sign "${documentTitle}"`,
-            html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-          <h1 style="color: #0f172a; font-size: 22px;">Signature requested</h1>
-          <p>Hello,</p>
-          <p>You have been asked to review and sign <strong>${documentTitle}</strong>${signerRole ? ` as <strong>${signerRole}</strong>` : ""}.</p>
-          ${description ? `<p style="color: #475569;">${description}</p>` : ""}
-          <ol style="color: #334155; line-height: 1.6;">
-            <li>Sign in to the Nuriek employee portal.</li>
-            <li>Open <strong>Documents &amp; Policy Hub</strong>.</li>
-            <li>Read the full document, then use <strong>Sign Now</strong>.</li>
-          </ol>
-          <a href="${documentsUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">
-            Open Documents Hub
-          </a>
-          <p style="color: #64748b; font-size: 13px;">The Sign button unlocks only after you scroll through the entire document.</p>
-        </div>
-      `,
+            html: nuriekEmailSimple({
+                title: `Sign ${documentTitle}`,
+                eyebrow: "Nuriek Core · Signature",
+                headline: "Signature requested",
+                bodyHtml: `
+              <p style="margin: 0 0 12px; font-size: 15px; color: ${NURIEK_EMAIL.textMuted}; line-height: 1.6;">
+                You have been asked to review and sign <strong style="color: ${NURIEK_EMAIL.text};">${documentTitle}</strong>${signerRole ? ` as <strong>${signerRole}</strong>` : ""}.
+              </p>
+              ${description ? `<p style="margin: 0 0 14px; font-size: 14px; color: ${NURIEK_EMAIL.textSoft}; line-height: 1.55;">${description}</p>` : ""}
+              <ol style="margin: 0; padding-left: 20px; font-size: 14px; color: ${NURIEK_EMAIL.textMuted}; line-height: 1.65;">
+                <li>Sign in to the Nuriek employee portal.</li>
+                <li>Open <strong>Documents &amp; Policy Hub</strong>.</li>
+                <li>Read the full document, then use <strong>Sign Now</strong>.</li>
+              </ol>
+              <p style="margin: 16px 0 0; font-size: 13px; color: ${NURIEK_EMAIL.textSoft}; line-height: 1.5;">
+                The Sign button unlocks only after you scroll through the entire document.
+              </p>`,
+                ctaHref: documentsUrl,
+                ctaLabel: "Open Documents Hub",
+            }),
         });
         return { success: true };
     });
@@ -227,13 +238,17 @@ export async function sendTimesheetApprovalEmail(
             from: zohoMailFrom(),
             bcc: recipients,
             subject: `Timesheet Approval Required: ${employeeName}`,
-            html: `
-        <div style="font-family: sans-serif; padding: 20px;">
-          <h2>Pending Timesheet Approval</h2>
-          <p><strong>${employeeName}</strong> — ${date}</p>
-          <a href="${portalUrl("/admin/timesheets")}">Review in portal</a>
-        </div>
-      `,
+            html: nuriekEmailSimple({
+                title: `Timesheet — ${employeeName}`,
+                eyebrow: "Nuriek Core · Timesheets",
+                headline: "Pending timesheet approval",
+                bodyHtml: `
+              <p style="margin: 0; font-size: 15px; color: ${NURIEK_EMAIL.textMuted}; line-height: 1.6;">
+                <strong style="color: ${NURIEK_EMAIL.text};">${employeeName}</strong> — ${date}
+              </p>`,
+                ctaHref: portalUrl("/admin/timesheets"),
+                ctaLabel: "Review in portal",
+            }),
         });
         return { success: true };
     });
