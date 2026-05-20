@@ -77,13 +77,54 @@
 }
 
 .dashClockTime {
-  font-size: 1.75rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   color: var(--text-primary);
+  min-width: 11.5rem;
+}
+
+.liveClock {
+  display: inline-flex;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: inherit;
+  min-width: 9.5rem;
+}
+
+.liveClock--card {
+  font-size: 1.75rem;
+}
+
+.liveClock--large {
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  justify-content: center;
+  width: 100%;
+  min-width: 10rem;
+  padding: 0.5rem 0;
+}
+
+.liveClock-hm {
+  display: inline-block;
+  min-width: 4.5ch;
+  text-align: right;
+}
+
+.liveClock-sec {
+  display: inline-block;
+  min-width: 3ch;
+}
+
+.liveClock-period {
+  display: inline-block;
+  min-width: 2.25ch;
+  margin-left: 0.2rem;
+  font-size: 0.72em;
+  font-weight: 600;
+  opacity: 0.85;
 }
 
 .dashClockSub {
@@ -314,12 +355,8 @@
 
 /* Attendance control */
 .dashTimeBig {
-  font-size: 2.25rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
+  display: block;
   text-align: center;
-  letter-spacing: -0.02em;
-  padding: 0.5rem 0;
 }
 
 .dashActions {

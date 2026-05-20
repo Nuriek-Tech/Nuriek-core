@@ -25,6 +25,7 @@ import {
     FileCheck,
     BarChart3,
 } from "lucide-react";
+import LiveClock from "@/components/LiveClock";
 import "@/styles/dashboard.css";
 import "@/styles/dashboard-home.css";
 
@@ -37,7 +38,6 @@ function getGreeting(): string {
 
 export default function DashboardPage() {
     const { data: session } = useSession();
-    const [currentTime, setCurrentTime] = useState(new Date());
     const [isCheckedIn, setIsCheckedIn] = useState(false);
     const [checkInTime, setCheckInTime] = useState<string | null>(null);
     const [logs, setLogs] = useState<AttendanceLog[]>([]);
@@ -62,11 +62,6 @@ export default function DashboardPage() {
 
     const disciplineScore = stats?.disciplineScore ?? 100;
     const ringOffset = 251.2 - (251.2 * disciplineScore) / 100;
-
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
 
     const fetchAdminSummary = useCallback(async () => {
         setIsLoadingAdminSummary(true);
@@ -191,14 +186,7 @@ export default function DashboardPage() {
         }
     };
 
-    const timeStr = currentTime.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-    });
-
-    const dateStr = currentTime.toLocaleDateString("en-US", {
+    const dateStr = new Date().toLocaleDateString("en-US", {
         weekday: "long",
         day: "numeric",
         month: "long",
@@ -233,8 +221,8 @@ export default function DashboardPage() {
 
                 <div className="dashClockCard glass">
                     <div className="dashClockTime">
-                        <Clock size={22} color="var(--nuriek-blue)" />
-                        {timeStr}
+                        <Clock size={22} color="var(--nuriek-blue)" aria-hidden />
+                        <LiveClock variant="card" />
                     </div>
                     <p className="dashClockSub">
                         {isAdmin ? "Organizational overview" : "Your workday at a glance"}
@@ -424,7 +412,7 @@ export default function DashboardPage() {
                                 <Clock className="dashPanelIcon" size={20} />
                             </div>
 
-                            <div className="dashTimeBig">{timeStr}</div>
+                            <LiveClock variant="large" className="dashTimeBig" />
 
                             <div className="dashActions">
                                 {!isCheckedIn ? (

@@ -257,12 +257,15 @@
 }
 
 .notifPanelFoot {
+    display: flex;
+    gap: 0.5rem;
     padding: 0.5rem 1rem 0.75rem;
     border-top: 1px solid var(--border);
 }
 
+.notifClearBtn,
 .notifRefreshBtn {
-    width: 100%;
+    flex: 1;
     padding: 0.45rem;
     font-size: 0.78rem;
     font-weight: 600;
@@ -274,6 +277,12 @@
     transition: border-color var(--transition-fast), color var(--transition-fast);
 }
 
+.notifClearBtn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.notifClearBtn:hover:not(:disabled),
 .notifRefreshBtn:hover {
     color: var(--text-primary);
     border-color: var(--border-hover);

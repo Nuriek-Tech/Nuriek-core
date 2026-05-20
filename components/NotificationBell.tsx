@@ -17,6 +17,10 @@ import {
 } from "lucide-react";
 import type { PortalNotification } from "@/lib/api-types";
 import type { LucideIcon } from "lucide-react";
+import {
+    dismissNotificationIds,
+    loadDismissedNotificationIds,
+} from "@/lib/notification-dismiss";
 
 const KIND_ICONS: Record<PortalNotification["kind"], LucideIcon> = {
     leave: Calendar,
@@ -54,7 +58,11 @@ export default function NotificationBell() {
             const res = await fetch("/api/notifications", { cache: "no-store" });
             if (res.ok) {
                 const data = await res.json();
-                setNotifications(data.notifications ?? []);
+                const dismissed = loadDismissedNotificationIds();
+                const incoming: PortalNotification[] = data.notifications ?? [];
+                setNotifications(
+                    incoming.filter((n) => !dismissed.has(n.id))
+                );
             }
         } catch {
             /* ignore */
@@ -104,6 +112,12 @@ export default function NotificationBell() {
     const actionItems = notifications.filter((n) => n.tier !== "activity");
     const activityItems = notifications.filter((n) => n.tier === "activity");
     const unreadCount = actionItems.length;
+
+    const handleClearAll = () => {
+        if (notifications.length === 0) return;
+        dismissNotificationIds(notifications.map((n) => n.id));
+        setNotifications([]);
+    };
 
     const renderList = (items: PortalNotification[]) => (
         <ul className="notifList">
@@ -201,6 +215,14 @@ export default function NotificationBell() {
                     </div>
 
                     <div className="notifPanelFoot">
+                        <button
+                            type="button"
+                            className="notifClearBtn"
+                            onClick={handleClearAll}
+                            disabled={notifications.length === 0}
+                        >
+                            Clear all
+                        </button>
                         <button
                             type="button"
                             className="notifRefreshBtn"

@@ -20,7 +20,12 @@ export type LeaveRecord = {
 };
 
 export type LeaveBalance = {
+    /** Entitled days this calendar year (prorated from join date when applicable) */
     total: number;
+    /** Full-year quota for role before proration */
+    annualQuota?: number;
+    isProrated?: boolean;
+    joinDate?: string | null;
     used: number;
     pending: number;
     remaining: number;

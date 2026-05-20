@@ -175,9 +175,18 @@ export default function LeavePage() {
     });
 
     const totalLeaves = balance?.total ?? 22;
+    const annualQuota = balance?.annualQuota ?? totalLeaves;
+    const isProrated = balance?.isProrated ?? false;
     const usedLeaves = balance?.used ?? 0;
     const remainingLeaves = balance?.remaining ?? totalLeaves - usedLeaves;
     const pendingLeaves = balance?.pending ?? leaves.filter(l => l.status === "PENDING").length;
+    const joinLabel = balance?.joinDate
+        ? new Date(balance.joinDate).toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+          })
+        : null;
 
     // Upcoming holidays (next 5)
     const upcomingHolidays = holidays
@@ -288,11 +297,32 @@ export default function LeavePage() {
                         <span className="cardTitle">Leave Balance</span>
                         <Clock className="cardIcon" size={20} />
                     </div>
+                    {isProrated && joinLabel && (
+                        <p
+                            className="statLabel"
+                            style={{
+                                marginBottom: "0.75rem",
+                                lineHeight: 1.45,
+                                fontWeight: 500,
+                            }}
+                        >
+                            Prorated from joining date ({joinLabel}): {annualQuota} days/year →{" "}
+                            <strong>{totalLeaves}</strong> days entitled this year.
+                        </p>
+                    )}
                     <div className="statsGrid">
                         <div className="statItem">
-                            <span className="statLabel">Annual Quota</span>
+                            <span className="statLabel">
+                                {isProrated ? "Entitled (prorated)" : "Annual quota"}
+                            </span>
                             <span className="statValue">{totalLeaves} days</span>
                         </div>
+                        {isProrated && (
+                            <div className="statItem">
+                                <span className="statLabel">Full-year quota</span>
+                                <span className="statValue">{annualQuota} days</span>
+                            </div>
+                        )}
                         <div className="statItem">
                             <span className="statLabel">Used (Approved)</span>
                             <span className="statValue" style={{ color: "#ff9f0a" }}>{usedLeaves}</span>
