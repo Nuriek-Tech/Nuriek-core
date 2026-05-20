@@ -13,7 +13,9 @@ import {
     Star,
     Trash2,
     AlertTriangle,
+    Calendar,
 } from "lucide-react";
+import type { LeaveBalance } from "@/lib/api-types";
 import type { Role } from "@/lib/constants";
 import { BadgeIcon } from "@/lib/nav-icons";
 import "@/styles/directory.css";
@@ -65,12 +67,21 @@ export default function ClientProfileWrapper({
     user,
     isHrOrAdmin,
     analytics,
+    leaveBalance,
 }: {
     user: ProfileUser;
     viewerRole?: Role;
     isHrOrAdmin: boolean;
     analytics: ProfileAnalytics;
+    leaveBalance?: LeaveBalance | null;
 }) {
+    const joinLabel =
+        leaveBalance?.joinDate &&
+        new Date(leaveBalance.joinDate).toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        });
     const [isEditingDate, setIsEditingDate] = useState(false);
     const [joinDate, setJoinDate] = useState(user.profile?.joinDate ? new Date(user.profile.joinDate).toISOString().split('T')[0] : "");
     const [isEditingManager, setIsEditingManager] = useState(false);
@@ -224,8 +235,70 @@ export default function ClientProfileWrapper({
                                 <b>{analytics.lateArrivals}</b>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                                <span>Leaves Taken</span>
-                                <b>{analytics.approvedLeaves} per year</b>
+                                <span>Approved requests</span>
+                                <b>{analytics.approvedLeaves}</b>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {leaveBalance && (
+                    <div className="sidebarCard glass" style={{ border: "1px solid rgba(var(--nuriek-blue-rgb), 0.25)" }}>
+                        <div className="sectionHeader" style={{ border: "none", padding: 0, color: "var(--nuriek-blue)" }}>
+                            <Calendar size={18} />
+                            <span>Leave balance</span>
+                        </div>
+                        {leaveBalance.isProrated && joinLabel && (
+                            <p
+                                style={{
+                                    marginTop: "0.65rem",
+                                    fontSize: "0.78rem",
+                                    lineHeight: 1.45,
+                                    color: "var(--text-secondary)",
+                                }}
+                            >
+                                Prorated from {joinLabel}
+                                {leaveBalance.annualQuota != null && (
+                                    <>
+                                        {" "}
+                                        ({leaveBalance.annualQuota} days/year → {leaveBalance.total} entitled)
+                                    </>
+                                )}
+                            </p>
+                        )}
+                        <div
+                            style={{
+                                marginTop: "0.85rem",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "0.55rem",
+                                fontSize: "0.9rem",
+                            }}
+                        >
+                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span>
+                                    {leaveBalance.isProrated ? "Entitled (prorated)" : "Annual entitlement"}
+                                </span>
+                                <b>{leaveBalance.total} days</b>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span>Used (approved)</span>
+                                <b style={{ color: "#ff9f0a" }}>{leaveBalance.used} days</b>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span>Pending approval</span>
+                                <b>{leaveBalance.pending} days</b>
+                            </div>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    paddingTop: "0.35rem",
+                                    borderTop: "1px solid var(--border)",
+                                }}
+                            >
+                                <span>Remaining</span>
+                                <b style={{ color: "#34c759" }}>{leaveBalance.remaining} days</b>
                             </div>
                         </div>
                     </div>

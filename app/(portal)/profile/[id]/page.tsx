@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { isAdminRole } from "@/lib/constants";
+import { isAdminRole, isSuperAdminRole, type Role } from "@/lib/constants";
+import { getLeaveBalance } from "@/lib/leave";
 import ClientProfileWrapper from "./client-profile";
 
 type AttendanceEntry = { status: string };
@@ -45,12 +46,18 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
     const attendanceRate = totalAttendance > 0 ? Math.round(((totalAttendance - lateArrivals) / totalAttendance) * 100) : 100;
     const approvedLeaves = leaves.filter((l) => l.status === "APPROVED").length;
 
+    const leaveBalance =
+        isSuperAdminRole(viewerRole as Role)
+            ? await getLeaveBalance(user.id, user.role as Role)
+            : null;
+
     return (
         <ClientProfileWrapper
             user={user}
             viewerRole={viewerRole}
             isHrOrAdmin={isHrOrAdmin}
             analytics={{ attendanceRate, lateArrivals, approvedLeaves }}
+            leaveBalance={leaveBalance}
         />
     );
 }
