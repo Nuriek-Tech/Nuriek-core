@@ -264,6 +264,26 @@
   color: #3d3a36;
 }
 
+.loginFieldLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.loginForgotLink {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6f6a63;
+  text-decoration: none;
+}
+
+.loginForgotLink:hover {
+  color: #1a1917;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .loginField input {
   width: 100%;
   padding: 0.85rem 1rem;
@@ -302,6 +322,18 @@
   color: #991b1b;
   background: #fef2f2;
   border: 1px solid #fecaca;
+  border-radius: 12px;
+}
+
+.loginSuccess {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.85rem;
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
   border-radius: 12px;
 }
 

@@ -49,6 +49,19 @@ model User {
   reportsToId         String?
   reportsTo           User?         @relation("UserReportsTo", fields: [reportsToId], references: [id], onDelete: SetNull)
   directReports       User[]        @relation("UserReportsTo")
+  passwordResetTokens PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model OfferLetter {

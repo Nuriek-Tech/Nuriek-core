@@ -4,14 +4,8 @@ import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
-import {
-    NURIEK_SITE_URL,
-    NURIEK_MISSION,
-    NURIEK_TAGLINE,
-    NURIEK_HERO_LINE,
-    NURIEK_SITE_PILLARS,
-} from "@/lib/nuriek-brand";
+import { ArrowRight, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import LoginPageShell from "@/components/LoginPageShell";
 import { isNuriekWorkEmail, WORK_EMAIL_ERROR } from "@/lib/email-policy";
 import "@/styles/login.css";
 
@@ -19,6 +13,7 @@ function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+    const resetSuccess = searchParams.get("reset") === "success";
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -75,6 +70,12 @@ function LoginForm() {
             </header>
 
             <form className="loginForm" onSubmit={handleSubmit}>
+                {resetSuccess && (
+                    <div className="loginSuccess" role="status">
+                        <CheckCircle2 size={17} />
+                        <span>Your password was updated. You can sign in now.</span>
+                    </div>
+                )}
                 {error && (
                     <div className="loginError" role="alert">
                         <AlertCircle size={17} />
@@ -101,7 +102,12 @@ function LoginForm() {
                 </div>
 
                 <div className="loginField">
-                    <label htmlFor="password">Password</label>
+                    <div className="loginFieldLabelRow">
+                        <label htmlFor="password">Password</label>
+                        <Link href="/login/forgot-password" className="loginForgotLink">
+                            Forgot password?
+                        </Link>
+                    </div>
                     <input
                         id="password"
                         type="password"
@@ -134,63 +140,17 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-    const [lineA, lineB] = (() => {
-        const parts = NURIEK_HERO_LINE.split(". ");
-        if (parts.length < 2) return [NURIEK_HERO_LINE, ""];
-        return [`${parts[0]}.`, parts.slice(1).join(". ").replace(/\.$/, "") + "."];
-    })();
-
     return (
-        <main className="loginPage">
-            <div className="loginShell">
-                <header className="loginTopBar">
-                    <span className="loginMark">nuriek</span>
-                    <a href={NURIEK_SITE_URL} className="loginTopLink" target="_blank" rel="noopener noreferrer">
-                        nuriek.com
-                    </a>
-                </header>
-
-                <div className="loginGrid">
-                    <section className="loginNarrative" aria-label="About nuriek">
-                        <h2 className="loginNarrativeHeadline">
-                            {lineA}
-                            {lineB && (
-                                <>
-                                    <br />
-                                    <span className="loginNarrativeEm">{lineB}</span>
-                                </>
-                            )}
-                        </h2>
-                        <p className="loginNarrativeMission">{NURIEK_MISSION}</p>
-
-                        <ul className="loginValues">
-                            {NURIEK_SITE_PILLARS.map((p) => (
-                                <li key={p.num}>
-                                    <span className="loginValuesNum">{p.num}</span>
-                                    <span>
-                                        <strong>{p.title}</strong>
-                                        <small>{p.description}</small>
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-
-                        <p className="loginNarrativeFoot">{NURIEK_TAGLINE}</p>
-                    </section>
-
-                    <section className="loginPanel" aria-label="Sign in">
-                        <Suspense
-                            fallback={
-                                <div className="loginFormWrap loginFormWrap--loading">
-                                    <Loader2 size={28} className="loginSpin" />
-                                </div>
-                            }
-                        >
-                            <LoginForm />
-                        </Suspense>
-                    </section>
-                </div>
-            </div>
-        </main>
+        <LoginPageShell>
+            <Suspense
+                fallback={
+                    <div className="loginFormWrap loginFormWrap--loading">
+                        <Loader2 size={28} className="loginSpin" />
+                    </div>
+                }
+            >
+                <LoginForm />
+            </Suspense>
+        </LoginPageShell>
     );
 }

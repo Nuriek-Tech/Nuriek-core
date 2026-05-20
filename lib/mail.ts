@@ -253,3 +253,44 @@ export async function sendTimesheetApprovalEmail(
         return { success: true };
     });
 }
+
+export async function sendPasswordResetEmail(params: {
+    to: string;
+    recipientName: string;
+    resetUrl: string;
+    expiresMinutes: number;
+}) {
+    if (!isZohoConfigured()) {
+        return { success: false, message: "Missing Zoho credentials in .env" };
+    }
+
+    const {
+        buildPasswordResetEmailHtml,
+        passwordResetEmailSubject,
+    } = await import("@/lib/password-reset-email");
+
+    const html = buildPasswordResetEmailHtml({
+        recipientName: params.recipientName,
+        resetUrl: params.resetUrl,
+        expiresMinutes: params.expiresMinutes,
+    });
+
+    const result = await sendWithRetry(async () => {
+        const info = await getTransporter().sendMail({
+            from: zohoMailFrom(),
+            to: params.to,
+            subject: passwordResetEmailSubject(),
+            html,
+            attachments: [nuriekEmailHeaderAttachment()],
+        });
+        return { success: true, data: info };
+    });
+
+    if (!result.success) {
+        return {
+            success: false,
+            message: result.error ? formatZohoSmtpError(result.error) : "Failed to send email",
+        };
+    }
+    return { success: true };
+}

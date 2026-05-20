@@ -6,6 +6,8 @@ export type AuditAction =
     | "USER_DELETE"
     | "LOGIN"
     | "PASSWORD_CHANGE"
+    | "PASSWORD_RESET_REQUEST"
+    | "PASSWORD_RESET_COMPLETE"
     | "DOCUMENT_UPLOAD"
     | "DOCUMENT_DELETE"
     | "DOCUMENT_SIGN"
