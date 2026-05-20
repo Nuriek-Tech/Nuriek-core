@@ -1,16 +1,17 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { ROLES } from "@/lib/constants";
+import { ROLES, filterDirectoryEmployees } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import DirectoryClient from "./DirectoryClient";
 
 export default async function DirectoryPage() {
     const session = await getServerSession(authOptions);
+    const viewerRole = session?.user?.role;
     const canOnboard =
-        session?.user?.role === ROLES.FOUNDER || session?.user?.role === ROLES.HR_ADMIN;
-    const isSuperAdmin = canOnboard;
+        viewerRole === ROLES.FOUNDER || viewerRole === ROLES.HR_ADMIN;
+    const isSuperAdmin = viewerRole === ROLES.FOUNDER;
 
-    const employees = await prisma.user.findMany({
+    const allUsers = await prisma.user.findMany({
         include: {
             profile: true,
             reportsTo: { select: { id: true, name: true, email: true } },
@@ -18,7 +19,7 @@ export default async function DirectoryPage() {
         orderBy: { name: "asc" },
     });
 
-    const serialized = employees.map((e) => ({
+    const serialized = allUsers.map((e) => ({
         id: e.id,
         name: e.name,
         email: e.email,
@@ -34,9 +35,11 @@ export default async function DirectoryPage() {
             : null,
     }));
 
+    const employees = filterDirectoryEmployees(serialized, viewerRole);
+
     return (
         <DirectoryClient
-            employees={serialized}
+            employees={employees}
             canOnboard={canOnboard}
             isSuperAdmin={isSuperAdmin}
         />

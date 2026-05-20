@@ -23,6 +23,24 @@ export function isSuperAdminRole(role?: Role): boolean {
     return role === ROLES.FOUNDER;
 }
 
+/** Roles hidden from Employee Directory for managers and individual contributors. */
+export const DIRECTORY_HIDDEN_ROLES: Role[] = [ROLES.FOUNDER, ROLES.HR_ADMIN];
+
+export function isDirectoryHiddenRole(role?: string | null): boolean {
+    return role === ROLES.FOUNDER || role === ROLES.HR_ADMIN;
+}
+
+/** Employee directory listing — excludes Super Admin & HR Admin for non-HR viewers. */
+export function filterDirectoryEmployees<T extends { role: string }>(
+    employees: T[],
+    viewerRole?: Role
+): T[] {
+    const viewerSeesAdmins =
+        viewerRole === ROLES.FOUNDER || viewerRole === ROLES.HR_ADMIN;
+    if (viewerSeesAdmins) return employees;
+    return employees.filter((e) => !isDirectoryHiddenRole(e.role));
+}
+
 export function isReportRole(role?: Role): boolean {
     return role === ROLES.FOUNDER || role === ROLES.HR_ADMIN || role === ROLES.MANAGER;
 }

@@ -229,10 +229,6 @@ export default function AdminDocumentsPage() {
                             Admin <span className="text-gradient">Document Manager</span>
                         </h1>
                     </div>
-                    <p className="hubSubtitle">
-                        Issue NDAs, policies, and contracts. Signers get email notifications and
-                        must read the full document in the portal before signing.
-                    </p>
                 </div>
                 <div className="hubHeroActions">
                     <span className="hubStatChip">
