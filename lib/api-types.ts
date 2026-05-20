@@ -26,6 +26,10 @@ export type LeaveBalance = {
     annualQuota?: number;
     isProrated?: boolean;
     joinDate?: string | null;
+    /** Months credited in the current leave period (monthly accrual) */
+    monthsCredited?: number;
+    /** First anniversary date when full quota renews */
+    nextAnniversary?: string | null;
     used: number;
     pending: number;
     remaining: number;

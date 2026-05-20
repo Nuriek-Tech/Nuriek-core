@@ -77,7 +77,14 @@ export default function ClientProfileWrapper({
 }) {
     const joinLabel =
         leaveBalance?.joinDate &&
-        new Date(leaveBalance.joinDate).toLocaleDateString("en-IN", {
+        new Date(leaveBalance.joinDate + "T12:00:00").toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        });
+    const nextAnniversaryLabel =
+        leaveBalance?.nextAnniversary &&
+        new Date(leaveBalance.nextAnniversary + "T12:00:00").toLocaleDateString("en-IN", {
             day: "numeric",
             month: "short",
             year: "numeric",
@@ -257,11 +264,15 @@ export default function ClientProfileWrapper({
                                     color: "var(--text-secondary)",
                                 }}
                             >
-                                Prorated from {joinLabel}
-                                {leaveBalance.annualQuota != null && (
+                                Monthly accrual until anniversary
+                                {nextAnniversaryLabel ? ` (${nextAnniversaryLabel})` : ""}
+                                {leaveBalance.annualQuota != null && leaveBalance.monthsCredited != null && (
                                     <>
                                         {" "}
-                                        ({leaveBalance.annualQuota} days/year → {leaveBalance.total} entitled)
+                                        — joined {joinLabel}, {leaveBalance.annualQuota} ÷ 12 ×{" "}
+                                        {leaveBalance.monthsCredited}{" "}
+                                        {leaveBalance.monthsCredited === 1 ? "month" : "months"} ={" "}
+                                        {leaveBalance.total} days
                                     </>
                                 )}
                             </p>
@@ -277,7 +288,7 @@ export default function ClientProfileWrapper({
                         >
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
                                 <span>
-                                    {leaveBalance.isProrated ? "Entitled (prorated)" : "Annual entitlement"}
+                                    {leaveBalance.isProrated ? "Entitled (monthly)" : "Annual entitlement"}
                                 </span>
                                 <b>{leaveBalance.total} days</b>
                             </div>

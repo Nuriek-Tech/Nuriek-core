@@ -180,8 +180,16 @@ export default function LeavePage() {
     const usedLeaves = balance?.used ?? 0;
     const remainingLeaves = balance?.remaining ?? totalLeaves - usedLeaves;
     const pendingLeaves = balance?.pending ?? leaves.filter(l => l.status === "PENDING").length;
+    const monthsCredited = balance?.monthsCredited;
+    const nextAnniversaryLabel = balance?.nextAnniversary
+        ? new Date(balance.nextAnniversary + "T12:00:00").toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+          })
+        : null;
     const joinLabel = balance?.joinDate
-        ? new Date(balance.joinDate).toLocaleDateString("en-IN", {
+        ? new Date(balance.joinDate + "T12:00:00").toLocaleDateString("en-IN", {
               day: "numeric",
               month: "short",
               year: "numeric",
@@ -306,14 +314,17 @@ export default function LeavePage() {
                                 fontWeight: 500,
                             }}
                         >
-                            Prorated from joining date ({joinLabel}): {annualQuota} days/year →{" "}
-                            <strong>{totalLeaves}</strong> days entitled this year.
+                            Monthly accrual until work anniversary
+                            {nextAnniversaryLabel ? ` (${nextAnniversaryLabel})` : ""}: joined{" "}
+                            {joinLabel}, ({annualQuota} ÷ 12) × {monthsCredited ?? "—"}{" "}
+                            month{(monthsCredited ?? 0) === 1 ? "" : "s"} ={" "}
+                            <strong>{totalLeaves}</strong> days.
                         </p>
                     )}
                     <div className="statsGrid">
                         <div className="statItem">
                             <span className="statLabel">
-                                {isProrated ? "Entitled (prorated)" : "Annual quota"}
+                                {isProrated ? "Entitled (monthly)" : "Annual quota"}
                             </span>
                             <span className="statValue">{totalLeaves} days</span>
                         </div>
