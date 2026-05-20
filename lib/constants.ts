@@ -131,6 +131,12 @@ export const NAV_ITEMS: NavItem[] = [
         hrPermission: "reports",
     },
     {
+        label: "Holiday calendar",
+        path: "/admin/holidays",
+        roles: [ROLES.FOUNDER],
+        icon: "Calendar",
+    },
+    {
         label: "Contact HR",
         path: "/contact-hr",
         roles: CONTACT_HR_ROLES,

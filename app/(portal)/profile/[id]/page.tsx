@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { isAdminRole, isSuperAdminRole, type Role } from "@/lib/constants";
+import { isLeaveExemptRole } from "@/lib/leave-approval";
 import { getLeaveBalance } from "@/lib/leave";
 import ClientProfileWrapper from "./client-profile";
 
@@ -47,7 +48,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
     const approvedLeaves = leaves.filter((l) => l.status === "APPROVED").length;
 
     const leaveBalance =
-        isSuperAdminRole(viewerRole as Role)
+        isSuperAdminRole(viewerRole as Role) &&
+        !isLeaveExemptRole(user.role as Role)
             ? await getLeaveBalance(user.id, user.role as Role)
             : null;
 

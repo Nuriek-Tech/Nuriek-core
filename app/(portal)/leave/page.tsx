@@ -9,12 +9,15 @@ import {
     ChevronRight,
     Loader2,
     X,
-    Trash2,
-    Sun
+    Sun,
+    Upload,
 } from "lucide-react";
 import "@/styles/dashboard.css";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import type { HolidayRecord, LeaveBalance, LeaveRecord } from "@/lib/api-types";
+import { leaveApprovalHint } from "@/lib/leave-approval";
+import type { Role } from "@/lib/constants";
 
 type LeaveApiResponse = { leaves: LeaveRecord[]; balance: LeaveBalance };
 
@@ -25,7 +28,6 @@ export default function LeavePage() {
     const [holidays, setHolidays] = useState<HolidayRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showApplyModal, setShowApplyModal] = useState(false);
-    const [showHolidayModal, setShowHolidayModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Calendar navigation state
@@ -40,14 +42,9 @@ export default function LeavePage() {
         reason: "",
     });
 
-    const [holidayData, setHolidayData] = useState({
-        name: "",
-        date: "",
-        type: "PUBLIC",
-    });
-
     const userRole = session?.user?.role;
-    const isAdmin = userRole === "HR_ADMIN" || userRole === "FOUNDER";
+    const isSuperAdmin = userRole === "FOUNDER";
+    const canApplyLeave = userRole && userRole !== "FOUNDER";
 
     useEffect(() => {
         if (session) fetchData();
@@ -90,8 +87,12 @@ export default function LeavePage() {
                 setShowApplyModal(false);
                 setFormData({ type: "CASUAL", startDate: "", endDate: "", reason: "" });
                 fetchData();
+                if (userRole === "HR_ADMIN") {
+                    alert("Leave submitted. It will be reviewed by Super Admin.");
+                }
             } else {
-                alert("Failed to apply for leave");
+                const err = await res.json().catch(() => ({}));
+                alert(err.error || "Failed to apply for leave");
             }
         } catch {
             alert("Failed to apply for leave");
@@ -100,43 +101,6 @@ export default function LeavePage() {
         }
     };
 
-    const handleAddHoliday = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-        try {
-            const res = await fetch("/api/holidays", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(holidayData),
-            });
-            if (res.ok) {
-                setShowHolidayModal(false);
-                setHolidayData({ name: "", date: "", type: "PUBLIC" });
-                fetchData();
-            } else {
-                alert("Failed to add holiday – check permissions");
-            }
-        } catch {
-            alert("Failed to add holiday");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleDeleteHoliday = async (id: string) => {
-        if (!confirm("Delete this holiday from the calendar?")) return;
-        try {
-            const res = await fetch("/api/holidays", {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id }),
-            });
-            if (res.ok) fetchData();
-            else alert("Failed to delete holiday");
-        } catch {
-            alert("Failed to delete holiday");
-        }
-    };
 
     // --- Calendar helpers ---
     const prevMonth = () => {
@@ -207,19 +171,34 @@ export default function LeavePage() {
             <header className="dashboardHeader">
                 <div className="welcomeSection">
                     <h1>Leave &amp; Holiday Management</h1>
-                    <p>Request time off, manage balances, and view the holiday calendar</p>
+                    <p>
+                        {isSuperAdmin
+                            ? "Company holiday calendar (published for all employees)"
+                            : "Request time off, manage balances, and view the holiday calendar"}
+                    </p>
                 </div>
-                <div style={{ display: "flex", gap: "0.75rem" }}>
-                    {isAdmin && (
-                        <button className="checkInButton" style={{ background: "rgba(10,132,255,0.15)", border: "1px solid rgba(10,132,255,0.3)", color: "#0a84ff" }} onClick={() => setShowHolidayModal(true)}>
+                <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                    {isSuperAdmin && (
+                        <Link
+                            href="/admin/holidays"
+                            className="checkInButton"
+                            style={{
+                                background: "rgba(10,132,255,0.15)",
+                                border: "1px solid rgba(10,132,255,0.3)",
+                                color: "#0a84ff",
+                                textDecoration: "none",
+                            }}
+                        >
+                            <Upload size={18} />
+                            <span>Upload holiday list</span>
+                        </Link>
+                    )}
+                    {canApplyLeave && (
+                        <button className="checkInButton" onClick={() => setShowApplyModal(true)}>
                             <Plus size={18} />
-                            <span>Add Holiday</span>
+                            <span>Apply for Leave</span>
                         </button>
                     )}
-                    <button className="checkInButton" onClick={() => setShowApplyModal(true)}>
-                        <Plus size={18} />
-                        <span>Apply for Leave</span>
-                    </button>
                 </div>
             </header>
 
@@ -264,42 +243,15 @@ export default function LeavePage() {
                 </div>
             )}
 
-            {/* --- Add Holiday Modal --- */}
-            {showHolidayModal && (
-                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)" }}>
-                    <form onSubmit={handleAddHoliday} className="card glass" style={{ width: "100%", maxWidth: "400px", padding: "2rem", position: "relative" }}>
-                        <button type="button" onClick={() => setShowHolidayModal(false)} style={{ position: "absolute", top: "1rem", right: "1rem", background: "none", border: "none", color: "white", cursor: "pointer" }}>
-                            <X size={20} />
-                        </button>
-                        <h2 style={{ marginBottom: "1.5rem" }}>Add Holiday to Calendar</h2>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                            <div className="inputGroup">
-                                <label className="statLabel">Holiday Name</label>
-                                <input type="text" className="input" required placeholder="e.g. Diwali" value={holidayData.name} onChange={e => setHolidayData({ ...holidayData, name: e.target.value })} />
-                            </div>
-                            <div className="inputGroup">
-                                <label className="statLabel">Date</label>
-                                <input type="date" className="input" required value={holidayData.date} onChange={e => setHolidayData({ ...holidayData, date: e.target.value })} />
-                            </div>
-                            <div className="inputGroup">
-                                <label className="statLabel">Type</label>
-                                <select className="input" value={holidayData.type} onChange={e => setHolidayData({ ...holidayData, type: e.target.value })}>
-                                    <option value="PUBLIC">Public Holiday</option>
-                                    <option value="OPTIONAL">Optional / Restricted</option>
-                                    <option value="COMPANY">Company Specific</option>
-                                </select>
-                            </div>
-                            <button type="submit" className="checkInButton" disabled={isSubmitting} style={{ marginTop: "0.5rem", width: "100%" }}>
-                                {isSubmitting ? <Loader2 className="animate-spin" /> : "Add Holiday"}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            )}
-
             {/* Stats + Calendar row */}
-            <div className="grid" style={{ gridTemplateColumns: "1fr 1.6fr", gap: "2rem" }}>
-                {/* Leave Balance */}
+            <div
+                className="grid"
+                style={{
+                    gridTemplateColumns: canApplyLeave ? "1fr 1.6fr" : "1fr",
+                    gap: "2rem",
+                }}
+            >
+                {canApplyLeave && (
                 <section className="card glass">
                     <div className="cardHeader">
                         <span className="cardTitle">Leave Balance</span>
@@ -367,6 +319,7 @@ export default function LeavePage() {
                         </div>
                     </div>
                 </section>
+                )}
 
                 {/* === FULL INTERACTIVE CALENDAR === */}
                 <section className="card glass">
@@ -451,10 +404,22 @@ export default function LeavePage() {
                             );
                         })}
                     </div>
+                    {!canApplyLeave && (
+                        <div style={{ marginTop: "1.25rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                            <span style={{ fontSize: "0.78rem" }}>
+                                <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 3, background: "#ff9f0a", marginRight: 6, verticalAlign: "middle" }} />
+                                Public holiday
+                            </span>
+                            <span style={{ fontSize: "0.78rem" }}>
+                                <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 3, background: "#5e5ce6", marginRight: 6, verticalAlign: "middle" }} />
+                                Company holiday
+                            </span>
+                        </div>
+                    )}
                 </section>
             </div>
 
-            {/* Leave History */}
+            {canApplyLeave && (
             <section className="card glass" style={{ marginTop: "2rem" }}>
                 <div className="cardHeader">
                     <span className="cardTitle">My Leave History</span>
@@ -472,10 +437,17 @@ export default function LeavePage() {
                                 {leave.reason && <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", marginTop: "0.2rem" }}>{leave.reason}</p>}
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                <div style={{ textAlign: "right" }}>
                                 <span className={`logStatus ${leave.status === "APPROVED" ? "statusOnTime" : "statusLate"}`}
                                     style={leave.status === "PENDING" ? { background: "rgba(255,159,10,0.1)", color: "#ff9f0a" } : undefined}>
                                     {leave.status}
                                 </span>
+                                {leave.status === "PENDING" && userRole && (
+                                    <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "0.35rem" }}>
+                                        {leaveApprovalHint(userRole as Role)}
+                                    </p>
+                                )}
+                                </div>
                             </div>
                         </div>
                     )) : (
@@ -483,18 +455,19 @@ export default function LeavePage() {
                     )}
                 </div>
             </section>
+            )}
 
-            {/* Upcoming Holidays + Admin Edit */}
+            {/* Upcoming Holidays */}
             <section className="card glass" style={{ marginTop: "1.5rem", border: "1px solid rgba(var(--nuriek-blue-rgb), 0.2)" }}>
                 <div className="cardHeader">
                     <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                         <Sun size={18} style={{ color: "#ff9f0a" }} />
                         <span className="cardTitle">Upcoming Holidays</span>
                     </div>
-                    {isAdmin && (
-                        <button className="checkInButton" style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", height: "auto" }} onClick={() => setShowHolidayModal(true)}>
-                            <Plus size={14} /> Add Holiday
-                        </button>
+                    {isSuperAdmin && (
+                        <Link href="/admin/holidays" style={{ fontSize: "0.8rem", color: "var(--nuriek-blue)" }}>
+                            Manage list
+                        </Link>
                     )}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginTop: "1rem" }}>
@@ -507,11 +480,6 @@ export default function LeavePage() {
                                     {h.type}
                                 </span>
                             </div>
-                            {isAdmin && (
-                                <button onClick={() => handleDeleteHoliday(h.id)} style={{ background: "rgba(255,69,58,0.1)", color: "#ff453a", border: "none", borderRadius: "var(--radius-sm)", padding: "0.4rem", cursor: "pointer", display: "flex", alignItems: "center" }}>
-                                    <Trash2 size={15} />
-                                </button>
-                            )}
                         </div>
                     )) : (
                         <p style={{ gridColumn: "1/-1", padding: "1rem", color: "var(--text-tertiary)" }}>No upcoming holidays scheduled.</p>

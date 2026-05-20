@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession, isNextResponse } from "@/lib/rbac";
 import { getLeaveBalance, countInclusiveDays } from "@/lib/leave";
+import { isLeaveExemptRole } from "@/lib/leave-approval";
 import { logAudit } from "@/lib/audit";
 import type { Role } from "@/lib/constants";
 
@@ -15,9 +16,12 @@ export async function GET() {
             orderBy: { startDate: "desc" },
         });
 
-        const balance = await getLeaveBalance(user.id, user.role as Role);
+        const exempt = isLeaveExemptRole(user.role);
+        const balance = exempt
+            ? null
+            : await getLeaveBalance(user.id, user.role as Role);
 
-        return NextResponse.json({ leaves, balance });
+        return NextResponse.json({ leaves, balance, leaveExempt: exempt });
     } catch {
         return new NextResponse("Internal Server Error", { status: 500 });
     }
@@ -26,6 +30,13 @@ export async function GET() {
 export async function POST(req: Request) {
     const user = await requireSession();
     if (isNextResponse(user)) return user;
+
+    if (isLeaveExemptRole(user.role)) {
+        return NextResponse.json(
+            { error: "Super Admin accounts do not apply for leave through the portal." },
+            { status: 403 }
+        );
+    }
 
     try {
         const body = await req.json();

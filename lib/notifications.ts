@@ -233,17 +233,21 @@ async function adminRecentActivityNotifications(): Promise<PortalNotification[]>
     return list;
 }
 
-async function adminActionNotifications(): Promise<PortalNotification[]> {
+async function adminActionNotifications(role: Role): Promise<PortalNotification[]> {
     const { start: todayStart, end: todayEnd } = getISTDayBounds();
 
     const [
         pendingLeaves,
+        hrPendingLeaves,
         pendingCertificates,
         pendingTimesheets,
         pendingFlows,
         lateToday,
     ] = await Promise.all([
         prisma.leave.count({ where: { status: "PENDING" } }),
+        prisma.leave.count({
+            where: { status: "PENDING", user: { role: ROLES.HR_ADMIN } },
+        }),
         prisma.certificateRequest.count({ where: { status: "PENDING" } }),
         prisma.timesheet.count({ where: { status: "SUBMITTED" } }),
         prisma.document.count({
@@ -264,14 +268,29 @@ async function adminActionNotifications(): Promise<PortalNotification[]> {
 
     const list: PortalNotification[] = [];
 
-    if (pendingLeaves > 0) {
+    if (role === ROLES.FOUNDER && hrPendingLeaves > 0) {
+        list.push(
+            item({
+                id: "founder-hr-leave-approval",
+                kind: "leave",
+                title: "HR leave awaiting your approval",
+                body: `${hrPendingLeaves} HR request${hrPendingLeaves === 1 ? "" : "s"} need Super Admin sign-off.`,
+                href: "/reports/leaves?status=PENDING",
+            })
+        );
+    }
+
+    const otherPendingLeaves =
+        role === ROLES.HR_ADMIN ? pendingLeaves - hrPendingLeaves : pendingLeaves;
+
+    if (otherPendingLeaves > 0) {
         list.push(
             item({
                 id: "admin-pending-leaves",
                 kind: "leave",
                 title: "Leave requests pending",
-                body: `${pendingLeaves} request${pendingLeaves === 1 ? "" : "s"} need review.`,
-                href: "/reports/leaves",
+                body: `${otherPendingLeaves} request${otherPendingLeaves === 1 ? "" : "s"} need review.`,
+                href: "/reports/leaves?status=PENDING",
             })
         );
     }
@@ -486,7 +505,7 @@ export async function buildNotificationsForUser(
     const activityItems: PortalNotification[] = [];
 
     if (isAdminRole(user.role)) {
-        actionItems.push(...(await adminActionNotifications()));
+        actionItems.push(...(await adminActionNotifications(user.role)));
         activityItems.push(...(await adminRecentActivityNotifications()));
     } else if (user.role === ROLES.MANAGER) {
         actionItems.push(...(await managerNotifications()));

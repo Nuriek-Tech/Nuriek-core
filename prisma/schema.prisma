@@ -208,11 +208,14 @@ model DocumentRead {
 }
 
 model Holiday {
-  id        String   @id @default(cuid())
-  name      String
-  date      DateTime
-  type      String   @default("PUBLIC")
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  name        String
+  date        DateTime
+  type        String    @default("PUBLIC")
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([date])
 }
 
 model InternPerformance {
