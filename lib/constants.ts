@@ -110,12 +110,6 @@ export const NAV_ITEMS: NavItem[] = [
         hrPermission: "interns",
     },
     {
-        label: "Documents & Legal",
-        path: "/documents",
-        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER, ROLES.TEAM_LEAD, ROLES.EMPLOYEE, ROLES.INTERN, ROLES.CONTRACTOR],
-        icon: "FileText",
-    },
-    {
         label: "Leave & Holidays",
         path: "/leave",
         roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER, ROLES.TEAM_LEAD, ROLES.EMPLOYEE, ROLES.INTERN, ROLES.CONTRACTOR],
@@ -133,13 +127,6 @@ export const NAV_ITEMS: NavItem[] = [
         roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER],
         icon: "FileCheck",
         hrPermission: "admin_timesheets",
-    },
-    {
-        label: "Documents & Legal (Admin)",
-        path: "/admin/documents",
-        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER],
-        icon: "FileUp",
-        hrPermission: "admin_documents",
     },
     {
         label: "Offer Letter",

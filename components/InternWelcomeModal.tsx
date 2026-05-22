@@ -9,7 +9,6 @@ import {
     CheckCircle2,
     Loader2,
     Clock,
-    FileText,
     Folder,
     Sparkles,
 } from "lucide-react";
@@ -31,12 +30,6 @@ const TOOLKIT = [
         title: "Time Management",
         desc: "Check in, log timesheets, and track your rhythm.",
         href: "/attendance",
-    },
-    {
-        icon: FileText,
-        title: "Documents",
-        desc: "Sign policies and HR flows assigned to you.",
-        href: "/documents",
     },
     {
         icon: Folder,

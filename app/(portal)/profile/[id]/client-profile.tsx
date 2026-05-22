@@ -483,13 +483,6 @@ export default function ClientProfileWrapper({
                                 No signed company-wide documents yet.
                             </p>
                         )}
-                        <Link href="/documents" className="logItem" style={{ textDecoration: 'none', color: 'inherit' }}>
-                            <div className="logInfo">
-                                <span className="logTitle">View All Policies</span>
-                                <span className="logTime">Go to Document Hub</span>
-                            </div>
-                            <FileText size={16} />
-                        </Link>
                     </div>
                 </section>
             </div>
