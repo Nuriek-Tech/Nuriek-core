@@ -124,6 +124,8 @@ export default function OfferLetterPage() {
         hrSignatoryTitle: "Human Resources",
         hrSignatureDataUrl: "",
         additionalTerms: "",
+        appendCustomRoleDesignation: false,
+        customRoleDesignation: "",
     });
 
     const [hrPrefsLoaded, setHrPrefsLoaded] = useState(false);
@@ -451,6 +453,13 @@ export default function OfferLetterPage() {
             });
             if (!readiness.ready) {
                 alert(`Please complete: ${readiness.missing.join(", ")}`);
+                return;
+            }
+            if (
+                form.appendCustomRoleDesignation &&
+                !form.customRoleDesignation.trim()
+            ) {
+                alert("Enter a custom role & designation, or turn off “Append to offer”.");
                 return;
             }
 
@@ -914,6 +923,44 @@ export default function OfferLetterPage() {
                                         ))}
                                     </select>
                                 </div>
+                                <div className="admField olFieldSpan2">
+                                    <label className="olCustomRoleToggle">
+                                        <input
+                                            type="checkbox"
+                                            checked={form.appendCustomRoleDesignation}
+                                            onChange={(e) =>
+                                                setForm((f) => ({
+                                                    ...f,
+                                                    appendCustomRoleDesignation: e.target.checked,
+                                                }))
+                                            }
+                                        />
+                                        <span>
+                                            <strong>Append custom role &amp; designation</strong>
+                                            <small>
+                                                Adds HR text after the selected position in the
+                                                offer letter (e.g. client title or special
+                                                designation).
+                                            </small>
+                                        </span>
+                                    </label>
+                                </div>
+                                {form.appendCustomRoleDesignation && (
+                                    <div className="admField olFieldSpan2">
+                                        <label className="admLabel" htmlFor="ol-custom-role">
+                                            Custom role &amp; designation *
+                                        </label>
+                                        <input
+                                            id="ol-custom-role"
+                                            className="admInput"
+                                            value={form.customRoleDesignation}
+                                            onChange={(e) =>
+                                                update("customRoleDesignation", e.target.value)
+                                            }
+                                            placeholder="e.g. Senior Consultant — Enterprise Accounts"
+                                        />
+                                    </div>
+                                )}
                                 <div className="admField">
                                     <label className="admLabel" htmlFor="ol-emp-type">
                                         Employment type

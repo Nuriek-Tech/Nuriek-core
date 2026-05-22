@@ -7,6 +7,7 @@ import { checkRateLimit, resetRateLimit } from "./rate-limit";
 import { logAudit } from "./audit";
 import { normalizeRole } from "./roles";
 import { isNuriekWorkEmail, normalizeWorkEmail } from "./email-policy";
+import { startLoginSession, endLoginSessionById } from "./session-tracking";
 
 async function loadUserForToken(email?: string | null, id?: string | null) {
     if (id) {
@@ -80,6 +81,8 @@ export const authOptions: NextAuthOptions = {
                         entityId: user.id,
                     });
 
+                    const loginSession = await startLoginSession(user.id);
+
                     return {
                         id: user.id,
                         name: user.name,
@@ -87,6 +90,7 @@ export const authOptions: NextAuthOptions = {
                         role: normalizeRole(user.role) ?? ROLES.EMPLOYEE,
                         mustChangePassword: user.mustChangePassword,
                         hrPermissions: user.hrPermissions,
+                        loginSessionId: loginSession.id,
                     };
                 } catch (err) {
                     const msg = err instanceof Error ? err.message : "";
@@ -112,6 +116,7 @@ export const authOptions: NextAuthOptions = {
                 token.role = user.role || ROLES.EMPLOYEE;
                 token.mustChangePassword = user.mustChangePassword ?? false;
                 token.hrPermissions = user.hrPermissions ?? null;
+                token.loginSessionId = user.loginSessionId ?? null;
                 token.lastSync = Date.now();
                 return token;
             }
@@ -155,6 +160,14 @@ export const authOptions: NextAuthOptions = {
     session: {
         strategy: "jwt",
         maxAge: 30 * 24 * 60 * 60,
+    },
+    events: {
+        async signOut({ token }) {
+            const sessionId = token?.loginSessionId;
+            if (sessionId && typeof sessionId === "string") {
+                await endLoginSessionById(sessionId, "logout");
+            }
+        },
     },
     secret: process.env.NEXTAUTH_SECRET,
 };

@@ -36,6 +36,9 @@ export type OfferLetterInput = {
     /** PNG/JPG as data URL, or URL path — embedded on HR signatory line */
     hrSignatureDataUrl?: string | null;
     additionalTerms?: string;
+    /** When true, customRoleDesignation is appended to the position line in the offer body */
+    appendCustomRoleDesignation?: boolean;
+    customRoleDesignation?: string;
     refNumber: string;
     issueDate: string;
 };
@@ -87,6 +90,16 @@ export function resolveOfferEmploymentType(offer: {
     return "Full-time";
 }
 
+/** Position line in offer body — optionally appends HR-entered role & designation. */
+export function buildOfferPositionHtml(data: OfferLetterInput): string {
+    const base = escapeHtml(data.position);
+    if (data.appendCustomRoleDesignation && data.customRoleDesignation?.trim()) {
+        const custom = escapeHtml(data.customRoleDesignation.trim());
+        return `<strong>${base}</strong>, <strong>${custom}</strong>`;
+    }
+    return `<strong>${base}</strong>`;
+}
+
 export function buildOfferLetterHtml(data: OfferLetterInput): string {
     if (isInternEmploymentType(data.employmentType)) {
         return buildInternOfferLetterHtml(data);
@@ -96,7 +109,7 @@ export function buildOfferLetterHtml(data: OfferLetterInput): string {
     const validUntil = formatDisplayDate(data.offerValidUntil);
     const city = escapeHtml(data.candidateCity || data.workLocation || "Bangalore");
     const name = escapeHtml(data.candidateName);
-    const position = escapeHtml(data.position);
+    const positionHtml = buildOfferPositionHtml(data);
     const department = escapeHtml(data.department);
     const compensation = escapeHtml(data.compensation);
     const employmentType = escapeHtml(data.employmentType);
@@ -168,7 +181,7 @@ export function buildOfferLetterHtml(data: OfferLetterInput): string {
     <p>Dear ${name.split(" ")[0] || name},</p>
     <p>
       We are pleased to make an offer to you to join <strong>${NURIEK_LEGAL_NAME}</strong> ("Company / Employer / We"),
-      at our <strong>${workLocation}</strong> office as <strong>${position}</strong> in the
+      at our <strong>${workLocation}</strong> office as ${positionHtml} in the
       <strong>${department}</strong> department${gradeLine}, on a <strong>${employmentType}</strong> basis.
     </p>
     <p>

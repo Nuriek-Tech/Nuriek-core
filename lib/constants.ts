@@ -23,7 +23,14 @@ export function isSuperAdminRole(role?: Role): boolean {
     return role === ROLES.FOUNDER;
 }
 
-/** Roles hidden from Employee Directory for managers and individual contributors. */
+/** Super Admin does not get inactivity auto-logout. */
+export function hasInactivityAutoLogout(role?: Role): boolean {
+    return !isSuperAdminRole(role);
+}
+
+/** Auto sign-out after this idle period (employees & HR; not Super Admin). */
+export const SESSION_INACTIVITY_MS = 15 * 60 * 1000;
+
 export const DIRECTORY_HIDDEN_ROLES: Role[] = [ROLES.FOUNDER, ROLES.HR_ADMIN];
 
 export function isDirectoryHiddenRole(role?: string | null): boolean {
@@ -147,6 +154,12 @@ export const NAV_ITEMS: NavItem[] = [
         roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER],
         icon: "BarChart3",
         hrPermission: "reports",
+    },
+    {
+        label: "Login activity",
+        path: "/admin/login-sessions",
+        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN],
+        icon: "LogIn",
     },
     {
         label: "Holiday calendar",

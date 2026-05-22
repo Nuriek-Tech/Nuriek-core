@@ -1,6 +1,7 @@
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import InternOnboardingGate from "@/components/InternOnboardingGate";
+import InactivityGuard from "@/components/InactivityGuard";
 import "./layout.css";
 
 export default function PortalLayout({
@@ -16,6 +17,7 @@ export default function PortalLayout({
                 <main className="page">{children}</main>
             </div>
             <InternOnboardingGate />
+            <InactivityGuard />
         </div>
     );
 }

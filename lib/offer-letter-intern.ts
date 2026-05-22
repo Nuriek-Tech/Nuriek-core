@@ -12,7 +12,7 @@ import {
     isUnpaidInternship,
     normalizeInternshipType,
 } from "@/lib/internship-offer";
-import type { OfferLetterInput } from "@/lib/offer-letter";
+import { buildOfferPositionHtml, type OfferLetterInput } from "@/lib/offer-letter";
 import { buildHrSignatoryBlock, resolveHrSignatureSrc } from "@/lib/offer-hr-signature";
 
 function escapeHtml(s: string): string {
@@ -92,7 +92,7 @@ export function buildInternOfferLetterHtml(data: OfferLetterInput): string {
     const validUntil = formatDisplayDate(data.offerValidUntil);
     const city = escapeHtml(data.candidateCity || data.workLocation || "Bangalore");
     const name = escapeHtml(data.candidateName);
-    const position = escapeHtml(data.position);
+    const positionHtml = buildOfferPositionHtml(data);
     const department = escapeHtml(data.department);
     const reportingTo = escapeHtml(data.reportingTo);
     const workLocation = escapeHtml(data.workLocation);
@@ -161,7 +161,7 @@ export function buildInternOfferLetterHtml(data: OfferLetterInput): string {
     <p>Dear ${name.split(" ")[0] || name},</p>
     <p>
       We are pleased to offer you an internship with <strong>${NURIEK_LEGAL_NAME}</strong> ("Company") at our
-      <strong>${workLocation}</strong> office as <strong>${position}</strong> in the
+      <strong>${workLocation}</strong> office as ${positionHtml} in the
       <strong>${department}</strong> department${gradeLine}.
     </p>
     ${compensationSection(data, unpaid, stipendAfterMonths)}

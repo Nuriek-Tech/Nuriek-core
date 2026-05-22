@@ -14,6 +14,7 @@ function LoginForm() {
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
     const resetSuccess = searchParams.get("reset") === "success";
+    const inactivityLogout = searchParams.get("reason") === "inactivity";
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -70,6 +71,12 @@ function LoginForm() {
             </header>
 
             <form className="loginForm" onSubmit={handleSubmit}>
+                {inactivityLogout && (
+                    <div className="loginSuccess" role="status">
+                        <CheckCircle2 size={17} />
+                        <span>Signed out after 15 minutes of inactivity. Sign in again to continue.</span>
+                    </div>
+                )}
                 {resetSuccess && (
                     <div className="loginSuccess" role="status">
                         <CheckCircle2 size={17} />

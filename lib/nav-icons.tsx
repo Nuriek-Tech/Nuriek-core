@@ -14,6 +14,7 @@ import {
     Mail,
     BadgeCheck,
     LogOut,
+    LogIn,
     Award,
     Star,
     Zap,
@@ -40,6 +41,7 @@ export const NAV_ICON_MAP: Record<string, LucideIcon> = {
     Mail,
     BadgeCheck,
     LogOut,
+    LogIn,
 };
 
 /** Icons that may appear on profile badges */

@@ -16,6 +16,7 @@ declare module "next-auth" {
         role: Role;
         mustChangePassword?: boolean;
         hrPermissions?: string | null;
+        loginSessionId?: string;
     }
 }
 
@@ -25,5 +26,7 @@ declare module "next-auth/jwt" {
         role: Role;
         mustChangePassword?: boolean;
         hrPermissions?: string | null;
+        loginSessionId?: string | null;
+        lastSync?: number;
     }
 }

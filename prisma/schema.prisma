@@ -50,6 +50,23 @@ model User {
   reportsTo           User?         @relation("UserReportsTo", fields: [reportsToId], references: [id], onDelete: SetNull)
   directReports       User[]        @relation("UserReportsTo")
   passwordResetTokens PasswordResetToken[]
+  loginSessions      LoginSession[]
+}
+
+model LoginSession {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loginAt        DateTime  @default(now())
+  lastActivityAt DateTime  @default(now())
+  logoutAt       DateTime?
+  /** logout | inactivity | new_login */
+  endReason      String?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId])
+  @@index([loginAt])
+  @@index([logoutAt])
 }
 
 model PasswordResetToken {

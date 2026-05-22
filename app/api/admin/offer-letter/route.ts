@@ -96,6 +96,10 @@ export async function POST(req: Request) {
                 ? String(body.hrSignatoryTitle).trim()
                 : orgHr.hrSignatoryTitle || "Human Resources",
             additionalTerms: body.additionalTerms ? String(body.additionalTerms) : undefined,
+            appendCustomRoleDesignation: Boolean(body.appendCustomRoleDesignation),
+            customRoleDesignation: body.customRoleDesignation
+                ? String(body.customRoleDesignation).trim()
+                : undefined,
             hrSignatureDataUrl:
                 (await resolveHrSignatureForOffer(
                     body.hrSignatureDataUrl ? String(body.hrSignatureDataUrl).trim() : null
