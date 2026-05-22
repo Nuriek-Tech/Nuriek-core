@@ -14,7 +14,13 @@ export default async function OfferLetterViewPage({ params }: Props) {
     const offer = await prisma.offerLetter.findUnique({ where: { token } });
     if (!offer) notFound();
 
-    if (offer.expiresAt && offer.expiresAt < new Date() && offer.status !== OFFER_STATUS.SIGNED) {
+    if (
+        offer.expiresAt &&
+        offer.expiresAt < new Date() &&
+        offer.status !== OFFER_STATUS.SIGNED &&
+        offer.status !== OFFER_STATUS.DECLINED &&
+        !offer.declinedAt
+    ) {
         return (
             <main className="offerViewPage">
                 <div className="offerViewCard">
@@ -30,6 +36,8 @@ export default async function OfferLetterViewPage({ params }: Props) {
 
     const displayHtml = await getOfferDisplayHtmlHydrated(offer);
     const isSigned = offer.status === OFFER_STATUS.SIGNED || Boolean(offer.signedAt);
+    const isDeclined =
+        offer.status === OFFER_STATUS.DECLINED || Boolean(offer.declinedAt);
     const isIntern = isInternEmploymentType(resolveOfferEmploymentType(offer));
 
     return (
@@ -38,7 +46,10 @@ export default async function OfferLetterViewPage({ params }: Props) {
             candidateName={offer.candidateName}
             token={token}
             isSigned={isSigned}
+            isDeclined={isDeclined}
             signedAt={offer.signedAt?.toISOString() ?? null}
+            declinedAt={offer.declinedAt?.toISOString() ?? null}
+            declineReason={offer.declineReason}
             isIntern={isIntern}
         />
     );

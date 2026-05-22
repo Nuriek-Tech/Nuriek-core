@@ -10,7 +10,10 @@ type Props = {
     candidateName: string;
     token: string;
     isSigned: boolean;
+    isDeclined?: boolean;
     signedAt?: string | null;
+    declinedAt?: string | null;
+    declineReason?: string | null;
     isIntern?: boolean;
 };
 
@@ -19,7 +22,10 @@ export default function OfferViewClient({
     candidateName,
     token,
     isSigned: initialSigned,
+    isDeclined: initialDeclined = false,
     signedAt,
+    declinedAt,
+    declineReason,
     isIntern = false,
 }: Props) {
     const [displayHtml, setDisplayHtml] = useState(initialHtml);
@@ -54,7 +60,10 @@ export default function OfferViewClient({
                     token={token}
                     candidateName={candidateName}
                     isSigned={initialSigned}
+                    isDeclined={initialDeclined}
                     signedAt={signedAt}
+                    declinedAt={declinedAt}
+                    declineReason={declineReason}
                     isIntern={isIntern}
                     onSigned={(signedHtml) => setDisplayHtml(signedHtml)}
                 />

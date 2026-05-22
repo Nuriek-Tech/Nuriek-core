@@ -105,6 +105,8 @@ model OfferLetter {
   signedName      String?
   signedPlace     String?
   signatureText   String?
+  declinedAt      DateTime?
+  declineReason   String?
   expiresAt       DateTime?
   provisionedUserId   String?
   provisionedUser     User?     @relation("OfferLetterProvisioned", fields: [provisionedUserId], references: [id], onDelete: SetNull)

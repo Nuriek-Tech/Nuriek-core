@@ -1,0 +1,2 @@
+ALTER TABLE "OfferLetter" ADD COLUMN IF NOT EXISTS "declinedAt" TIMESTAMP(3);
+ALTER TABLE "OfferLetter" ADD COLUMN IF NOT EXISTS "declineReason" TEXT;

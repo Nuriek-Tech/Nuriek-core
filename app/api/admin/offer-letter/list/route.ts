@@ -29,6 +29,8 @@ export async function GET() {
                 viewedAt: true,
                 signedAt: true,
                 signedName: true,
+                declinedAt: true,
+                declineReason: true,
                 expiresAt: true,
                 provisionedUserId: true,
                 provisionedAt: true,

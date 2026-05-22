@@ -14,7 +14,7 @@ export async function POST(
             return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
 
-        if (offer.status === OFFER_STATUS.SIGNED) {
+        if (offer.status === OFFER_STATUS.SIGNED || offer.status === OFFER_STATUS.DECLINED) {
             return NextResponse.json({ status: offer.status });
         }
 

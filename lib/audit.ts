@@ -13,6 +13,7 @@ export type AuditAction =
     | "DOCUMENT_SIGN"
     | "OFFER_EMAIL_SENT"
     | "OFFER_SIGNED"
+    | "OFFER_DECLINED"
     | "LEAVE_REQUEST"
     | "LEAVE_APPROVE"
     | "LEAVE_REJECT"

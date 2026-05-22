@@ -4,6 +4,7 @@ export const OFFER_STATUS = {
     SENT: "SENT",
     VIEWED: "VIEWED",
     SIGNED: "SIGNED",
+    DECLINED: "DECLINED",
     EXPIRED: "EXPIRED",
 } as const;
 
@@ -101,6 +102,8 @@ export function offerStatusLabel(status: string): string {
             return "Viewed";
         case OFFER_STATUS.SIGNED:
             return "Signed";
+        case OFFER_STATUS.DECLINED:
+            return "Declined";
         case OFFER_STATUS.EXPIRED:
             return "Expired";
         default:
@@ -112,9 +115,13 @@ export function computeOfferStatus(offer: {
     status: string;
     expiresAt: Date | null;
     signedAt: Date | null;
+    declinedAt?: Date | null;
     viewedAt: Date | null;
     emailedAt: Date | null;
 }): OfferStatus {
+    if (offer.declinedAt || offer.status === OFFER_STATUS.DECLINED) {
+        return OFFER_STATUS.DECLINED;
+    }
     if (offer.expiresAt && offer.expiresAt < new Date() && offer.status !== OFFER_STATUS.SIGNED) {
         return OFFER_STATUS.EXPIRED;
     }

@@ -53,6 +53,13 @@ export async function POST(
             );
         }
 
+        if (offer.status === OFFER_STATUS.DECLINED || offer.declinedAt) {
+            return NextResponse.json(
+                { error: "This offer was declined and can no longer be signed" },
+                { status: 409 }
+            );
+        }
+
         const baseHtml = await getOfferDisplayHtmlHydrated(offer);
         const signedHtml = applyOfferSignature(baseHtml, {
             signedName,

@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Loader2, PenLine } from "lucide-react";
+import { CheckCircle2, Loader2, PenLine, XCircle } from "lucide-react";
 
 type Props = {
     token: string;
     candidateName: string;
     isSigned: boolean;
+    isDeclined?: boolean;
     signedAt?: string | null;
+    declinedAt?: string | null;
+    declineReason?: string | null;
     isIntern?: boolean;
     onSigned: (signedHtml: string) => void;
 };
@@ -24,7 +27,10 @@ export default function OfferSignPanel({
     token,
     candidateName,
     isSigned,
+    isDeclined = false,
     signedAt,
+    declinedAt,
+    declineReason,
     isIntern = false,
     onSigned,
 }: Props) {
@@ -33,8 +39,14 @@ export default function OfferSignPanel({
     const [signatureText, setSignatureText] = useState(candidateName);
     const [signedDate] = useState(todayDisplay());
     const [busy, setBusy] = useState(false);
+    const [declineBusy, setDeclineBusy] = useState(false);
     const [error, setError] = useState("");
     const [done, setDone] = useState(isSigned);
+    const [declined, setDeclined] = useState(isDeclined);
+    const [showDeclineForm, setShowDeclineForm] = useState(false);
+    const [declineReasonInput, setDeclineReasonInput] = useState("");
+    const [recordedDeclineReason, setRecordedDeclineReason] = useState(declineReason ?? "");
+    const [recordedDeclinedAt, setRecordedDeclinedAt] = useState(declinedAt ?? null);
 
     const handleSign = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -69,6 +81,74 @@ export default function OfferSignPanel({
         }
     };
 
+    const handleDecline = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (
+            !window.confirm(
+                isIntern
+                    ? "Decline this internship offer? HR will be notified."
+                    : "Decline this offer letter? HR will be notified."
+            )
+        ) {
+            return;
+        }
+
+        setError("");
+        setDeclineBusy(true);
+        try {
+            const res = await fetch(`/api/offer/${token}/decline`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    declineReason: declineReasonInput.trim() || undefined,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setError(data.error || "Could not record decline");
+                if (data.declinedAt) {
+                    setDeclined(true);
+                    setRecordedDeclinedAt(data.declinedAt);
+                    setRecordedDeclineReason(data.declineReason ?? "");
+                }
+                return;
+            }
+            setDeclined(true);
+            setRecordedDeclinedAt(data.declinedAt);
+            setRecordedDeclineReason(data.declineReason ?? "");
+            setShowDeclineForm(false);
+        } catch {
+            setError("Network error. Please try again.");
+        } finally {
+            setDeclineBusy(false);
+        }
+    };
+
+    if (declined || isDeclined) {
+        return (
+            <section className="offerSignPanel offerSignPanel--declined">
+                <XCircle size={28} className="offerSignDeclineIcon" />
+                <h2>{isIntern ? "Internship offer declined" : "Offer declined"}</h2>
+                <p>
+                    You have declined this offer
+                    {recordedDeclinedAt
+                        ? ` on ${new Date(recordedDeclinedAt).toLocaleString("en-IN")}`
+                        : ""}
+                    . HR has been notified.
+                </p>
+                {recordedDeclineReason && (
+                    <p className="offerSignDeclineReason">
+                        <strong>Your note:</strong> {recordedDeclineReason}
+                    </p>
+                )}
+                <p className="offerSignDeclineHelp">
+                    If this was a mistake, contact HR at{" "}
+                    <a href="mailto:hr@nuriek.com">hr@nuriek.com</a>.
+                </p>
+            </section>
+        );
+    }
+
     if (done || isSigned) {
         return (
             <section className="offerSignPanel offerSignPanel--done">
@@ -94,7 +174,7 @@ export default function OfferSignPanel({
                     <h2>{isIntern ? "Accept this internship offer" : "Accept this offer"}</h2>
                     <p>
                         Read the full letter above (including the HR signatory section), then sign
-                        below. This creates a digital record for Nuriek HR.
+                        below or decline if you do not wish to proceed.
                     </p>
                 </div>
             </header>
@@ -143,11 +223,64 @@ export default function OfferSignPanel({
                         />
                     </label>
                 </div>
-                <button type="submit" className="offerSignSubmit" disabled={busy}>
+                <button type="submit" className="offerSignSubmit" disabled={busy || declineBusy}>
                     {busy ? <Loader2 className="animate-spin" size={20} /> : <PenLine size={18} />}
                     {isIntern ? "I accept — sign internship offer" : "I accept — sign offer letter"}
                 </button>
             </form>
+
+            <div className="offerSignDeclineWrap">
+                {!showDeclineForm ? (
+                    <button
+                        type="button"
+                        className="offerSignDeclineToggle"
+                        onClick={() => setShowDeclineForm(true)}
+                        disabled={busy || declineBusy}
+                    >
+                        Decline this offer
+                    </button>
+                ) : (
+                    <form className="offerSignDeclineForm" onSubmit={handleDecline}>
+                        <p className="offerSignDeclineLead">
+                            {isIntern
+                                ? "You may optionally share a short note for HR before declining."
+                                : "You may optionally share a short note for HR before declining the offer."}
+                        </p>
+                        <label>
+                            Reason (optional)
+                            <textarea
+                                rows={3}
+                                value={declineReasonInput}
+                                onChange={(e) => setDeclineReasonInput(e.target.value)}
+                                placeholder="e.g. Accepted another role"
+                                maxLength={500}
+                            />
+                        </label>
+                        <div className="offerSignDeclineActions">
+                            <button
+                                type="button"
+                                className="offerSignDeclineCancel"
+                                onClick={() => setShowDeclineForm(false)}
+                                disabled={declineBusy}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="offerSignDeclineSubmit"
+                                disabled={declineBusy}
+                            >
+                                {declineBusy ? (
+                                    <Loader2 className="animate-spin" size={18} />
+                                ) : (
+                                    <XCircle size={18} />
+                                )}
+                                Confirm decline
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </div>
         </section>
     );
 }

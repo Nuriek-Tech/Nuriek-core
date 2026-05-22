@@ -14,6 +14,7 @@ import {
     AlertTriangle,
     UserPlus,
     Link2,
+    XCircle,
 } from "lucide-react";
 import { isSuperAdminRole } from "@/lib/constants";
 import { internshipTypeLabel } from "@/lib/internship-offer";
@@ -37,6 +38,8 @@ type OfferRow = {
     viewedAt: string | null;
     signedAt: string | null;
     signedName: string | null;
+    declinedAt: string | null;
+    declineReason: string | null;
     createdAt: string;
     provisionedUserId?: string | null;
     provisionedAt?: string | null;
@@ -64,6 +67,8 @@ function statusClass(status: string) {
     switch (status) {
         case "SIGNED":
             return "olStatus olStatus--signed";
+        case "DECLINED":
+            return "olStatus olStatus--declined";
         case "VIEWED":
             return "olStatus olStatus--viewed";
         case "SENT":
@@ -243,8 +248,8 @@ export default function OfferLetterWorkflow() {
                 </div>
             </div>
             <p className="olWorkflowLead">
-                Track sent offers, when candidates open the link, and when they sign. Remove test rows
-                before production.
+                Track sent offers, when candidates open the link, and when they sign or decline.
+                Remove test rows before production.
             </p>
 
             {showPurgeAll && isSuperAdmin && (
@@ -307,6 +312,7 @@ export default function OfferLetterWorkflow() {
                                 <th>Sent</th>
                                 <th>Viewed</th>
                                 <th>Signed</th>
+                                <th>Declined</th>
                                 <th>Portal</th>
                                 <th></th>
                             </tr>
@@ -345,6 +351,7 @@ export default function OfferLetterWorkflow() {
                                             {o.status === "SIGNED" && (
                                                 <CheckCircle2 size={12} />
                                             )}
+                                            {o.status === "DECLINED" && <XCircle size={12} />}
                                             {o.status === "VIEWED" && <Eye size={12} />}
                                             {o.status === "SENT" && <Mail size={12} />}
                                             {o.statusLabel}
@@ -359,6 +366,22 @@ export default function OfferLetterWorkflow() {
                                                 {o.signedName && (
                                                     <span className="olWorkflowSub">
                                                         {o.signedName}
+                                                    </span>
+                                                )}
+                                            </>
+                                        ) : (
+                                            "—"
+                                        )}
+                                    </td>
+                                    <td>
+                                        {o.declinedAt ? (
+                                            <>
+                                                {fmt(o.declinedAt)}
+                                                {o.declineReason && (
+                                                    <span className="olWorkflowSub" title={o.declineReason}>
+                                                        {o.declineReason.length > 48
+                                                            ? `${o.declineReason.slice(0, 48)}…`
+                                                            : o.declineReason}
                                                     </span>
                                                 )}
                                             </>

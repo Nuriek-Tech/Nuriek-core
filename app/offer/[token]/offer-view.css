@@ -256,6 +256,121 @@
   cursor: wait;
 }
 
+.offerSignPanel--declined {
+  border-color: rgba(255, 59, 48, 0.25);
+  background: #fff8f7;
+}
+
+.offerSignDeclineIcon {
+  color: #ff3b30;
+  margin-bottom: 0.75rem;
+}
+
+.offerSignDeclineReason {
+  margin: 0.75rem 0 0;
+  font-size: 0.88rem;
+  color: #6f6a63;
+  line-height: 1.5;
+}
+
+.offerSignDeclineHelp {
+  margin: 0.75rem 0 0;
+  font-size: 0.82rem;
+  color: #8a847c;
+}
+
+.offerSignDeclineHelp a {
+  color: #3d5248;
+}
+
+.offerSignDeclineWrap {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(26, 25, 23, 0.08);
+}
+
+.offerSignDeclineToggle {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border: 1px solid rgba(255, 59, 48, 0.25);
+  border-radius: 10px;
+  background: transparent;
+  color: #b42318;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.offerSignDeclineToggle:hover:not(:disabled) {
+  background: rgba(255, 59, 48, 0.06);
+}
+
+.offerSignDeclineForm label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6f6a63;
+}
+
+.offerSignDeclineForm textarea {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(26, 25, 23, 0.12);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #fff;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.offerSignDeclineLead {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: #6f6a63;
+  line-height: 1.45;
+}
+
+.offerSignDeclineActions {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.offerSignDeclineCancel,
+.offerSignDeclineSubmit {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.offerSignDeclineCancel {
+  border: 1px solid rgba(26, 25, 23, 0.12);
+  background: #fff;
+  color: #1a1917;
+}
+
+.offerSignDeclineSubmit {
+  border: 1px solid #ff3b30;
+  background: #ff3b30;
+  color: #fff;
+}
+
+.offerSignDeclineSubmit:disabled,
+.offerSignDeclineToggle:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
 @media (max-width: 560px) {
   .offerSignGrid {
     grid-template-columns: 1fr;
