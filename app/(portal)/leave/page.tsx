@@ -15,11 +15,15 @@ import {
 import "@/styles/dashboard.css";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import type { HolidayRecord, LeaveBalance, LeaveRecord } from "@/lib/api-types";
 import { leaveApprovalHint } from "@/lib/leave-approval";
-import type { Role } from "@/lib/constants";
+import type { HolidayRecord, LeaveBalance, LeaveRecord } from "@/lib/api-types";
 
-type LeaveApiResponse = { leaves: LeaveRecord[]; balance: LeaveBalance };
+type LeaveApiResponse = {
+    leaves: LeaveRecord[];
+    balance: LeaveBalance;
+    defaultReportingManagerEmail?: string | null;
+    defaultReportingManagerName?: string | null;
+};
 
 export default function LeavePage() {
     const { data: session } = useSession();
@@ -40,7 +44,9 @@ export default function LeavePage() {
         startDate: "",
         endDate: "",
         reason: "",
+        reportingManagerEmail: "",
     });
+    const [defaultManagerName, setDefaultManagerName] = useState("");
 
     const userRole = session?.user?.role;
     const isSuperAdmin = userRole === "FOUNDER";
@@ -64,6 +70,12 @@ export default function LeavePage() {
                 } else {
                     setLeaves(data.leaves ?? []);
                     setBalance(data.balance ?? null);
+                    const managerEmail = data.defaultReportingManagerEmail ?? "";
+                    setDefaultManagerName(data.defaultReportingManagerName ?? "");
+                    setFormData((f) => ({
+                        ...f,
+                        reportingManagerEmail: f.reportingManagerEmail || managerEmail,
+                    }));
                 }
             }
             if (holidaysRes.ok) setHolidays(await holidaysRes.json());
@@ -84,11 +96,23 @@ export default function LeavePage() {
                 body: JSON.stringify(formData),
             });
             if (res.ok) {
+                const body = await res.json().catch(() => ({}));
                 setShowApplyModal(false);
-                setFormData({ type: "CASUAL", startDate: "", endDate: "", reason: "" });
+                setFormData({
+                    type: "CASUAL",
+                    startDate: "",
+                    endDate: "",
+                    reason: "",
+                    reportingManagerEmail: "",
+                });
                 fetchData();
-                if (userRole === "HR_ADMIN") {
-                    alert("Leave submitted. It will be reviewed by Super Admin.");
+                if (body.emailSent === false) {
+                    alert(
+                        body.emailError ||
+                            "Leave saved but approval email could not be sent. Contact HR."
+                    );
+                } else {
+                    alert("Leave submitted. Your reporting manager will receive an approval email.");
                 }
             } else {
                 const err = await res.json().catch(() => ({}));
@@ -230,6 +254,33 @@ export default function LeavePage() {
                                     <label className="statLabel">End Date</label>
                                     <input type="date" className="input" required value={formData.endDate} onChange={e => setFormData({ ...formData, endDate: e.target.value })} />
                                 </div>
+                            </div>
+                            <div className="inputGroup">
+                                <label className="statLabel">Reporting manager email *</label>
+                                <input
+                                    type="email"
+                                    className="input"
+                                    required
+                                    value={formData.reportingManagerEmail}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            reportingManagerEmail: e.target.value,
+                                        })
+                                    }
+                                    placeholder="manager@nuriek.com"
+                                />
+                                {defaultManagerName && (
+                                    <p
+                                        style={{
+                                            fontSize: "0.72rem",
+                                            color: "var(--text-tertiary)",
+                                            marginTop: "0.35rem",
+                                        }}
+                                    >
+                                        Default: {defaultManagerName}
+                                    </p>
+                                )}
                             </div>
                             <div className="inputGroup">
                                 <label className="statLabel">Reason</label>
@@ -442,9 +493,9 @@ export default function LeavePage() {
                                     style={leave.status === "PENDING" ? { background: "rgba(255,159,10,0.1)", color: "#ff9f0a" } : undefined}>
                                     {leave.status}
                                 </span>
-                                {leave.status === "PENDING" && userRole && (
+                                {leave.status === "PENDING" && (
                                     <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "0.35rem" }}>
-                                        {leaveApprovalHint(userRole as Role)}
+                                        {leaveApprovalHint()}
                                     </p>
                                 )}
                                 </div>

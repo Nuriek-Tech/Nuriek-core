@@ -16,6 +16,7 @@ export type AuditAction =
     | "LEAVE_REQUEST"
     | "LEAVE_APPROVE"
     | "LEAVE_REJECT"
+    | "LEAVE_REVOKE"
     | "HOLIDAY_LIST_PUBLISH"
     | "TIMESHEET_SUBMIT"
     | "TIMESHEET_APPROVE"

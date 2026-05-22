@@ -1,0 +1,57 @@
+.leaveRespondPage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background: var(--background, #0f0f0f);
+}
+
+.leaveRespondCard {
+  width: 100%;
+  max-width: 440px;
+  padding: 2rem;
+  border-radius: var(--radius-lg, 16px);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  background: var(--surface, rgba(255, 255, 255, 0.04));
+  text-align: center;
+}
+
+.leaveRespondCard h1 {
+  margin: 1rem 0 0.75rem;
+  font-size: 1.35rem;
+}
+
+.leaveRespondCard p {
+  margin: 0;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  line-height: 1.55;
+}
+
+.leaveRespondIcon {
+  margin: 0 auto;
+}
+
+.leaveRespondCard--success .leaveRespondIcon {
+  color: #34c759;
+}
+
+.leaveRespondCard--error .leaveRespondIcon {
+  color: #ff453a;
+}
+
+.leaveRespondCard--neutral .leaveRespondIcon {
+  color: var(--nuriek-blue, #0a84ff);
+}
+
+.leaveRespondLink {
+  display: inline-block;
+  margin-top: 1.5rem;
+  color: var(--nuriek-blue, #0a84ff);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.leaveRespondLink:hover {
+  text-decoration: underline;
+}

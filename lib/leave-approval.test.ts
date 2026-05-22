@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canApproveLeave, isLeaveExemptRole } from "./leave-approval";
+import { canApproveLeave, canRevokeLeave, isLeaveExemptRole } from "./leave-approval";
 import { ROLES } from "./constants";
 
 describe("canApproveLeave", () => {
@@ -11,6 +11,14 @@ describe("canApproveLeave", () => {
     it("allows HR or Super Admin for employee leave", () => {
         expect(canApproveLeave(ROLES.HR_ADMIN, ROLES.EMPLOYEE)).toBe(true);
         expect(canApproveLeave(ROLES.FOUNDER, ROLES.EMPLOYEE)).toBe(true);
+    });
+});
+
+describe("canRevokeLeave", () => {
+    it("allows HR and Super Admin to revoke", () => {
+        expect(canRevokeLeave(ROLES.FOUNDER)).toBe(true);
+        expect(canRevokeLeave(ROLES.HR_ADMIN)).toBe(true);
+        expect(canRevokeLeave(ROLES.EMPLOYEE)).toBe(false);
     });
 });
 

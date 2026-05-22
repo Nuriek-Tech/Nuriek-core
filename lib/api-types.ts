@@ -17,6 +17,9 @@ export type LeaveRecord = {
     endDate: string;
     status: string;
     reason?: string | null;
+    reportingManagerEmail?: string | null;
+    approvalActorEmail?: string | null;
+    revokedAt?: string | null;
 };
 
 export type LeaveBalance = {

@@ -2,7 +2,7 @@ import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
 const LOGIN_PATH = "/login";
-const PUBLIC_PATHS = ["/contact-hr", "/offer"];
+const PUBLIC_PATHS = ["/contact-hr", "/offer", "/leave/respond"];
 
 function isPublicAsset(pathname: string) {
     return (
@@ -29,6 +29,10 @@ export default withAuth(
         }
 
         if (pathname.startsWith("/api/offer/")) {
+            return NextResponse.next();
+        }
+
+        if (pathname.startsWith("/api/leave/respond/")) {
             return NextResponse.next();
         }
 

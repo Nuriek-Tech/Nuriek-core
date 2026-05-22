@@ -17,13 +17,19 @@ export function canApproveLeave(approverRole: Role, requesterRole: Role): boolea
     return approverRole === ROLES.FOUNDER || approverRole === ROLES.HR_ADMIN;
 }
 
-export function leaveApprovalHint(requesterRole: Role): string {
-    if (requesterRole === ROLES.HR_ADMIN) {
-        return "Awaiting Super Admin approval";
-    }
-    return "Awaiting HR / Super Admin approval";
-}
-
 export function canReviewLeaveQueue(role: Role): boolean {
     return role === ROLES.FOUNDER || role === ROLES.HR_ADMIN;
+}
+
+export function canRevokeLeave(role: Role): boolean {
+    return role === ROLES.FOUNDER || role === ROLES.HR_ADMIN;
+}
+
+export function leaveApprovalHint(): string {
+    return "Awaiting reporting manager approval (email sent)";
+}
+
+export function isValidReportingManagerEmail(email: string): boolean {
+    const normalized = email.trim().toLowerCase();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
 }

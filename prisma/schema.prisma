@@ -51,6 +51,7 @@ model User {
   directReports       User[]        @relation("UserReportsTo")
   passwordResetTokens PasswordResetToken[]
   loginSessions      LoginSession[]
+  leavesRevoked      Leave[]       @relation("LeaveRevokedBy")
 }
 
 model LoginSession {
@@ -181,16 +182,35 @@ model Attendance {
 }
 
 model Leave {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String
-  startDate DateTime
-  endDate   DateTime
-  status    String   @default("PENDING")
-  reason    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type                  String
+  startDate             DateTime
+  endDate               DateTime
+  status                String   @default("PENDING")
+  reason                String?
+  reportingManagerEmail String?
+  approvalActorEmail    String?
+  revokedAt             DateTime?
+  revokedById           String?
+  revokedBy             User?    @relation("LeaveRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  approvalTokens        LeaveApprovalToken[]
+}
+
+model LeaveApprovalToken {
+  id        String    @id @default(cuid())
+  leaveId   String
+  leave     Leave     @relation(fields: [leaveId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  action    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([leaveId])
 }
 
 model Document {

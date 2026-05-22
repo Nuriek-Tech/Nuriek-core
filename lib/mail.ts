@@ -254,6 +254,51 @@ export async function sendTimesheetApprovalEmail(
     });
 }
 
+export async function sendLeaveApprovalRequestEmail(params: {
+    to: string;
+    managerName?: string;
+    employeeName: string;
+    employeeEmail: string;
+    leaveType: string;
+    startDate: string;
+    endDate: string;
+    days: number;
+    reason?: string | null;
+    approveUrl: string;
+    rejectUrl: string;
+    expiresDays: number;
+}) {
+    if (!isZohoConfigured()) {
+        return { success: false, message: "Missing Zoho credentials in .env" };
+    }
+
+    const {
+        buildLeaveApprovalEmailHtml,
+        leaveApprovalEmailSubject,
+    } = await import("@/lib/leave-approval-email");
+
+    const html = buildLeaveApprovalEmailHtml(params);
+
+    const result = await sendWithRetry(async () => {
+        const info = await getTransporter().sendMail({
+            from: zohoMailFrom(),
+            to: params.to,
+            subject: leaveApprovalEmailSubject(params.employeeName),
+            html,
+            attachments: [nuriekEmailHeaderAttachment()],
+        });
+        return { success: true, data: info };
+    });
+
+    if (!result.success) {
+        return {
+            success: false,
+            message: result.error ? formatZohoSmtpError(result.error) : "Failed to send email",
+        };
+    }
+    return { success: true };
+}
+
 export async function sendPasswordResetEmail(params: {
     to: string;
     recipientName: string;

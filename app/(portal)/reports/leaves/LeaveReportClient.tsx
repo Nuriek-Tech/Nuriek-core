@@ -20,7 +20,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XL from "xlsx";
 import ReportDetailModal from "@/components/ReportDetailModal";
-import { canApproveLeave } from "@/lib/leave-approval";
+import { canApproveLeave, canRevokeLeave } from "@/lib/leave-approval";
 import type { Role } from "@/lib/constants";
 import "@/styles/people-hub.css";
 import "@/styles/reports.css";
@@ -34,6 +34,7 @@ type LeaveReportRow = LeaveRecord & {
 function statusClass(status: string): string {
     if (status === "APPROVED") return "repStatusBadge--approved";
     if (status === "PENDING") return "repStatusBadge--pending";
+    if (status === "REVOKED") return "repStatusBadge--rejected";
     return "repStatusBadge--rejected";
 }
 
@@ -120,7 +121,17 @@ export default function LeaveReportClient() {
         doc.save("Leave_Report.pdf");
     };
 
-    const handleLeaveAction = async (leaveId: string, newStatus: "APPROVED" | "REJECTED") => {
+    const handleLeaveAction = async (
+        leaveId: string,
+        newStatus: "APPROVED" | "REJECTED" | "REVOKED"
+    ) => {
+        if (newStatus === "REVOKED") {
+            const confirmed = window.confirm(
+                "Revoke this approved leave? The employee's balance will be restored."
+            );
+            if (!confirmed) return;
+        }
+
         setActingId(leaveId);
         try {
             const res = await fetch(`/api/leave/${leaveId}`, {
@@ -169,8 +180,7 @@ export default function LeaveReportClient() {
                         Leave <span className="text-gradient">Report</span>
                     </h1>
                     <p className="hubSubtitle">
-                        Employee absences, leave types, and approval status. HR leave requires
-                        Super Admin approval.
+                        Review leave requests, manager email approvals, and revoke when needed.
                     </p>
                 </div>
                 <div className="repExportGroup">
@@ -240,6 +250,7 @@ export default function LeaveReportClient() {
                             <option value="PENDING">Pending</option>
                             <option value="APPROVED">Approved</option>
                             <option value="REJECTED">Rejected</option>
+                            <option value="REVOKED">Revoked</option>
                         </select>
                     </div>
                     <div className="repFilterGroup">
@@ -290,6 +301,7 @@ export default function LeaveReportClient() {
                                     <th>Start</th>
                                     <th>End</th>
                                     <th>Status</th>
+                                    <th>Manager</th>
                                     <th>Reason</th>
                                     <th>Actions</th>
                                 </tr>
@@ -325,6 +337,18 @@ export default function LeaveReportClient() {
                                                 >
                                                     {item.status}
                                                 </span>
+                                            </td>
+                                            <td
+                                                style={{
+                                                    maxWidth: "160px",
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    whiteSpace: "nowrap",
+                                                    color: "var(--text-secondary)",
+                                                    fontSize: "0.82rem",
+                                                }}
+                                            >
+                                                {item.reportingManagerEmail || "—"}
                                             </td>
                                             <td
                                                 style={{
@@ -391,6 +415,24 @@ export default function LeaveReportClient() {
                                                                 </button>
                                                             </>
                                                         )}
+                                                    {item.status === "APPROVED" &&
+                                                        canRevokeLeave(viewerRole) && (
+                                                            <button
+                                                                type="button"
+                                                                className="repViewBtn"
+                                                                title="Revoke approved leave"
+                                                                disabled={actingId === item.id}
+                                                                onClick={() =>
+                                                                    handleLeaveAction(
+                                                                        item.id,
+                                                                        "REVOKED"
+                                                                    )
+                                                                }
+                                                                style={{ color: "#ff9f0a" }}
+                                                            >
+                                                                Revoke
+                                                            </button>
+                                                        )}
                                                     <button
                                                         type="button"
                                                         className="repViewBtn"
@@ -407,7 +449,7 @@ export default function LeaveReportClient() {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={7} className="repEmptyRow">
+                                        <td colSpan={8} className="repEmptyRow">
                                             No leave records for this selection.
                                         </td>
                                     </tr>
