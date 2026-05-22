@@ -195,7 +195,7 @@ export default function AdminDocumentsPage() {
                         " Email was NOT sent — add ZOHO_USER and ZOHO_PASSWORD to .env and restart the server.";
                 } else {
                     msg +=
-                        " Email was NOT sent — check Zoho credentials. Signers can still open Documents & Policy Hub in the portal.";
+                        " Email was NOT sent — check Zoho credentials. Signers can still open Documents & Legal in the portal.";
                     if (failures.length > 0) {
                         msg += ` Failed: ${failures.map((f) => f.email).join(", ")}`;
                     }
@@ -226,7 +226,7 @@ export default function AdminDocumentsPage() {
                     <p className="hubEyebrow">Compliance</p>
                     <div className="admHeroTitleRow">
                         <h1>
-                            Admin <span className="text-gradient">Document Manager</span>
+                            Documents &amp; Legal <span className="text-gradient">Admin</span>
                         </h1>
                     </div>
                 </div>
@@ -237,7 +237,7 @@ export default function AdminDocumentsPage() {
                     </span>
                     <Link href="/documents" className="hubBtnPrimary" style={{ textDecoration: "none" }}>
                         <Scale size={16} />
-                        Employee hub
+                        Documents &amp; Legal hub
                     </Link>
                 </div>
             </header>

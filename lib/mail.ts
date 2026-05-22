@@ -157,7 +157,7 @@ export async function sendSignatureRequestEmail(params: {
               ${description ? `<p style="margin: 0 0 14px; font-size: 14px; color: ${NURIEK_EMAIL.textSoft}; line-height: 1.55;">${description}</p>` : ""}
               <ol style="margin: 0; padding-left: 20px; font-size: 14px; color: ${NURIEK_EMAIL.textMuted}; line-height: 1.65;">
                 <li>Sign in to the Nuriek employee portal.</li>
-                <li>Open <strong>Documents &amp; Policy Hub</strong>.</li>
+                <li>Open <strong>Documents &amp; Legal</strong>.</li>
                 <li>Read the full document, then use <strong>Sign Now</strong>.</li>
               </ol>
               <p style="margin: 16px 0 0; font-size: 13px; color: ${NURIEK_EMAIL.textSoft}; line-height: 1.5;">

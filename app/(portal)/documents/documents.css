@@ -1,104 +1,313 @@
-.docContainer {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
+/* Documents & Legal — employee hub */
+.docHubPage {
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.docHubSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.docHubSectionHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.docHubSectionHead--warn {
+  color: #ff9500;
+}
+
+.docHubLoading {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 1rem;
+}
+
+.docHubEmpty {
+  color: var(--text-tertiary);
+  font-size: 0.9rem;
+  margin: 0;
 }
 
 .docGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
 }
 
 .docCard {
-    padding: 1.5rem;
-    border-radius: var(--radius-lg);
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-    transition: var(--transition-base);
+  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  transition: var(--transition-base);
+  border: 1px solid var(--border);
 }
 
-.docCardIndicator {
-    width: 4px;
-    height: 24px;
-    background: var(--nuriek-blue);
-    border-radius: var(--radius-xl);
+.docCard--action {
+  border-color: rgba(255, 149, 0, 0.35);
+  background: rgba(255, 149, 0, 0.04);
 }
 
 .docHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
 .docTitleSection {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
 }
 
 .docIcon {
-    color: var(--nuriek-blue);
-    background: rgba(var(--nuriek-blue-rgb), 0.1);
-    padding: 0.6rem;
-    border-radius: var(--radius-sm);
+  color: var(--nuriek-blue);
+  background: rgba(var(--nuriek-blue-rgb), 0.1);
+  padding: 0.55rem;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.docIcon--warn {
+  color: #ff9500;
+  background: rgba(255, 149, 0, 0.12);
 }
 
 .docTitle {
-    font-size: 1.05rem;
-    font-weight: 700;
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .docMeta {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .docDescription {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    line-height: 1.4;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin: 0;
 }
 
 .docStatus {
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 0.25rem 0.6rem;
-    border-radius: var(--radius-xl);
-    align-self: flex-start;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-xl);
+  align-self: flex-start;
+  letter-spacing: 0.03em;
 }
 
-.statusPending {
-    background: rgba(255, 159, 10, 0.1);
-    color: #ff9f0a;
+.docStatus--signed {
+  background: rgba(52, 199, 89, 0.12);
+  color: #34c759;
 }
 
-.statusAccepted {
-    background: rgba(52, 199, 89, 0.1);
-    color: #34c759;
+.docStatus--pending {
+  background: rgba(255, 159, 10, 0.12);
+  color: #ff9500;
+}
+
+.docStatus--neutral {
+  background: var(--surface-lighter);
+  color: var(--text-secondary);
+}
+
+.docProgress {
+  margin-bottom: 0.25rem;
+}
+
+.docProgressMeta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+  font-size: 0.75rem;
+}
+
+.docProgressMeta span:first-child {
+  color: #ff9500;
+}
+
+.docProgressBar {
+  height: 4px;
+  background: rgba(255, 149, 0, 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.docProgressFill {
+  height: 100%;
+  background: #ff9500;
 }
 
 .docFooter {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: auto;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .docAction {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--nuriek-blue);
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--nuriek-blue);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+.docAction:disabled {
+  cursor: default;
+}
+
+.docAction--danger {
+  color: #ef4444;
 }
 
 .docDate {
-    font-size: 0.75rem;
-    color: var(--text-tertiary);
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.docReadHint {
+  font-size: 0.7rem;
+  color: #fbbf24;
+  align-self: center;
+}
+
+.docSignOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(5px);
+  padding: 1rem;
+}
+
+.docSignModal {
+  width: 100%;
+  max-width: 500px;
+  background: var(--surface, #fff);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+}
+
+.docSignModalHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
+  gap: 1rem;
+}
+
+.docSignModalHead h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.docSignModalHead p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0.25rem 0 0;
+}
+
+.docSignCanvasWrap {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  position: relative;
+  height: 200px;
+  background: var(--surface-lighter, #f9f9f9);
+}
+
+.docSignCanvasWrap canvas {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.docSignCanvasHint {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  pointer-events: none;
+}
+
+.docSignModalFoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.docSignClear {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: #ff453a;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.docSignConfirm {
+  background: var(--nuriek-blue);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: inherit;
+  font-weight: 600;
+}
+
+.docSignConfirm:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.docSignClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 0;
 }

@@ -135,7 +135,7 @@ export const NAV_ITEMS: NavItem[] = [
         hrPermission: "admin_timesheets",
     },
     {
-        label: "Admin Documents",
+        label: "Documents & Legal (Admin)",
         path: "/admin/documents",
         roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER],
         icon: "FileUp",

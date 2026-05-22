@@ -15,13 +15,15 @@ import {
     Trash2,
 } from "lucide-react";
 import "./documents.css";
+import "@/styles/people-hub.css";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import type { DocumentRecord } from "@/lib/api-types";
 import DocumentViewerModal from "@/components/DocumentViewerModal";
 import EditDocumentModal from "@/components/EditDocumentModal";
 import DeleteDocumentModal from "@/components/DeleteDocumentModal";
-import { isAdminRole } from "@/lib/constants";
+import { isAdminRole, ROLES } from "@/lib/constants";
+import { hasHrPermission } from "@/lib/hr-permissions";
 
 type DocumentSigner = NonNullable<DocumentRecord["requiredSigners"]>[number] & { role?: string };
 type CanvasPointerEvent = React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>;
@@ -39,6 +41,13 @@ export default function DocumentsPage() {
     const [deletingDoc, setDeletingDoc] = useState<DocumentRecord | null>(null);
 
     const isAdmin = isAdminRole(currentUserRole);
+    const canManageDocuments =
+        currentUserRole === ROLES.FOUNDER ||
+        hasHrPermission(
+            currentUserRole,
+            session?.user?.hrPermissions,
+            "admin_documents"
+        );
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -203,72 +212,66 @@ export default function DocumentsPage() {
         return (
             <div
                 key={doc.id}
-                className="docCard glass"
-                style={accent === "warning" ? { borderColor: "rgba(255, 149, 0, 0.3)" } : undefined}
+                className={`docCard glass${accent === "warning" ? " docCard--action" : ""}`}
             >
                 <div className="docHeader">
                     <div className="docTitleSection">
-                        <Icon className="docIcon" size={24} color={accent === "warning" ? "#ff9500" : undefined} />
+                        <Icon
+                            className={`docIcon${accent === "warning" ? " docIcon--warn" : ""}`}
+                            size={22}
+                        />
                         <div className="docMeta">
                             <span className="docTitle">{doc.title}</span>
                             <span
-                                className={`docStatus ${doc.isSigned ? "statusOnTime" : "statusPending"}`}
-                                style={{ textTransform: "uppercase", fontSize: "0.65rem" }}
+                                className={`docStatus ${
+                                    doc.isSigned
+                                        ? "docStatus--signed"
+                                        : accent === "warning"
+                                          ? "docStatus--pending"
+                                          : "docStatus--neutral"
+                                }`}
                             >
                                 {doc.isSigned
-                                    ? "SIGNED & VERIFIED"
+                                    ? "Signed & verified"
                                     : accent === "warning"
-                                      ? "ACTION REQUIRED"
-                                      : doc.type}
+                                      ? "Action required"
+                                      : doc.type.replace(/_/g, " ")}
                             </span>
                         </div>
                     </div>
                 </div>
-                <p className="docDescription">{doc.description || "Review and sign this company document."}</p>
+                <p className="docDescription">
+                    {doc.description || "Review and sign this company document."}
+                </p>
                 {accent === "warning" && doc.totalSigners ? (
-                    <div style={{ marginBottom: "1rem" }}>
-                        <div
-                            style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                marginBottom: "0.4rem",
-                                fontSize: "0.75rem",
-                            }}
-                        >
-                            <span style={{ color: "#ff9500" }}>Signature Progress</span>
+                    <div className="docProgress">
+                        <div className="docProgressMeta">
+                            <span>Signature progress</span>
                             <span>
                                 {doc.signedCount} / {doc.totalSigners} signed
                             </span>
                         </div>
-                        <div
-                            style={{
-                                height: "4px",
-                                background: "rgba(255, 149, 0, 0.1)",
-                                borderRadius: "2px",
-                                overflow: "hidden",
-                            }}
-                        >
+                        <div className="docProgressBar">
                             <div
+                                className="docProgressFill"
                                 style={{
                                     width: `${((doc.signedCount ?? 0) / Math.max(doc.totalSigners ?? 1, 1)) * 100}%`,
-                                    height: "100%",
-                                    background: "#ff9500",
                                 }}
                             />
                         </div>
                     </div>
                 ) : null}
                 <div className="docFooter">
-                    <span className="docDate">Updated: {new Date(doc.updatedAt).toLocaleDateString()}</span>
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <span className="docDate">
+                        Updated {new Date(doc.updatedAt).toLocaleDateString()}
+                    </span>
+                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                         <button type="button" className="docAction" onClick={() => openViewer(doc)}>
                             <Eye size={14} />
                             <span>View</span>
                         </button>
                         {needsSign && !doc.hasRead && (
-                            <span style={{ fontSize: "0.7rem", color: "#fbbf24", alignSelf: "center" }}>
-                                Read to sign
-                            </span>
+                            <span className="docReadHint">Read to sign</span>
                         )}
                         {doc.isSigned && (
                             <button type="button" className="docAction" disabled style={{ opacity: 0.6 }}>
@@ -292,13 +295,12 @@ export default function DocumentsPage() {
                                 </button>
                                 <button
                                     type="button"
-                                    className="docAction"
+                                    className="docAction docAction--danger"
                                     title="Delete document"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setDeletingDoc(doc);
                                     }}
-                                    style={{ color: "#ef4444", borderColor: "rgba(239,68,68,0.4)" }}
                                 >
                                     <Trash2 size={14} />
                                     <span>Delete</span>
@@ -312,48 +314,56 @@ export default function DocumentsPage() {
     };
 
     return (
-        <div className="docContainer">
-            <header className="dashboardHeader">
-                <div className="welcomeSection">
-                    <h1>Documents & Policy Hub</h1>
-                    <p>Review policies, NDAs, and company documents — sign after reading in full</p>
+        <div className="hubPage docHubPage">
+            <header className="hubHero">
+                <div className="hubHeroMain">
+                    <p className="hubEyebrow">Compliance</p>
+                    <h1>
+                        Documents &amp; <span className="text-gradient">Legal</span>
+                    </h1>
+                    <p className="hubSubtitle">
+                        Review policies, legal documents, and employment files — sign after reading
+                        in full.
+                    </p>
                 </div>
-                {isAdmin && (
-                    <Link href="/admin/documents" className="checkInButton" style={{ textDecoration: "none" }}>
-                        <Shield size={18} />
-                        <span>Admin Document Portal</span>
-                    </Link>
-                )}
+                <div className="hubHeroActions">
+                    {signatureRequests.length > 0 && (
+                        <span className="hubStatChip">
+                            <PenTool size={16} color="#ff9500" />
+                            <strong>{signatureRequests.length}</strong> awaiting signature
+                        </span>
+                    )}
+                    {canManageDocuments && (
+                        <Link href="/admin/documents" className="hubBtnPrimary" style={{ textDecoration: "none" }}>
+                            <Shield size={16} />
+                            Manage documents
+                        </Link>
+                    )}
+                </div>
             </header>
 
             {isLoading ? (
-                <div style={{ display: "flex", justifyContent: "center", padding: "5rem" }}>
+                <div className="docHubLoading">
                     <Loader2 className="animate-spin" size={40} color="var(--nuriek-blue)" />
                 </div>
             ) : (
                 <>
                     {signatureRequests.length > 0 && (
-                        <section style={{ marginBottom: "3rem" }}>
-                            <h2
-                                className="cardTitle"
-                                style={{
-                                    marginBottom: "1.5rem",
-                                    color: "#ff9500",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "0.5rem",
-                                }}
-                            >
-                                <PenTool size={20} />
-                                Signature Requests
+                        <section className="docHubSection glass">
+                            <h2 className="docHubSectionHead docHubSectionHead--warn">
+                                <PenTool size={18} />
+                                Signature requests
                             </h2>
-                            <div className="docGrid">{signatureRequests.map((doc) => renderDocCard(doc, "warning"))}</div>
+                            <div className="docGrid">
+                                {signatureRequests.map((doc) => renderDocCard(doc, "warning"))}
+                            </div>
                         </section>
                     )}
 
                     {employeeDocuments.length > 0 && (
-                        <section style={{ marginBottom: "3rem" }}>
-                            <h2 className="cardTitle" style={{ marginBottom: "1.5rem" }}>
+                        <section className="docHubSection glass">
+                            <h2 className="docHubSectionHead">
+                                <FileText size={18} />
                                 My employment documents
                             </h2>
                             <div className="docGrid">
@@ -362,15 +372,16 @@ export default function DocumentsPage() {
                         </section>
                     )}
 
-                    <section>
-                        <h2 className="cardTitle" style={{ marginBottom: "1.5rem" }}>
-                            Company Policies & Resources
+                    <section className="docHubSection glass">
+                        <h2 className="docHubSectionHead">
+                            <BookOpen size={18} />
+                            Company policies &amp; legal
                         </h2>
                         <div className="docGrid">
                             {generalPolicies.length > 0 ? (
                                 generalPolicies.map((doc) => renderDocCard(doc))
                             ) : (
-                                <p style={{ color: "var(--text-tertiary)" }}>No policy documents yet.</p>
+                                <p className="docHubEmpty">No policy documents yet.</p>
                             )}
                         </div>
                     </section>
@@ -404,63 +415,23 @@ export default function DocumentsPage() {
             )}
 
             {signingDoc && (
-                <div
-                    style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        height: "100%",
-                        background: "rgba(0,0,0,0.8)",
-                        zIndex: 1100,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        backdropFilter: "blur(5px)",
-                    }}
-                >
-                    <div
-                        style={{
-                            width: "500px",
-                            background: "white",
-                            borderRadius: "12px",
-                            padding: "2rem",
-                            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-                        }}
-                    >
-                        <div
-                            style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                marginBottom: "1.5rem",
-                            }}
-                        >
+                <div className="docSignOverlay">
+                    <div className="docSignModal">
+                        <div className="docSignModalHead">
                             <div>
-                                <h2 style={{ fontSize: "1.25rem", fontWeight: 600 }}>Sign Document</h2>
-                                <p style={{ fontSize: "0.85rem", color: "#666", marginTop: "0.25rem" }}>
-                                    {signingDoc.title}
-                                </p>
+                                <h2>Sign document</h2>
+                                <p>{signingDoc.title}</p>
                             </div>
                             <button
                                 type="button"
+                                className="docSignClose"
                                 onClick={() => setSigningDoc(null)}
-                                style={{ background: "none", border: "none", cursor: "pointer" }}
                             >
                                 <X size={20} />
                             </button>
                         </div>
 
-                        <div
-                            style={{
-                                border: "2px dashed #ccc",
-                                borderRadius: "8px",
-                                marginBottom: "1rem",
-                                position: "relative",
-                                height: "200px",
-                                background: "#f9f9f9",
-                            }}
-                        >
+                        <div className="docSignCanvasWrap">
                             <canvas
                                 ref={canvasRef}
                                 width={436}
@@ -472,61 +443,27 @@ export default function DocumentsPage() {
                                 onTouchStart={startDrawing}
                                 onTouchMove={draw}
                                 onTouchEnd={stopDrawing}
-                                style={{ width: "100%", height: "100%", touchAction: "none" }}
                             />
-                            <div
-                                style={{
-                                    position: "absolute",
-                                    bottom: "0.5rem",
-                                    left: "0.5rem",
-                                    color: "#999",
-                                    fontSize: "0.75rem",
-                                    pointerEvents: "none",
-                                }}
-                            >
-                                Draw your signature above
-                            </div>
+                            <div className="docSignCanvasHint">Draw your signature above</div>
                         </div>
 
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <button
-                                type="button"
-                                onClick={clearSignature}
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "0.5rem",
-                                    background: "none",
-                                    border: "none",
-                                    color: "#ff453a",
-                                    cursor: "pointer",
-                                }}
-                            >
+                        <div className="docSignModalFoot">
+                            <button type="button" className="docSignClear" onClick={clearSignature}>
                                 <Eraser size={16} />
                                 <span>Clear</span>
                             </button>
                             <button
                                 type="button"
+                                className="docSignConfirm"
                                 onClick={submitSignature}
                                 disabled={isSigning}
-                                style={{
-                                    background: "var(--nuriek-blue)",
-                                    color: "white",
-                                    border: "none",
-                                    padding: "0.75rem 1.5rem",
-                                    borderRadius: "6px",
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "0.5rem",
-                                }}
                             >
                                 {isSigning ? (
                                     <Loader2 className="animate-spin" size={18} />
                                 ) : (
                                     <>
                                         <CheckCircle2 size={18} />
-                                        <span>Confirm & Sign</span>
+                                        <span>Confirm &amp; sign</span>
                                     </>
                                 )}
                             </button>
