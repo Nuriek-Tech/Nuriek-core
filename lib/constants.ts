@@ -129,6 +129,13 @@ export const NAV_ITEMS: NavItem[] = [
         hrPermission: "admin_timesheets",
     },
     {
+        label: "Documents & Legal (Admin)",
+        path: "/admin/documents",
+        roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER],
+        icon: "FileUp",
+        hrPermission: "admin_documents",
+    },
+    {
         label: "Offer Letter",
         path: "/admin/offer-letter",
         roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER],
