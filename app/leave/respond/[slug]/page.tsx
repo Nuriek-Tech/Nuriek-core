@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CheckCircle2, XCircle, AlertCircle, Clock } from "lucide-react";
-import "./leave-respond.css";
+import "../leave-respond.css";
 
 type Props = {
     params: Promise<{ slug: string }>;
