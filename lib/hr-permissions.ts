@@ -63,7 +63,7 @@ export function parseStoredHrPermissions(raw: string | null | undefined): HrPerm
 export function getEffectiveHrPermissions(role: Role, stored: string | null | undefined): HrPermission[] {
     if (isSuperAdminRole(role)) return [...HR_PERMISSIONS];
     const custom = parseStoredHrPermissions(stored);
-    if (custom) return custom;
+    if (custom && custom.length > 0) return custom;
     return DEFAULT_BY_ROLE[role] ?? [];
 }
 

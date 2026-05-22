@@ -1,5 +1,5 @@
 import { NAV_ITEMS, ROLES, type NavItem, type Role, isSuperAdminRole } from "@/lib/constants";
-import { hasHrPermission, parseStoredHrPermissions } from "@/lib/hr-permissions";
+import { hasHrPermission } from "@/lib/hr-permissions";
 
 export function filterNavItemsForUser(
     role: Role,
@@ -23,11 +23,9 @@ export function canSeeNavItem(
         return roleListed;
     }
 
-    const permitted = hasHrPermission(role, hrPermissions, item.hrPermission);
-    if (!permitted) return false;
-
-    const custom = parseStoredHrPermissions(hrPermissions);
-    if (custom && custom.length > 0) return true;
+    if (!hasHrPermission(role, hrPermissions, item.hrPermission)) {
+        return false;
+    }
 
     return roleListed;
 }

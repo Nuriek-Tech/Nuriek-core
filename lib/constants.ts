@@ -133,7 +133,6 @@ export const NAV_ITEMS: NavItem[] = [
         path: "/admin/documents",
         roles: [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER],
         icon: "FileUp",
-        hrPermission: "admin_documents",
     },
     {
         label: "Offer Letter",
