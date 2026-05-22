@@ -93,10 +93,6 @@ export default function AdminLoginSessionsPage() {
                     <h1>
                         Login <span className="text-gradient">activity</span>
                     </h1>
-                    <p className="hubSubtitle">
-                        Who signed in, when, and how long they stayed. Employees and HR auto
-                        sign out after 15 minutes idle; Super Admin sessions stay active.
-                    </p>
                 </div>
                 <div className="hubHeroActions">
                     <span className="hubStatChip">

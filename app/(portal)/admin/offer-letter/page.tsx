@@ -689,7 +689,6 @@ export default function OfferLetterPage() {
                                         className="admInput"
                                         value={form.candidateName}
                                         onChange={(e) => update("candidateName", e.target.value)}
-                                        placeholder="e.g. Priya Sharma"
                                     />
                                 </div>
                                 <div className="admField">
@@ -937,11 +936,6 @@ export default function OfferLetterPage() {
                                         />
                                         <span>
                                             <strong>Append custom role &amp; designation</strong>
-                                            <small>
-                                                Adds HR text after the selected position in the
-                                                offer letter (e.g. client title or special
-                                                designation).
-                                            </small>
                                         </span>
                                     </label>
                                 </div>
