@@ -36,7 +36,7 @@ export type OfferLetterInput = {
     /** PNG/JPG as data URL, or URL path — embedded on HR signatory line */
     hrSignatureDataUrl?: string | null;
     additionalTerms?: string;
-    /** When true, customRoleDesignation is appended to the position line in the offer body */
+    /** When true, customRoleDesignation is shown in the offer body instead of the selected position */
     appendCustomRoleDesignation?: boolean;
     customRoleDesignation?: string;
     refNumber: string;
@@ -90,14 +90,12 @@ export function resolveOfferEmploymentType(offer: {
     return "Full-time";
 }
 
-/** Position line in offer body — optionally appends HR-entered role & designation. */
+/** Position line in offer body — custom designation replaces the catalog position when enabled. */
 export function buildOfferPositionHtml(data: OfferLetterInput): string {
-    const base = escapeHtml(data.position);
     if (data.appendCustomRoleDesignation && data.customRoleDesignation?.trim()) {
-        const custom = escapeHtml(data.customRoleDesignation.trim());
-        return `<strong>${base}</strong>, <strong>${custom}</strong>`;
+        return `<strong>${escapeHtml(data.customRoleDesignation.trim())}</strong>`;
     }
-    return `<strong>${base}</strong>`;
+    return `<strong>${escapeHtml(data.position)}</strong>`;
 }
 
 export function buildOfferLetterHtml(data: OfferLetterInput): string {

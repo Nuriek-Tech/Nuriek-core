@@ -22,13 +22,13 @@ describe("buildOfferPositionHtml", () => {
         expect(buildOfferPositionHtml(base)).toBe("<strong>Software Engineer</strong>");
     });
 
-    it("appends custom role when enabled", () => {
+    it("uses custom role instead of catalog position when enabled", () => {
         const html = buildOfferPositionHtml({
             ...base,
             appendCustomRoleDesignation: true,
-            customRoleDesignation: "Senior Consultant — APAC",
+            customRoleDesignation: "Marketing Executive",
         });
-        expect(html).toContain("Software Engineer");
-        expect(html).toContain("Senior Consultant — APAC");
+        expect(html).toBe("<strong>Marketing Executive</strong>");
+        expect(html).not.toContain("Software Engineer");
     });
 });

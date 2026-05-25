@@ -459,7 +459,7 @@ export default function OfferLetterPage() {
                 form.appendCustomRoleDesignation &&
                 !form.customRoleDesignation.trim()
             ) {
-                alert("Enter a custom role & designation, or turn off “Append to offer”.");
+                alert("Enter a custom role & designation, or turn off “Use custom title in offer”.");
                 return;
             }
 
@@ -935,7 +935,7 @@ export default function OfferLetterPage() {
                                             }
                                         />
                                         <span>
-                                            <strong>Append custom role &amp; designation</strong>
+                                            <strong>Use custom role &amp; designation in offer</strong>
                                         </span>
                                     </label>
                                 </div>
