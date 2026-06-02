@@ -85,11 +85,31 @@ export async function getOfferDisplayHtmlHydrated(offer: {
     html: string;
     signedHtml?: string | null;
     status?: string | null;
+    employmentType?: string | null;
+    position?: string | null;
+    internshipMonths?: number | null;
+    joiningDate?: Date | null;
 }): Promise<string> {
     const { patchHrSignatureInOfferHtml } = await import("@/lib/offer-hr-signature");
     const { resolveHrSignatureForOffer } = await import("@/lib/offer-hr-signature-org");
+    const { resolveOfferEmploymentType } = await import("@/lib/offer-letter");
+    const { refreshInternDurationInOfferHtml } = await import("@/lib/offer-letter-intern");
 
-    const base = getOfferDisplayHtml(offer);
+    let base = getOfferDisplayHtml(offer);
+
+    const employmentType = resolveOfferEmploymentType(offer);
+    const isSigned = offer.status === OFFER_STATUS.SIGNED;
+    if (
+        !isSigned &&
+        employmentType.toLowerCase() === "intern" &&
+        offer.joiningDate &&
+        offer.internshipMonths &&
+        offer.internshipMonths > 0
+    ) {
+        const joiningIso = offer.joiningDate.toISOString().slice(0, 10);
+        base = refreshInternDurationInOfferHtml(base, joiningIso, offer.internshipMonths);
+    }
+
     const sigSrc = await resolveHrSignatureForOffer(null);
     return patchHrSignatureInOfferHtml(base, sigSrc);
 }

@@ -18,6 +18,7 @@ import {
     resolveInternOfferCompensation,
 } from "@/lib/internship-offer";
 import { getOrgHrSignatory, resolveHrSignatureForOffer } from "@/lib/offer-hr-signature-org";
+import { parseOfferLocalDate } from "@/lib/offer-letter-intern";
 
 function isOfferLetterModelMissing(error: unknown): boolean {
     if (!(error instanceof Error)) return false;
@@ -131,6 +132,7 @@ export async function POST(req: Request) {
 
         const html = buildOfferLetterHtml(payload);
         const token = buildOfferLetterToken();
+        const joiningDateParsed = parseOfferLocalDate(joiningDate);
         const expiresAt = new Date(offerValidUntil);
         if (!Number.isNaN(expiresAt.getTime())) {
             expiresAt.setHours(23, 59, 59, 999);
@@ -152,6 +154,7 @@ export async function POST(req: Request) {
                     internshipType,
                     internshipMonths: internshipMonths ?? null,
                     stipendAfterMonths,
+                    joiningDate: joiningDateParsed,
                     html,
                     status: "GENERATED",
                     createdById: user.id,
@@ -189,6 +192,7 @@ export async function POST(req: Request) {
             candidateName: payload.candidateName,
             token: savedToken,
             viewPath: savedToken ? offerLetterViewPath(savedToken) : null,
+            internshipMonths: internshipMonths ?? null,
             warning,
         });
     } catch (error) {

@@ -47,6 +47,8 @@ import {
     internshipTypeLabel,
     isUnpaidInternship,
     isNonPaidInternship,
+    resolveInternshipMonths,
+    resolveStipendAfterMonths,
 } from "@/lib/internship-offer";
 import {
     clearHrSignatoryPrefs,
@@ -101,6 +103,7 @@ export default function OfferLetterPage() {
         }[]
     >([]);
     const [reportingManagerId, setReportingManagerId] = useState("");
+    const [previewStale, setPreviewStale] = useState(false);
 
     const [form, setForm] = useState({
         candidateName: "",
@@ -129,6 +132,32 @@ export default function OfferLetterPage() {
         appendCustomRoleDesignation: false,
         customRoleDesignation: "",
     });
+
+    const formRef = useRef(form);
+    useEffect(() => {
+        formRef.current = form;
+    }, [form]);
+
+    const durationFieldsTouched = useRef(false);
+    useEffect(() => {
+        if (!durationFieldsTouched.current) {
+            durationFieldsTouched.current = true;
+            return;
+        }
+        setPreviewStale(true);
+    }, [form.internshipMonths, form.joiningDate]);
+
+    useEffect(() => {
+        if (form.employmentType !== "Intern") return;
+        const internMo = resolveInternshipMonths(form.internshipMonths);
+        const stipendMo = Number(form.stipendAfterMonths);
+        if (Number.isFinite(stipendMo) && stipendMo > internMo) {
+            setForm((f) => ({
+                ...f,
+                stipendAfterMonths: String(resolveStipendAfterMonths(internMo, internMo)),
+            }));
+        }
+    }, [form.internshipMonths, form.employmentType, form.stipendAfterMonths]);
 
     const [hrPrefsLoaded, setHrPrefsLoaded] = useState(false);
     const [hrMigrationPending, setHrMigrationPending] = useState(false);
@@ -490,24 +519,26 @@ export default function OfferLetterPage() {
 
     const generate = useCallback(
         async (opts: { openInNewTab?: boolean; showModal?: boolean }) => {
+            const current = formRef.current;
+            const internshipMonths = resolveInternshipMonths(current.internshipMonths);
             const readiness = getOfferFormReadiness({
-                candidateName: form.candidateName,
-                department: form.department,
-                position: form.position,
-                salaryGrade: form.salaryGrade,
-                compensation: form.compensation,
-                employmentType: form.employmentType,
-                internshipType: form.internshipType,
-                internshipMonths: form.internshipMonths,
-                includeFuturePaymentAmount: form.includeFuturePaymentAmount,
+                candidateName: current.candidateName,
+                department: current.department,
+                position: current.position,
+                salaryGrade: current.salaryGrade,
+                compensation: current.compensation,
+                employmentType: current.employmentType,
+                internshipType: current.internshipType,
+                internshipMonths,
+                includeFuturePaymentAmount: current.includeFuturePaymentAmount,
             });
             if (!readiness.ready) {
                 alert(`Please complete: ${readiness.missing.join(", ")}`);
                 return;
             }
             if (
-                form.appendCustomRoleDesignation &&
-                !form.customRoleDesignation.trim()
+                current.appendCustomRoleDesignation &&
+                !current.customRoleDesignation.trim()
             ) {
                 alert("Enter a custom role & designation, or turn off “Use custom title in offer”.");
                 return;
@@ -519,10 +550,13 @@ export default function OfferLetterPage() {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        ...form,
+                        ...current,
+                        employmentType: current.employmentType,
+                        internshipMonths,
+                        joiningDate: current.joiningDate,
                         compensation: readiness.compensation,
-                        includeFuturePaymentAmount: form.includeFuturePaymentAmount,
-                        probationMonths: Number(form.probationMonths) || 3,
+                        includeFuturePaymentAmount: current.includeFuturePaymentAmount,
+                        probationMonths: Number(current.probationMonths) || 3,
                     }),
                 });
                 const data = await res.json();
@@ -537,10 +571,11 @@ export default function OfferLetterPage() {
                 }
 
                 setPreviewHtml(data.html);
+                setPreviewStale(false);
                 setLastRef(data.refNumber);
                 if (data.token) setOfferToken(data.token);
                 else setOfferToken(null);
-                if (form.candidateEmail) setEmailTo(form.candidateEmail);
+                if (current.candidateEmail) setEmailTo(current.candidateEmail);
                 setWorkflowTick((t) => t + 1);
 
                 if (data.warning) {
@@ -566,7 +601,7 @@ export default function OfferLetterPage() {
                 setGenerating(false);
             }
         },
-        [form]
+        []
     );
 
     useEffect(() => {
@@ -1372,6 +1407,12 @@ export default function OfferLetterPage() {
                                 <h2 id="ol-preview-title" className="olModalTitle">
                                     Offer letter preview
                                 </h2>
+                                {previewStale && (
+                                    <p className="olPreviewStale" role="status">
+                                        Duration or joining date changed — generate again to refresh
+                                        this preview.
+                                    </p>
+                                )}
                                 {lastRef && (
                                     <span className="olRefBadge olRefBadge--inline">
                                         <FileSignature size={14} />
@@ -1391,6 +1432,7 @@ export default function OfferLetterPage() {
 
                         <div className="olPreviewBody">
                             <iframe
+                                key={`${lastRef ?? "preview"}-${form.internshipMonths}-${form.joiningDate}`}
                                 title="Offer letter preview"
                                 srcDoc={previewHtml}
                                 className="olPreviewFrame"

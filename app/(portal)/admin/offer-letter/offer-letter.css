@@ -951,3 +951,10 @@
 .olInternCompFieldset .olPaymentAfterToggle {
   margin-top: 0.35rem;
 }
+
+.olPreviewStale {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: #b45309;
+  font-weight: 500;
+}

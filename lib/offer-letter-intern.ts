@@ -25,17 +25,84 @@ function escapeHtml(s: string): string {
         .replace(/"/g, "&quot;");
 }
 
-function formatDisplayDate(isoOrDate: string): string {
-    const d = new Date(isoOrDate);
-    if (Number.isNaN(d.getTime())) return isoOrDate;
+/** Parse YYYY-MM-DD as local calendar date (avoids UTC day-shift). */
+export function parseOfferLocalDate(isoOrDate: string): Date | null {
+    const trimmed = isoOrDate.trim();
+    const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+    if (ymd) {
+        const d = new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
+        return Number.isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(trimmed);
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function toYmd(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+}
+
+export function formatDisplayDate(isoOrDate: string): string {
+    const d = parseOfferLocalDate(isoOrDate);
+    if (!d) return isoOrDate;
     return d.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-function addMonthsToDate(isoOrDate: string, months: number): string {
-    const d = new Date(isoOrDate);
-    if (Number.isNaN(d.getTime())) return isoOrDate;
+export function addMonthsToDate(isoOrDate: string, months: number): string {
+    const d = parseOfferLocalDate(isoOrDate);
+    if (!d) return isoOrDate;
     d.setMonth(d.getMonth() + months);
-    return formatDisplayDate(d.toISOString());
+    return formatDisplayDate(toYmd(d));
+}
+
+export function internDurationLabels(joiningDate: string, internshipMonths: number) {
+    const months = resolveInternshipMonths(internshipMonths);
+    const monthsLabel = months === 1 ? "1 month" : `${months} months`;
+    return {
+        months,
+        monthsLabel,
+        joining: formatDisplayDate(joiningDate),
+        expectedEnd: addMonthsToDate(joiningDate, months),
+    };
+}
+
+/** Sync duration/end-date copy in stored HTML from DB metadata (fixes stale snapshots). */
+export function refreshInternDurationInOfferHtml(
+    html: string,
+    joiningDate: string,
+    internshipMonths: number
+): string {
+    const { months, monthsLabel, joining, expectedEnd } = internDurationLabels(
+        joiningDate,
+        internshipMonths
+    );
+    const monthsInProgramme = months === 1 ? "1 month" : `${months} months`;
+
+    let out = html;
+
+    out = out.replace(
+        /Your internship is for <strong>[^<]*<\/strong>, commencing on <strong>[^<]*<\/strong> with an\s+expected end date of <strong>[^<]*<\/strong>/gi,
+        `Your internship is for <strong>${monthsLabel}</strong>, commencing on <strong>${joining}</strong> with an expected end date of <strong>${expectedEnd}</strong>`
+    );
+
+    out = out.replace(
+        /internship programme<\/strong>\s*\(<strong>[^<]*<\/strong>\)/gi,
+        `internship programme</strong> (<strong>${monthsLabel}</strong>)`
+    );
+
+    out = out.replace(
+        /structured learning programme for <strong>[^<]*<\/strong>/gi,
+        `structured learning programme for <strong>${monthsInProgramme}</strong>`
+    );
+
+    out = out.replace(
+        /<strong>internship offer<\/strong> for <strong>[^<]*<\/strong>/gi,
+        `<strong>internship offer</strong> for <strong>${monthsLabel}</strong>`
+    );
+
+    return out;
 }
 
 function compensationSection(

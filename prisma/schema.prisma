@@ -94,6 +94,7 @@ model OfferLetter {
   internshipType     String?
   internshipMonths   Int?
   stipendAfterMonths Int?
+  joiningDate        DateTime?
   html               String    @db.Text
   signedHtml      String?   @db.Text
   status          String    @default("GENERATED")
