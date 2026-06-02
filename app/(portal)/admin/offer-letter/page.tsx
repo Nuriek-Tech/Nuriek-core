@@ -416,19 +416,22 @@ export default function OfferLetterPage() {
         }));
     };
 
-    const handleInternshipTypeChange = (internshipType: InternshipType) => {
+    const handlePaymentAfterInternshipChange = (paymentAfterInternship: boolean) => {
+        const internshipType = paymentAfterInternship
+            ? INTERNSHIP_TYPES.UNPAID
+            : INTERNSHIP_TYPES.PAID;
         setForm((f) => ({
             ...f,
             internshipType,
             compensation:
-                internshipType === INTERNSHIP_TYPES.UNPAID && !f.compensation.trim()
-                    ? ""
-                    : f.compensation,
+                paymentAfterInternship && !f.compensation.trim() ? "" : f.compensation,
         }));
     };
 
     const isInternOffer = form.employmentType === "Intern";
-    const isUnpaidInternOffer = isInternOffer && isUnpaidInternship(form.internshipType);
+    const paymentAfterInternship =
+        isInternOffer && isUnpaidInternship(form.internshipType);
+    const isUnpaidInternOffer = paymentAfterInternship;
 
     const handleSalaryGradeChange = (salaryGrade: string) => {
         const hint = getCompensationHintForGrade(form.department, form.position, salaryGrade);
@@ -832,10 +835,10 @@ export default function OfferLetterPage() {
                                                 ))}
                                             </select>
                                         </div>
-                                        {isUnpaidInternOffer && (
+                                        {paymentAfterInternship && (
                                             <div className="admField">
                                                 <label className="admLabel" htmlFor="ol-stipend-after">
-                                                    Months before stipend review
+                                                    Months before payment starts
                                                 </label>
                                                 <select
                                                     id="ol-stipend-after"
@@ -852,7 +855,8 @@ export default function OfferLetterPage() {
                                                     ))}
                                                 </select>
                                                 <span className="olFieldHint">
-                                                    Stipend may be offered after this review period.
+                                                    Unpaid for this period; stipend or payment may
+                                                    follow after review.
                                                 </span>
                                             </div>
                                         )}
@@ -974,47 +978,31 @@ export default function OfferLetterPage() {
                                 </div>
                                 {isInternOffer && (
                                     <div className="admField olFieldSpan2">
-                                        <label className="admLabel">Internship arrangement *</label>
-                                        <div className="olInternTypeRow">
-                                            <label className="olInternTypeOption">
-                                                <input
-                                                    type="radio"
-                                                    name="internshipType"
-                                                    checked={form.internshipType === INTERNSHIP_TYPES.PAID}
-                                                    onChange={() =>
-                                                        handleInternshipTypeChange(INTERNSHIP_TYPES.PAID)
-                                                    }
-                                                />
-                                                <span>
-                                                    <strong>Paid internship</strong>
-                                                    <small>Stipend from day one</small>
-                                                </span>
-                                            </label>
-                                            <label className="olInternTypeOption">
-                                                <input
-                                                    type="radio"
-                                                    name="internshipType"
-                                                    checked={
-                                                        form.internshipType === INTERNSHIP_TYPES.UNPAID
-                                                    }
-                                                    onChange={() =>
-                                                        handleInternshipTypeChange(INTERNSHIP_TYPES.UNPAID)
-                                                    }
-                                                />
-                                                <span>
-                                                    <strong>Unpaid internship</strong>
-                                                    <small>
-                                                        No stipend for first 3 months; paid after review
-                                                    </small>
-                                                </span>
-                                            </label>
-                                        </div>
+                                        <label className="olCustomRoleToggle olPaymentAfterToggle">
+                                            <input
+                                                type="checkbox"
+                                                checked={paymentAfterInternship}
+                                                onChange={(e) =>
+                                                    handlePaymentAfterInternshipChange(
+                                                        e.target.checked
+                                                    )
+                                                }
+                                            />
+                                            <span>
+                                                <strong>Payment after internship review</strong>
+                                                <small>
+                                                    No stipend for the initial period; payment may
+                                                    start after HR review (offer letter adjusted
+                                                    accordingly).
+                                                </small>
+                                            </span>
+                                        </label>
                                     </div>
                                 )}
                                 <div className="admField olFieldSpan2">
                                     <label className="admLabel" htmlFor="ol-comp">
-                                        {isUnpaidInternOffer
-                                            ? "Stipend after 3 months (optional)"
+                                        {paymentAfterInternship
+                                            ? `Stipend / payment after ${form.stipendAfterMonths} month(s) (optional)`
                                             : isInternOffer
                                               ? "Stipend *"
                                               : "Compensation *"}
@@ -1026,16 +1014,16 @@ export default function OfferLetterPage() {
                                         value={form.compensation}
                                         onChange={(e) => update("compensation", e.target.value)}
                                         placeholder={
-                                            isUnpaidInternOffer
-                                                ? "e.g. Rs. 25,000 per month (if known)"
+                                            paymentAfterInternship
+                                                ? "e.g. Rs. 84,000 per annum or Rs. 25,000 per month"
                                                 : isInternOffer
                                                   ? "Rs. 25,000 per month stipend"
                                                   : "Rs. 12,00,000 per annum"
                                         }
                                     />
                                     <span className="olFieldHint">
-                                        {isUnpaidInternOffer
-                                            ? "Leave blank if stipend amount is decided after the 3-month review."
+                                        {paymentAfterInternship
+                                            ? "Shown in the offer as payment that may start after the review period. Leave blank if amount is TBD."
                                             : "Suggested from grade — you can edit"}
                                     </span>
                                 </div>

@@ -43,19 +43,20 @@ function compensationSection(
 ): string {
     const stipend = escapeHtml(data.compensation?.trim() || "");
     if (unpaid) {
-        const futureStipend = stipend
-            ? ` Following a satisfactory <strong>${stipendAfterMonths}-month</strong> review, you may be offered a stipend of <strong>${stipend}</strong>, subject to Company policy and role requirements.`
-            : ` Following a satisfactory <strong>${stipendAfterMonths}-month</strong> review, you may be considered for a paid stipend as determined by the Company, subject to performance and business needs.`;
+        const futurePayment = stipend
+            ? ` After a satisfactory review at the end of the initial <strong>${stipendAfterMonths}-month</strong> period, you may be offered payment of <strong>${stipend}</strong>, subject to Company policy, performance, and role requirements.`
+            : ` After a satisfactory review at the end of the initial <strong>${stipendAfterMonths}-month</strong> period, you may be considered for stipend or other payment as determined by the Company, subject to performance and business needs.`;
         return `<p>
-      For the initial <strong>${stipendAfterMonths} months</strong> of this internship, you will not receive monetary compensation.
-      You will focus on learning and delivery during this period.${futureStipend}
+      <strong>Payment schedule:</strong> For the first <strong>${stipendAfterMonths} months</strong> of this internship, you will not receive monetary compensation.
+      You will focus on learning and delivery during this initial period.${futurePayment}
+      Any payment after this period is not guaranteed and remains at the Company's sole discretion.
       This internship is not a permanent employment contract.
     </p>`;
     }
 
     const amount = stipend || "as communicated by HR";
     return `<p>
-      Your stipend will be <strong>${amount}</strong>, payable as per Company payroll schedule for the duration of the internship.
+      <strong>Stipend:</strong> Your stipend will be <strong>${amount}</strong>, payable as per Company payroll schedule from the start of the internship.
       This internship is on an <strong>Intern</strong> basis and is not a permanent employment contract.
     </p>`;
 }
@@ -65,11 +66,11 @@ function programmeSection(unpaid: boolean, stipendAfterMonths: number): string {
 
     return `
       <li class="section-item">
-        <h4>2. Initial period &amp; transition to stipend</h4>
+        <h4>2. Initial period &amp; payment after review</h4>
         <p>
           For the first <strong>${stipendAfterMonths} months</strong>, the internship does not include monetary compensation.
           You are expected to focus on learning, delivery, and team contribution. At the end of this period, HR and your mentor
-          will conduct a performance review. Continuation of the internship and any stipend thereafter are at the Company's sole
+          will conduct a performance review. Continuation of the internship and any stipend or payment thereafter are at the Company's sole
           discretion and are not guaranteed.
         </p>
       </li>`;
@@ -227,7 +228,7 @@ export function buildInternOfferLetterHtml(data: OfferLetterInput): string {
       <p>
         I, <strong>${name}</strong>, have read and understood this internship offer for <strong>${monthsLabel}</strong>${
             unpaid
-                ? `, including the initial ${stipendAfterMonths}-month period without stipend`
+                ? `, including the initial ${stipendAfterMonths}-month period without payment and the possibility of stipend or payment only after review`
                 : ""
         }, and agree to join on the terms stated herein and in applicable Company policies.
       </p>
