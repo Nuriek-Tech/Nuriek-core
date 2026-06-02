@@ -7,10 +7,12 @@ import {
 } from "@/lib/nuriek-letter-theme";
 import {
     INTERNSHIP_TYPES,
+    DEFAULT_STIPEND_AFTER_MONTHS,
     resolveInternshipMonths,
     resolveStipendAfterMonths,
-    isUnpaidInternship,
-    normalizeInternshipType,
+    resolveInternOfferTrack,
+    resolveInternOfferCompensation,
+    isMeaningfulOfferAmount,
 } from "@/lib/internship-offer";
 import { buildOfferPositionHtml, type OfferLetterInput } from "@/lib/offer-letter";
 import { buildHrSignatoryBlock, resolveHrSignatureSrc } from "@/lib/offer-hr-signature";
@@ -38,53 +40,100 @@ function addMonthsToDate(isoOrDate: string, months: number): string {
 
 function compensationSection(
     data: OfferLetterInput,
-    unpaid: boolean,
+    track: ReturnType<typeof resolveInternOfferTrack>,
     stipendAfterMonths: number
 ): string {
-    const stipend = escapeHtml(data.compensation?.trim() || "");
-    if (unpaid) {
-        const futurePayment = stipend
-            ? ` After a satisfactory review at the end of the initial <strong>${stipendAfterMonths}-month</strong> period, you may be offered payment of <strong>${stipend}</strong>, subject to Company policy, performance, and role requirements.`
-            : ` After a satisfactory review at the end of the initial <strong>${stipendAfterMonths}-month</strong> period, you may be considered for stipend or other payment as determined by the Company, subject to performance and business needs.`;
-        return `<p>
-      <strong>Payment schedule:</strong> For the first <strong>${stipendAfterMonths} months</strong> of this internship, you will not receive monetary compensation.
-      You will focus on learning and delivery during this initial period.${futurePayment}
-      Any payment after this period is not guaranteed and remains at the Company's sole discretion.
-      This internship is not a permanent employment contract.
-    </p>`;
+    const includeAmount = Boolean(data.includeFuturePaymentAmount);
+    const amountRaw = resolveInternOfferCompensation({
+        employmentType: data.employmentType,
+        internshipType: data.internshipType,
+        compensation: data.compensation,
+        includeFuturePaymentAmount: includeAmount,
+    });
+    const amount = amountRaw ? escapeHtml(amountRaw) : "";
+
+    if (track === INTERNSHIP_TYPES.NO_MONETARY) {
+        return `<div class="intern-comp-box intern-comp-box--none">
+      <p><strong>Monetary compensation:</strong> None.</p>
+      <p>
+        This is a <strong>learning internship</strong>. You will not receive any stipend, salary, or other monetary
+        compensation during the internship. Benefits are limited to learning, mentorship, and certificate of completion
+        as per Company policy.
+      </p>
+      <p>This internship is not a permanent employment contract.</p>
+    </div>`;
     }
 
-    const amount = stipend || "as communicated by HR";
-    return `<p>
-      <strong>Stipend:</strong> Your stipend will be <strong>${amount}</strong>, payable as per Company payroll schedule from the start of the internship.
-      This internship is on an <strong>Intern</strong> basis and is not a permanent employment contract.
-    </p>`;
+    if (track === INTERNSHIP_TYPES.UNPAID) {
+        const hasSpecificAmount =
+            includeAmount && isMeaningfulOfferAmount(amountRaw);
+        const futurePayment = hasSpecificAmount
+            ? ` Following a satisfactory review at the end of the initial <strong>${stipendAfterMonths}-month</strong> period, you may be offered payment of <strong>${amount}</strong>, subject to Company policy, performance, and role requirements. Any such payment is not guaranteed.`
+            : includeAmount
+              ? ` Following a satisfactory review at the end of the initial <strong>${stipendAfterMonths}-month</strong> period, you may be offered <strong>compensation</strong>, subject to Company policy, performance, and role requirements. Any such compensation is not guaranteed and remains at the Company's sole discretion.`
+              : ` Following the initial period, HR may conduct a review. Any stipend or compensation thereafter is at the Company's sole discretion, is not guaranteed, and will not be discussed as a fixed amount in this letter unless communicated separately in writing.`;
+
+        return `<div class="intern-comp-box intern-comp-box--unpaid">
+      <p><strong>Monetary compensation during initial period:</strong> None.</p>
+      <p>
+        For the first <strong>${stipendAfterMonths} months</strong> of this internship you will <strong>not receive any monetary compensation</strong>.
+        You will focus on learning and delivery during this period.${futurePayment}
+      </p>
+      <p>This internship is not a permanent employment contract.</p>
+    </div>`;
+    }
+
+    const stipend = amount || "as communicated by HR";
+    return `<div class="intern-comp-box intern-comp-box--paid">
+      <p><strong>Stipend:</strong> <strong>${stipend}</strong>, payable as per Company payroll schedule from the start of the internship.</p>
+      <p>This internship is on an <strong>Intern</strong> basis and is not a permanent employment contract.</p>
+    </div>`;
 }
 
-function programmeSection(unpaid: boolean, stipendAfterMonths: number): string {
-    if (!unpaid) return "";
-
-    return `
+function programmeSection(
+    track: ReturnType<typeof resolveInternOfferTrack>,
+    stipendAfterMonths: number,
+    internshipMonths: number
+): string {
+    if (track === INTERNSHIP_TYPES.NO_MONETARY) {
+        return `
       <li class="section-item">
-        <h4>2. Initial period &amp; payment after review</h4>
+        <h4>2. Learning programme (non-monetary)</h4>
         <p>
-          For the first <strong>${stipendAfterMonths} months</strong>, the internship does not include monetary compensation.
-          You are expected to focus on learning, delivery, and team contribution. At the end of this period, HR and your mentor
-          will conduct a performance review. Continuation of the internship and any stipend or payment thereafter are at the Company's sole
-          discretion and are not guaranteed.
+          This internship is offered as a structured learning programme for <strong>${internshipMonths === 1 ? "1 month" : `${internshipMonths} months`}</strong>.
+          It does not include monetary compensation at any stage unless the Company issues a separate written agreement.
+          You are expected to focus on learning, delivery, and professional conduct throughout.
         </p>
       </li>`;
+    }
+
+    if (track === INTERNSHIP_TYPES.UNPAID) {
+        return `
+      <li class="section-item">
+        <h4>2. Initial period without monetary compensation</h4>
+        <p>
+          For the first <strong>${stipendAfterMonths} months</strong> you will not receive stipend, salary, or other monetary compensation.
+          At the end of this period, HR and your mentor will conduct a performance review. Continuation of the internship and any
+          future payment remain at the Company's sole discretion and are not guaranteed.
+        </p>
+      </li>`;
+    }
+
+    return "";
 }
 
-/** Internship offer letter — paid or learning-track variants with configurable duration. */
+/** Internship offer letter — paid, unpaid-review, or fully non-monetary variants. */
 export function buildInternOfferLetterHtml(data: OfferLetterInput): string {
-    const internshipType =
-        normalizeInternshipType(data.internshipType) ?? INTERNSHIP_TYPES.PAID;
-    const unpaid = internshipType === INTERNSHIP_TYPES.UNPAID;
+    const track = resolveInternOfferTrack({
+        employmentType: data.employmentType,
+        internshipType: data.internshipType,
+        compensation: data.compensation,
+        includeFuturePaymentAmount: data.includeFuturePaymentAmount,
+    });
     const internshipMonths = resolveInternshipMonths(data.internshipMonths);
     const stipendAfterMonths = resolveStipendAfterMonths(
         data.stipendAfterMonths,
-        Math.min(3, internshipMonths)
+        Math.min(DEFAULT_STIPEND_AFTER_MONTHS, internshipMonths)
     );
 
     const issueDate = formatDisplayDate(data.issueDate);
@@ -100,7 +149,7 @@ export function buildInternOfferLetterHtml(data: OfferLetterInput): string {
     const hrName = escapeHtml(data.hrSignatory);
     const hrTitle = escapeHtml(data.hrSignatoryTitle || "Human Resources");
     const gradeLine =
-        data.salaryGrade && !unpaid
+        data.salaryGrade && track === INTERNSHIP_TYPES.PAID
             ? ` (Grade <strong>${escapeHtml(data.salaryGrade)}</strong>)`
             : "";
 
@@ -108,12 +157,22 @@ export function buildInternOfferLetterHtml(data: OfferLetterInput): string {
         ? `<p>${escapeHtml(data.additionalTerms).replace(/\n/g, "</p><p>")}</p>`
         : "";
 
-    const learnSectionNum = unpaid ? 3 : 2;
-    const ipSectionNum = unpaid ? 4 : 3;
-    const confSectionNum = unpaid ? 5 : 4;
-    const termSectionNum = unpaid ? 6 : 5;
-    const bgSectionNum = unpaid ? 7 : 6;
+    const hasExtraProgramme =
+        track === INTERNSHIP_TYPES.NO_MONETARY || track === INTERNSHIP_TYPES.UNPAID;
+    const learnSectionNum = hasExtraProgramme ? 3 : 2;
+    const ipSectionNum = hasExtraProgramme ? 4 : 3;
+    const confSectionNum = hasExtraProgramme ? 5 : 4;
+    const termSectionNum = hasExtraProgramme ? 6 : 5;
+    const bgSectionNum = hasExtraProgramme ? 7 : 6;
     const monthsLabel = internshipMonths === 1 ? "1 month" : `${internshipMonths} months`;
+
+    const acceptanceExtra =
+        track === INTERNSHIP_TYPES.NO_MONETARY
+            ? ", including that this internship carries <strong>no monetary compensation</strong>"
+            : track === INTERNSHIP_TYPES.UNPAID
+              ? `, including the initial ${stipendAfterMonths}-month period with <strong>no monetary compensation</strong>`
+              : "";
+
     const hrSignatureSrc = resolveHrSignatureSrc(data.hrSignatureDataUrl);
     const hrSignatoryBlock = buildHrSignatoryBlock({
         hrName,
@@ -122,12 +181,29 @@ export function buildInternOfferLetterHtml(data: OfferLetterInput): string {
         hrSignatureSrc,
     });
 
+    const internStyles = `
+.intern-comp-box {
+  margin: 1rem 0 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid #d8d2c8;
+  background: #faf8f5;
+  font-size: 10.5pt;
+  line-height: 1.55;
+}
+.intern-comp-box--none { border-left: 4px solid #6f6a63; }
+.intern-comp-box--unpaid { border-left: 4px solid #c93400; }
+.intern-comp-box--paid { border-left: 4px solid #3d5248; }
+.intern-comp-box p { margin: 0 0 0.65rem; }
+.intern-comp-box p:last-child { margin-bottom: 0; }
+`;
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Internship Offer — ${name}</title>
-  <style>${nuriekLetterStyles()}</style>
+  <style>${nuriekLetterStyles()}${internStyles}</style>
 </head>
 <body>
   <div class="page">
@@ -138,11 +214,11 @@ export function buildInternOfferLetterHtml(data: OfferLetterInput): string {
     <p><strong>Mr./Ms. ${name}</strong><br>${city}</p>
     <p>Dear ${name.split(" ")[0] || name},</p>
     <p>
-      Welcome to <strong>${NURIEK_LEGAL_NAME}</strong>. We are pleased to invite you to our internship programme
+      Welcome to <strong>${NURIEK_LEGAL_NAME}</strong>. We are pleased to invite you to our <strong>internship programme</strong>
       (<strong>${monthsLabel}</strong>) and look forward to your contribution to the <strong>${department}</strong> team.
     </p>
     <p>
-      Please review your internship offer letter below and sign the acceptance section online using the link sent to
+      Please review your <strong>internship offer letter</strong> below and sign the acceptance section online using the link sent to
       your email. We are excited to have you join us at ${workLocation}.
     </p>
     <p>Best wishes,</p>
@@ -161,11 +237,11 @@ export function buildInternOfferLetterHtml(data: OfferLetterInput): string {
     <h2 class="subject">Sub — Internship Offer Letter</h2>
     <p>Dear ${name.split(" ")[0] || name},</p>
     <p>
-      We are pleased to offer you an internship with <strong>${NURIEK_LEGAL_NAME}</strong> ("Company") at our
+      We are pleased to offer you an <strong>internship</strong> with <strong>${NURIEK_LEGAL_NAME}</strong> ("Company") at our
       <strong>${workLocation}</strong> office as ${positionHtml} in the
       <strong>${department}</strong> department${gradeLine}.
     </p>
-    ${compensationSection(data, unpaid, stipendAfterMonths)}
+    ${compensationSection(data, track, stipendAfterMonths)}
 
     <ol class="sections">
       <li class="section-item">
@@ -177,7 +253,7 @@ export function buildInternOfferLetterHtml(data: OfferLetterInput): string {
           This offer remains valid until <strong>${validUntil}</strong> unless withdrawn earlier.
         </p>
       </li>
-      ${programmeSection(unpaid, stipendAfterMonths)}
+      ${programmeSection(track, stipendAfterMonths, internshipMonths)}
       <li class="section-item">
         <h4>${learnSectionNum}. Learning &amp; conduct</h4>
         <p>
@@ -224,13 +300,9 @@ export function buildInternOfferLetterHtml(data: OfferLetterInput): string {
     ${hrSignatoryBlock}
 
     <div class="accept-block accept-block--intern">
-      <h3>Acceptance (Intern)</h3>
+      <h3>Acceptance (Internship)</h3>
       <p>
-        I, <strong>${name}</strong>, have read and understood this internship offer for <strong>${monthsLabel}</strong>${
-            unpaid
-                ? `, including the initial ${stipendAfterMonths}-month period without payment and the possibility of stipend or payment only after review`
-                : ""
-        }, and agree to join on the terms stated herein and in applicable Company policies.
+        I, <strong>${name}</strong>, have read and understood this <strong>internship offer</strong> for <strong>${monthsLabel}</strong>${acceptanceExtra}, and agree to join on the terms stated herein and in applicable Company policies.
       </p>
       <table class="sig-table">
         <tr><td>Name</td><td><strong>${name}</strong></td></tr>

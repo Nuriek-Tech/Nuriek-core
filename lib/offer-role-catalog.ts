@@ -3,6 +3,13 @@
  * Grade options update when position changes.
  */
 
+import {
+    INTERNSHIP_TYPES,
+    isNonPaidInternship,
+    normalizeInternshipType,
+    resolveInternOfferCompensation,
+} from "@/lib/internship-offer";
+
 export type SalaryGradeOption = {
     code: string;
     label: string;
@@ -358,10 +365,21 @@ export type OfferFormFields = {
     employmentType?: string;
     internshipType?: string | null;
     internshipMonths?: string | number;
+    includeFuturePaymentAmount?: boolean;
 };
 
 /** Resolve compensation from grade hint when the field was left empty */
 export function resolveOfferCompensation(fields: OfferFormFields): string {
+    const isIntern = fields.employmentType?.trim().toLowerCase() === "intern";
+    if (isIntern && isNonPaidInternship(fields.internshipType)) {
+        return resolveInternOfferCompensation({
+            employmentType: fields.employmentType,
+            internshipType: fields.internshipType,
+            compensation: fields.compensation,
+            includeFuturePaymentAmount: fields.includeFuturePaymentAmount,
+        });
+    }
+
     const trimmed = fields.compensation.trim();
     if (trimmed) return trimmed;
     return (
@@ -376,8 +394,9 @@ export function getOfferFormReadiness(fields: OfferFormFields): {
 } {
     const missing: string[] = [];
     const isIntern = fields.employmentType?.trim().toLowerCase() === "intern";
-    const isUnpaidIntern =
-        isIntern && fields.internshipType?.trim().toLowerCase() === "unpaid";
+    const internTrack = isIntern ? normalizeInternshipType(fields.internshipType) : null;
+    const isNonPaidIntern = isIntern && isNonPaidInternship(fields.internshipType);
+    const isPaidIntern = isIntern && internTrack === INTERNSHIP_TYPES.PAID;
 
     if (!fields.candidateName.trim()) missing.push("Candidate name");
     if (!fields.department.trim()) missing.push("Department");
@@ -386,11 +405,13 @@ export function getOfferFormReadiness(fields: OfferFormFields): {
         const months = Number(fields.internshipMonths);
         if (!Number.isFinite(months) || months < 1) missing.push("Internship duration (months)");
     }
-    if (!isUnpaidIntern && !fields.salaryGrade.trim()) missing.push("Salary grade");
+    if (!isNonPaidIntern && !fields.salaryGrade.trim()) missing.push("Salary grade");
 
     const compensation = resolveOfferCompensation(fields);
-    if (!isUnpaidIntern && !compensation) {
-        missing.push(isIntern ? "Stipend" : "Compensation");
+    if (isPaidIntern && !compensation) {
+        missing.push("Stipend");
+    } else if (!isIntern && !compensation) {
+        missing.push("Compensation");
     }
 
     return { ready: missing.length === 0, missing, compensation };

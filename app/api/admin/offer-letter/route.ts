@@ -11,9 +11,11 @@ import {
     type OfferLetterInput,
 } from "@/lib/offer-letter";
 import {
+    INTERNSHIP_TYPES,
     normalizeInternshipType,
     resolveInternshipMonths,
     resolveStipendAfterMonths,
+    resolveInternOfferCompensation,
 } from "@/lib/internship-offer";
 import { getOrgHrSignatory, resolveHrSignatureForOffer } from "@/lib/offer-hr-signature-org";
 
@@ -40,7 +42,6 @@ export async function POST(req: Request) {
         const position = String(body.position || "").trim();
         const department = String(body.department || "General").trim();
         const employmentType = String(body.employmentType || "Full-time").trim();
-        const compensation = String(body.compensation || "").trim();
         const joiningDate = String(body.joiningDate || "").trim();
         const reportingTo = String(body.reportingTo || "HR / Reporting Manager").trim();
         const workLocation = String(body.workLocation || "Bangalore (HQ)").trim();
@@ -50,27 +51,46 @@ export async function POST(req: Request) {
             body.hrSignatory || orgHr.hrSignatory || user.name || "HR Manager"
         ).trim();
 
-        if (!candidateName || !position || !compensation || !joiningDate || !offerValidUntil) {
-            return NextResponse.json(
-                {
-                    error: "Candidate name, position, compensation, joining date, and offer validity are required",
-                },
-                { status: 400 }
-            );
-        }
-
         const probationMonths = Math.max(0, Number(body.probationMonths) || 3);
         const candidateEmail = body.candidateEmail ? String(body.candidateEmail).trim() : undefined;
         const internshipType = isInternEmploymentType(employmentType)
-            ? normalizeInternshipType(body.internshipType) ?? "paid"
+            ? normalizeInternshipType(body.internshipType) ?? INTERNSHIP_TYPES.PAID
             : null;
         const internshipMonths = isInternEmploymentType(employmentType)
             ? resolveInternshipMonths(body.internshipMonths)
             : undefined;
         const stipendAfterMonths =
-            isInternEmploymentType(employmentType) && internshipType === "unpaid"
+            isInternEmploymentType(employmentType) && internshipType === INTERNSHIP_TYPES.UNPAID
                 ? resolveStipendAfterMonths(body.stipendAfterMonths)
                 : null;
+        const includeFuturePaymentAmount = Boolean(body.includeFuturePaymentAmount);
+        const compensation = resolveInternOfferCompensation({
+            employmentType,
+            internshipType,
+            compensation: String(body.compensation || "").trim(),
+            includeFuturePaymentAmount,
+        });
+
+        if (!candidateName || !position || !joiningDate || !offerValidUntil) {
+            return NextResponse.json(
+                {
+                    error: "Candidate name, position, joining date, and offer validity are required",
+                },
+                { status: 400 }
+            );
+        }
+
+        if (
+            isInternEmploymentType(employmentType) &&
+            internshipType === INTERNSHIP_TYPES.PAID &&
+            !compensation
+        ) {
+            return NextResponse.json({ error: "Stipend is required for paid internships" }, { status: 400 });
+        }
+
+        if (!isInternEmploymentType(employmentType) && !compensation) {
+            return NextResponse.json({ error: "Compensation is required" }, { status: 400 });
+        }
 
         const payload: OfferLetterInput = {
             candidateName,
@@ -83,6 +103,7 @@ export async function POST(req: Request) {
             internshipType,
             internshipMonths,
             stipendAfterMonths: stipendAfterMonths ?? undefined,
+            includeFuturePaymentAmount,
             compensation,
             salaryGrade: body.salaryGrade ? String(body.salaryGrade).trim() : undefined,
             bonusNote: body.bonusNote ? String(body.bonusNote).trim() : undefined,

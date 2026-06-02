@@ -46,6 +46,7 @@ import {
     type InternshipType,
     internshipTypeLabel,
     isUnpaidInternship,
+    isNonPaidInternship,
 } from "@/lib/internship-offer";
 import {
     clearHrSignatoryPrefs,
@@ -109,9 +110,10 @@ export default function OfferLetterPage() {
         position: INITIAL_ROLE.position,
         department: INITIAL_DEPT,
         employmentType: "Full-time",
-        internshipType: INTERNSHIP_TYPES.PAID as InternshipType,
+        internshipType: INTERNSHIP_TYPES.NO_MONETARY as InternshipType,
         internshipMonths: "6",
         stipendAfterMonths: String(DEFAULT_STIPEND_AFTER_MONTHS),
+        includeFuturePaymentAmount: false,
         compensation: INITIAL_ROLE.compensation,
         salaryGrade: INITIAL_ROLE.salaryGrade,
         bonusNote: "",
@@ -350,15 +352,38 @@ export default function OfferLetterPage() {
                 position: form.position,
                 salaryGrade: form.salaryGrade,
                 compensation: form.compensation,
+                employmentType: form.employmentType,
+                internshipType: form.internshipType,
+                internshipMonths: form.internshipMonths,
+                includeFuturePaymentAmount: form.includeFuturePaymentAmount,
             }),
-        [form.candidateName, form.department, form.position, form.salaryGrade, form.compensation]
+        [
+            form.candidateName,
+            form.department,
+            form.position,
+            form.salaryGrade,
+            form.compensation,
+            form.employmentType,
+            form.internshipType,
+            form.internshipMonths,
+            form.includeFuturePaymentAmount,
+        ]
     );
 
     const formComplete = formReadiness.ready;
 
-    // Keep grade & compensation in sync when department/position changes
+    // Keep grade & compensation in sync when department/position changes (not for non-paid interns)
     useEffect(() => {
         if (!form.department || !form.position) return;
+        const nonPaidIntern =
+            form.employmentType === "Intern" && isNonPaidInternship(form.internshipType);
+        if (nonPaidIntern) {
+            if (form.compensation.trim()) {
+                setForm((f) => ({ ...f, compensation: "" }));
+            }
+            return;
+        }
+
         const grades = getGradeOptions(form.department, form.position);
         if (grades.length === 0) return;
 
@@ -379,7 +404,14 @@ export default function OfferLetterPage() {
                 ) ||
                 "",
         }));
-    }, [form.department, form.position, form.salaryGrade, form.compensation]);
+    }, [
+        form.department,
+        form.position,
+        form.salaryGrade,
+        form.compensation,
+        form.employmentType,
+        form.internshipType,
+    ]);
 
     const handleDepartmentChange = (department: string) => {
         const defaults = roleDefaultsForDepartment(department);
@@ -401,7 +433,9 @@ export default function OfferLetterPage() {
             salaryGrade: defaults.salaryGrade,
             compensation: defaults.compensation || f.compensation,
             employmentType: isIntern ? "Intern" : f.employmentType === "Intern" ? "Full-time" : f.employmentType,
-            internshipType: isIntern ? f.internshipType || INTERNSHIP_TYPES.PAID : INTERNSHIP_TYPES.PAID,
+            internshipType: isIntern
+                ? f.internshipType || INTERNSHIP_TYPES.NO_MONETARY
+                : INTERNSHIP_TYPES.PAID,
         }));
     };
 
@@ -411,29 +445,41 @@ export default function OfferLetterPage() {
             employmentType,
             internshipType:
                 employmentType === "Intern"
-                    ? f.internshipType || INTERNSHIP_TYPES.PAID
+                    ? f.internshipType || INTERNSHIP_TYPES.NO_MONETARY
                     : INTERNSHIP_TYPES.PAID,
+            ...(employmentType === "Intern" && isNonPaidInternship(f.internshipType)
+                ? { compensation: "", includeFuturePaymentAmount: false }
+                : {}),
         }));
     };
 
-    const handlePaymentAfterInternshipChange = (paymentAfterInternship: boolean) => {
-        const internshipType = paymentAfterInternship
-            ? INTERNSHIP_TYPES.UNPAID
-            : INTERNSHIP_TYPES.PAID;
+    const handleInternshipCompensationChange = (internshipType: InternshipType) => {
         setForm((f) => ({
             ...f,
             internshipType,
+            includeFuturePaymentAmount: false,
             compensation:
-                paymentAfterInternship && !f.compensation.trim() ? "" : f.compensation,
+                internshipType === INTERNSHIP_TYPES.PAID ? f.compensation : "",
         }));
     };
 
     const isInternOffer = form.employmentType === "Intern";
-    const paymentAfterInternship =
+    const isPaidInternOffer =
+        isInternOffer && form.internshipType === INTERNSHIP_TYPES.PAID;
+    const isUnpaidReviewInternOffer =
         isInternOffer && isUnpaidInternship(form.internshipType);
-    const isUnpaidInternOffer = paymentAfterInternship;
+    const isNoMonetaryInternOffer =
+        isInternOffer && form.internshipType === INTERNSHIP_TYPES.NO_MONETARY;
+    const isNonPaidInternOffer = isNoMonetaryInternOffer || isUnpaidReviewInternOffer;
+    const showInternStipendField =
+        isPaidInternOffer ||
+        (isUnpaidReviewInternOffer && form.includeFuturePaymentAmount);
 
     const handleSalaryGradeChange = (salaryGrade: string) => {
+        if (isNonPaidInternOffer) {
+            setForm((f) => ({ ...f, salaryGrade }));
+            return;
+        }
         const hint = getCompensationHintForGrade(form.department, form.position, salaryGrade);
         setForm((f) => ({
             ...f,
@@ -453,6 +499,7 @@ export default function OfferLetterPage() {
                 employmentType: form.employmentType,
                 internshipType: form.internshipType,
                 internshipMonths: form.internshipMonths,
+                includeFuturePaymentAmount: form.includeFuturePaymentAmount,
             });
             if (!readiness.ready) {
                 alert(`Please complete: ${readiness.missing.join(", ")}`);
@@ -474,6 +521,7 @@ export default function OfferLetterPage() {
                     body: JSON.stringify({
                         ...form,
                         compensation: readiness.compensation,
+                        includeFuturePaymentAmount: form.includeFuturePaymentAmount,
                         probationMonths: Number(form.probationMonths) || 3,
                     }),
                 });
@@ -835,7 +883,7 @@ export default function OfferLetterPage() {
                                                 ))}
                                             </select>
                                         </div>
-                                        {paymentAfterInternship && (
+                                        {isUnpaidReviewInternOffer && (
                                             <div className="admField">
                                                 <label className="admLabel" htmlFor="ol-stipend-after">
                                                     Months before payment starts
@@ -977,67 +1025,142 @@ export default function OfferLetterPage() {
                                     </select>
                                 </div>
                                 {isInternOffer && (
-                                    <div className="admField olFieldSpan2">
-                                        <label className="olCustomRoleToggle olPaymentAfterToggle">
+                                    <fieldset className="admField olFieldSpan2 olInternCompFieldset">
+                                        <legend className="admLabel olInternCompLegend">
+                                            Internship compensation (in letter)
+                                        </legend>
+                                        <label className="olInternCompOption">
                                             <input
-                                                type="checkbox"
-                                                checked={paymentAfterInternship}
-                                                onChange={(e) =>
-                                                    handlePaymentAfterInternshipChange(
-                                                        e.target.checked
+                                                type="radio"
+                                                name="internComp"
+                                                checked={isPaidInternOffer}
+                                                onChange={() =>
+                                                    handleInternshipCompensationChange(
+                                                        INTERNSHIP_TYPES.PAID
                                                     )
                                                 }
                                             />
                                             <span>
-                                                <strong>Payment after internship review</strong>
+                                                <strong>Paid internship</strong>
+                                                <small>Stipend from day one (amount required)</small>
+                                            </span>
+                                        </label>
+                                        <label className="olInternCompOption">
+                                            <input
+                                                type="radio"
+                                                name="internComp"
+                                                checked={isNoMonetaryInternOffer}
+                                                onChange={() =>
+                                                    handleInternshipCompensationChange(
+                                                        INTERNSHIP_TYPES.NO_MONETARY
+                                                    )
+                                                }
+                                            />
+                                            <span>
+                                                <strong>No monetary compensation</strong>
                                                 <small>
-                                                    No stipend for the initial period; payment may
-                                                    start after HR review (offer letter adjusted
-                                                    accordingly).
+                                                    Learning programme only — no stipend or salary
+                                                    amounts in the letter
                                                 </small>
                                             </span>
                                         </label>
+                                        <label className="olInternCompOption">
+                                            <input
+                                                type="radio"
+                                                name="internComp"
+                                                checked={isUnpaidReviewInternOffer}
+                                                onChange={() =>
+                                                    handleInternshipCompensationChange(
+                                                        INTERNSHIP_TYPES.UNPAID
+                                                    )
+                                                }
+                                            />
+                                            <span>
+                                                <strong>Unpaid initial period</strong>
+                                                <small>
+                                                    No pay for the first months; optional payment
+                                                    after HR review
+                                                </small>
+                                            </span>
+                                        </label>
+                                        {isUnpaidReviewInternOffer && (
+                                            <label className="olCustomRoleToggle olPaymentAfterToggle">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={form.includeFuturePaymentAmount}
+                                                    onChange={(e) =>
+                                                        setForm((f) => ({
+                                                            ...f,
+                                                            includeFuturePaymentAmount:
+                                                                e.target.checked,
+                                                            compensation: e.target.checked
+                                                                ? f.compensation
+                                                                : "",
+                                                        }))
+                                                    }
+                                                />
+                                                <span>
+                                                    <strong>Include payment amount in letter</strong>
+                                                    <small>
+                                                        Leave unchecked to avoid any Rs. figures
+                                                        after the review period
+                                                    </small>
+                                                </span>
+                                            </label>
+                                        )}
+                                    </fieldset>
+                                )}
+                                {(!isInternOffer || showInternStipendField) && (
+                                    <div className="admField olFieldSpan2">
+                                        <label className="admLabel" htmlFor="ol-comp">
+                                            {isUnpaidReviewInternOffer
+                                                ? `Payment after ${form.stipendAfterMonths} month(s) (optional)`
+                                                : isInternOffer
+                                                  ? "Stipend *"
+                                                  : "Compensation *"}
+                                        </label>
+                                        <input
+                                            id="ol-comp"
+                                            required={isPaidInternOffer || !isInternOffer}
+                                            className="admInput"
+                                            value={form.compensation}
+                                            onChange={(e) =>
+                                                update("compensation", e.target.value)
+                                            }
+                                            placeholder={
+                                                isUnpaidReviewInternOffer
+                                                    ? "e.g. Rs. 25,000 per month"
+                                                    : isInternOffer
+                                                      ? "Rs. 25,000 per month stipend"
+                                                      : "Rs. 12,00,000 per annum"
+                                            }
+                                        />
+                                        <span className="olFieldHint">
+                                            {isUnpaidReviewInternOffer
+                                                ? "Only included in the letter when “Include payment amount” is checked."
+                                                : "Suggested from grade — you can edit"}
+                                        </span>
                                     </div>
                                 )}
-                                <div className="admField olFieldSpan2">
-                                    <label className="admLabel" htmlFor="ol-comp">
-                                        {paymentAfterInternship
-                                            ? `Stipend / payment after ${form.stipendAfterMonths} month(s) (optional)`
-                                            : isInternOffer
-                                              ? "Stipend *"
-                                              : "Compensation *"}
-                                    </label>
-                                    <input
-                                        id="ol-comp"
-                                        required={!isUnpaidInternOffer}
-                                        className="admInput"
-                                        value={form.compensation}
-                                        onChange={(e) => update("compensation", e.target.value)}
-                                        placeholder={
-                                            paymentAfterInternship
-                                                ? "e.g. Rs. 84,000 per annum or Rs. 25,000 per month"
-                                                : isInternOffer
-                                                  ? "Rs. 25,000 per month stipend"
-                                                  : "Rs. 12,00,000 per annum"
-                                        }
-                                    />
-                                    <span className="olFieldHint">
-                                        {paymentAfterInternship
-                                            ? "Shown in the offer as payment that may start after the review period. Leave blank if amount is TBD."
-                                            : "Suggested from grade — you can edit"}
-                                    </span>
-                                </div>
+                                {isNoMonetaryInternOffer && (
+                                    <p className="olFieldHint olFieldSpan2">
+                                        The internship offer will state clearly that there is no
+                                        monetary compensation for the full programme.
+                                    </p>
+                                )}
                                 <div className="admField">
                                     <label className="admLabel" htmlFor="ol-grade">
-                                        Salary grade{isUnpaidInternOffer ? "" : " *"}
+                                        Salary grade{isNonPaidInternOffer ? "" : " *"}
                                     </label>
                                     <select
                                         id="ol-grade"
-                                        required={!isUnpaidInternOffer}
+                                        required={!isNonPaidInternOffer}
                                         className="admSelect"
                                         value={form.salaryGrade}
                                         onChange={(e) => handleSalaryGradeChange(e.target.value)}
-                                        disabled={gradeOptions.length === 0 || isUnpaidInternOffer}
+                                        disabled={
+                                            gradeOptions.length === 0 || isNonPaidInternOffer
+                                        }
                                     >
                                         {gradeOptions.map((g) => (
                                             <option key={g.code} value={g.code}>

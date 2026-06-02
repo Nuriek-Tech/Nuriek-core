@@ -17,12 +17,14 @@ export type OfferLetterInput = {
     position: string;
     department: string;
     employmentType: string;
-    /** paid | unpaid — only when employmentType is Intern */
+    /** paid | unpaid | no_monetary — only when employmentType is Intern */
     internshipType?: string | null;
     /** Total internship length in months */
     internshipMonths?: number;
     /** Months before stipend review (unpaid track only) */
     stipendAfterMonths?: number;
+    /** When unpaid track: only include Rs. amount in letter if true */
+    includeFuturePaymentAmount?: boolean;
     compensation: string;
     salaryGrade?: string;
     bonusNote?: string;
