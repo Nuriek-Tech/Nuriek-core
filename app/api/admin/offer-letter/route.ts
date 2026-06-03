@@ -19,6 +19,7 @@ import {
 } from "@/lib/internship-offer";
 import { getOrgHrSignatory, resolveHrSignatureForOffer } from "@/lib/offer-hr-signature-org";
 import { parseOfferLocalDate } from "@/lib/offer-letter-intern";
+import { createOfferLetterRecord } from "@/lib/offer-letter-save";
 
 function isOfferLetterModelMissing(error: unknown): boolean {
     if (!(error instanceof Error)) return false;
@@ -141,26 +142,31 @@ export async function POST(req: Request) {
         let savedToken: string | null = token;
         let warning: string | undefined;
 
+        let createdOfferId: string | null = null;
+
         try {
-            await prisma.offerLetter.create({
-                data: {
-                    token,
-                    refNumber: payload.refNumber,
-                    candidateName,
-                    candidateEmail: candidateEmail || null,
-                    position,
-                    department,
-                    employmentType,
-                    internshipType,
-                    internshipMonths: internshipMonths ?? null,
-                    stipendAfterMonths,
-                    joiningDate: joiningDateParsed,
-                    html,
-                    status: "GENERATED",
-                    createdById: user.id,
-                    expiresAt: Number.isNaN(expiresAt.getTime()) ? null : expiresAt,
-                },
+            const created = await createOfferLetterRecord({
+                token,
+                refNumber: payload.refNumber,
+                candidateName,
+                candidateEmail: candidateEmail || null,
+                position,
+                department,
+                employmentType,
+                internshipType,
+                internshipMonths: internshipMonths ?? null,
+                stipendAfterMonths,
+                joiningDate: joiningDateParsed ?? undefined,
+                html,
+                status: "GENERATED",
+                createdBy: { connect: { id: user.id } },
+                expiresAt: Number.isNaN(expiresAt.getTime()) ? null : expiresAt,
             });
+            createdOfferId = created.id;
+            if (created.omittedJoiningDate) {
+                warning =
+                    "Offer saved for email. Run npx prisma migrate deploy on production to store joining dates for duration updates.";
+            }
 
             await logAudit({
                 actorId: user.id,
@@ -177,17 +183,20 @@ export async function POST(req: Request) {
         } catch (dbError) {
             console.error("Offer letter DB save error:", dbError);
             savedToken = null;
+            const errMsg =
+                dbError instanceof Error ? dbError.message.slice(0, 200) : "unknown error";
             if (isOfferLetterModelMissing(dbError)) {
                 warning =
-                    "Preview and PDF work, but the offer was not saved for email links. Run: npx prisma generate — then restart npm run dev.";
+                    "Preview works, but the offer was not saved for email. Run: npx prisma generate && npx prisma migrate deploy — then try Preview again.";
             } else {
                 warning =
-                    "Preview and PDF work, but saving to the database failed. Check your database connection or run: npx prisma db push";
+                    `Preview works, but saving failed (${errMsg}). Run npx prisma migrate deploy on the server, then generate again. Email will not work until the offer is saved.`;
             }
         }
 
         return NextResponse.json({
             html,
+            id: createdOfferId,
             refNumber: payload.refNumber,
             candidateName: payload.candidateName,
             token: savedToken,

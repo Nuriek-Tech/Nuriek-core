@@ -76,6 +76,7 @@ export default withAuth(
             pathname.startsWith("/api/auth") ||
             pathname.startsWith("/api/attendance") ||
             pathname.startsWith("/api/config/public") ||
+            pathname.startsWith("/api/admin/offer-letter") ||
             (isAdminToken && pathname.startsWith("/api/admin/")) ||
             pathname.startsWith("/api/drive") ||
             (isAdminToken && pathname === "/api/drive/upload") ||

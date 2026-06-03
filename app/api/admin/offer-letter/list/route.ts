@@ -3,16 +3,31 @@ import { prisma } from "@/lib/prisma";
 import { requireHrPermission, isNextResponse } from "@/lib/rbac";
 import { computeOfferStatus, offerStatusLabel } from "@/lib/offer-letter-workflow";
 
-export async function GET() {
+export async function GET(req: Request) {
     const user = await requireHrPermission("offer_letter");
     if (isNextResponse(user)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
+        const { searchParams } = new URL(req.url);
+        const ref = searchParams.get("ref")?.trim();
+        const q = searchParams.get("q")?.trim();
+
         const offers = await prisma.offerLetter.findMany({
+            where: ref
+                ? { refNumber: ref }
+                : q
+                  ? {
+                        OR: [
+                            { refNumber: { contains: q, mode: "insensitive" } },
+                            { candidateName: { contains: q, mode: "insensitive" } },
+                            { candidateEmail: { contains: q, mode: "insensitive" } },
+                        ],
+                    }
+                  : undefined,
             orderBy: { createdAt: "desc" },
-            take: 50,
+            take: ref ? 5 : 150,
             select: {
                 id: true,
                 token: true,

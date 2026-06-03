@@ -958,3 +958,59 @@
   color: #b45309;
   font-weight: 500;
 }
+
+.olSaveWarning {
+  flex: 1 1 100%;
+  margin: 0 0 0.5rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: var(--radius-md);
+}
+
+.olSaveOk {
+  flex: 1 1 100%;
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.olWorkflowSearchRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.olWorkflowSearchRow .admInput {
+  flex: 1;
+  min-width: 200px;
+}
+
+.olRefDeleteBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #b91c1c;
+  background: transparent;
+  border: 1px solid rgba(185, 28, 28, 0.35);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.olRefDeleteBtn:hover:not(:disabled) {
+  background: rgba(185, 28, 28, 0.08);
+}
+
+.olRefDeleteBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

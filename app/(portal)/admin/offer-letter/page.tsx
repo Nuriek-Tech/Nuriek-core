@@ -22,6 +22,7 @@ import {
     Mail,
     Users,
     CheckCircle2,
+    Trash2,
 } from "lucide-react";
 import "@/styles/people-hub.css";
 import "../documents/admin-documents.css";
@@ -83,7 +84,10 @@ export default function OfferLetterPage() {
     const [previewHtml, setPreviewHtml] = useState<string | null>(null);
     const [previewOpen, setPreviewOpen] = useState(false);
     const [lastRef, setLastRef] = useState<string | null>(null);
+    const [lastOfferId, setLastOfferId] = useState<string | null>(null);
     const [offerToken, setOfferToken] = useState<string | null>(null);
+    const [deletingOffer, setDeletingOffer] = useState(false);
+    const [offerSaveWarning, setOfferSaveWarning] = useState<string | null>(null);
     const [emailOpen, setEmailOpen] = useState(false);
     const [emailTo, setEmailTo] = useState("");
     const [directoryUserId, setDirectoryUserId] = useState("");
@@ -573,12 +577,21 @@ export default function OfferLetterPage() {
                 setPreviewHtml(data.html);
                 setPreviewStale(false);
                 setLastRef(data.refNumber);
-                if (data.token) setOfferToken(data.token);
-                else setOfferToken(null);
+                setLastOfferId(data.id ?? null);
+                if (data.token) {
+                    setOfferToken(data.token);
+                    setOfferSaveWarning(data.warning ?? null);
+                } else {
+                    setOfferToken(null);
+                    setOfferSaveWarning(
+                        data.warning ??
+                            "Offer was not saved — Email offer is disabled until you generate again after running database migrations."
+                    );
+                }
                 if (current.candidateEmail) setEmailTo(current.candidateEmail);
                 setWorkflowTick((t) => t + 1);
 
-                if (data.warning) {
+                if (data.warning && data.token) {
                     alert(data.warning);
                 }
 
@@ -655,10 +668,19 @@ export default function OfferLetterPage() {
 
     const openEmailModal = () => {
         if (!offerToken) {
-            alert("Generate the offer letter first, then send by email.");
+            alert(
+                offerSaveWarning ||
+                    (lastRef
+                        ? `Offer ${lastRef} was not saved to the database. Click Preview or Generate again. If it still fails, run: npx prisma migrate deploy`
+                        : "Generate or Preview the offer first, then send by email.")
+            );
             return;
         }
-        setEmailTo(form.candidateEmail);
+        if (!form.candidateEmail.trim() && !emailTo.trim()) {
+            alert("Add the candidate email in the form before sending.");
+            return;
+        }
+        setEmailTo(form.candidateEmail.trim() || emailTo);
         setEmailMsg(null);
         setEmailOpen(true);
     };
@@ -690,6 +712,38 @@ export default function OfferLetterPage() {
             setEmailMsg({ type: "err", text: "Failed to send email" });
         } finally {
             setSendingEmail(false);
+        }
+    };
+
+    const deleteLastOffer = async () => {
+        const ref = lastRef?.trim();
+        const id = lastOfferId?.trim();
+        if (!ref && !id) return;
+        if (!confirm(`Delete offer ${ref ?? id}? This cannot be undone.`)) return;
+
+        setDeletingOffer(true);
+        try {
+            const res = await fetch("/api/admin/offer-letter/delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(id ? { id } : { refNumber: ref }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(
+                    (data as { error?: string }).error ||
+                        "Could not delete. If this was only a preview, the offer was never saved to the database."
+                );
+                return;
+            }
+            setLastRef(null);
+            setLastOfferId(null);
+            setOfferToken(null);
+            setOfferSaveWarning(null);
+            setPreviewHtml(null);
+            setWorkflowTick((t) => t + 1);
+        } finally {
+            setDeletingOffer(false);
         }
     };
 
@@ -729,6 +783,16 @@ export default function OfferLetterPage() {
                         <span className="hubStatChip">
                             <FileSignature size={16} color="var(--nuriek-blue)" />
                             Ref <strong>{lastRef}</strong>
+                            <button
+                                type="button"
+                                className="olRefDeleteBtn"
+                                disabled={deletingOffer}
+                                onClick={() => void deleteLastOffer()}
+                                title="Delete this offer from the database"
+                            >
+                                <Trash2 size={12} />
+                                Delete
+                            </button>
                         </span>
                     )}
                     <span className="hubStatChip">
@@ -1345,6 +1409,16 @@ export default function OfferLetterPage() {
                 </div>
 
                 <div className="olActions">
+                    {offerSaveWarning && !offerToken && (
+                        <p className="olSaveWarning" role="alert">
+                            {offerSaveWarning}
+                        </p>
+                    )}
+                    {offerToken && lastRef && (
+                        <p className="olSaveOk" role="status">
+                            Saved as <strong>{lastRef}</strong> — you can email the offer.
+                        </p>
+                    )}
                     {!formComplete && formReadiness.missing.length > 0 && (
                         <p className="olFormStatus" role="status">
                             To preview or generate, add: {formReadiness.missing.join(", ")}
@@ -1376,7 +1450,11 @@ export default function OfferLetterPage() {
                         disabled={!offerToken || sendingEmail}
                         className="olBtnSecondary olBtnEmail"
                         onClick={openEmailModal}
-                        title={offerToken ? "Email offer to candidate" : "Generate offer first"}
+                        title={
+                            offerToken
+                                ? "Email offer to candidate"
+                                : offerSaveWarning || "Save offer first (Preview or Generate)"
+                        }
                     >
                         <Mail size={18} />
                         Email offer
@@ -1467,16 +1545,26 @@ export default function OfferLetterPage() {
                                     openEmailModal();
                                 }}
                                 disabled={!offerToken}
+                                title={
+                                    offerToken
+                                        ? "Send offer email"
+                                        : "Offer must be saved first — close and use Preview again"
+                                }
                             >
                                 <Mail size={18} />
                                 Email offer
                             </button>
+                            {!offerToken && offerSaveWarning && (
+                                <p className="olPreviewStale olFieldSpan2" role="alert">
+                                    {offerSaveWarning}
+                                </p>
+                            )}
                             <button
                                 type="button"
                                 className="admSubmitBtn olModalPrimary"
                                 onClick={() => setPreviewOpen(false)}
                             >
-                                Edit & generate again
+                                Close
                             </button>
                         </footer>
                         </div>

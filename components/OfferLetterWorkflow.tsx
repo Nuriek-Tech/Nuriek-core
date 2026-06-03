@@ -91,11 +91,16 @@ export default function OfferLetterWorkflow() {
     const [purgeConfirm, setPurgeConfirm] = useState("");
     const [showPurgeAll, setShowPurgeAll] = useState(false);
     const [onboardingOffer, setOnboardingOffer] = useState<OfferRow | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/admin/offer-letter/list");
+            const params = new URLSearchParams();
+            const q = searchQuery.trim();
+            if (q) params.set("q", q);
+            const url = `/api/admin/offer-letter/list${params.toString() ? `?${params}` : ""}`;
+            const res = await fetch(url);
             if (res.ok) {
                 const data = await res.json();
                 setOffers(data.offers ?? []);
@@ -106,7 +111,7 @@ export default function OfferLetterWorkflow() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [searchQuery]);
 
     useEffect(() => {
         load();
@@ -127,6 +132,33 @@ export default function OfferLetterWorkflow() {
         } else {
             setSelected(new Set(offers.map((o) => o.id)));
         }
+    };
+
+    const requestDelete = async (
+        key: string
+    ): Promise<{ ok: true } | { ok: false; error: string }> => {
+        const encoded = encodeURIComponent(key);
+        let res = await fetch(`/api/admin/offer-letter/${encoded}`, { method: "DELETE" });
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            const isRef = key.toUpperCase().startsWith("NRK-OFR-");
+            res = await fetch("/api/admin/offer-letter/delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(isRef ? { refNumber: key } : { id: key }),
+            });
+            if (!res.ok) {
+                const retryBody = await res.json().catch(() => ({}));
+                return {
+                    ok: false,
+                    error:
+                        (retryBody as { error?: string }).error ||
+                        (body as { error?: string }).error ||
+                        `Delete failed (${res.status})`,
+                };
+            }
+        }
+        return { ok: true };
     };
 
     const deleteSelected = async () => {
@@ -153,10 +185,9 @@ export default function OfferLetterWorkflow() {
                 }
             } else {
                 for (const id of selected) {
-                    const res = await fetch(`/api/admin/offer-letter/${id}`, { method: "DELETE" });
-                    if (!res.ok) {
-                        const data = await res.json().catch(() => ({}));
-                        alert((data as { error?: string }).error || "Delete failed");
+                    const result = await requestDelete(id);
+                    if (!result.ok) {
+                        alert(result.error);
                         return;
                     }
                 }
@@ -167,15 +198,34 @@ export default function OfferLetterWorkflow() {
         }
     };
 
-    const deleteOne = async (id: string, name: string) => {
-        if (!confirm(`Delete offer for ${name}? This cannot be undone.`)) return;
+    const deleteOne = async (id: string, name: string, refNumber?: string) => {
+        const label = refNumber ? `${name} (${refNumber})` : name;
+        if (!confirm(`Delete offer for ${label}? This cannot be undone.`)) return;
         setDeleting(true);
         try {
-            const res = await fetch(`/api/admin/offer-letter/${id}`, { method: "DELETE" });
-            if (res.ok) await load();
-            else {
-                const data = await res.json().catch(() => ({}));
-                alert((data as { error?: string }).error || "Delete failed");
+            const result = await requestDelete(id);
+            if (result.ok) await load();
+            else alert(result.error);
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    const deleteByRef = async () => {
+        const ref = searchQuery.trim().toUpperCase();
+        if (!ref.startsWith("NRK-OFR-")) {
+            alert("Enter a full offer ref (e.g. NRK-OFR-MPWS6O7R) in the search box.");
+            return;
+        }
+        if (!confirm(`Delete offer ${ref}? This cannot be undone.`)) return;
+        setDeleting(true);
+        try {
+            const result = await requestDelete(ref);
+            if (result.ok) {
+                setSearchQuery("");
+                await load();
+            } else {
+                alert(result.error);
             }
         } finally {
             setDeleting(false);
@@ -249,8 +299,39 @@ export default function OfferLetterWorkflow() {
             </div>
             <p className="olWorkflowLead">
                 Track sent offers, when candidates open the link, and when they sign or decline.
-                Remove test rows before production.
+                Remove test rows before production. Search by ref (NRK-OFR-…) or candidate name to
+                find older offers.
             </p>
+
+            <div className="olWorkflowSearchRow">
+                <input
+                    type="search"
+                    className="admInput"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search ref, name, or email…"
+                    aria-label="Search offers"
+                />
+                <button
+                    type="button"
+                    className="olBtnSecondary"
+                    onClick={() => load()}
+                    disabled={loading}
+                >
+                    Search
+                </button>
+                {searchQuery.trim().toUpperCase().startsWith("NRK-OFR-") && (
+                    <button
+                        type="button"
+                        className="olBtnDanger"
+                        disabled={deleting}
+                        onClick={deleteByRef}
+                    >
+                        <Trash2 size={16} />
+                        Delete this ref
+                    </button>
+                )}
+            </div>
 
             {showPurgeAll && isSuperAdmin && (
                 <div className="olPurgeBox">
@@ -433,7 +514,9 @@ export default function OfferLetterWorkflow() {
                                             className="olWorkflowLink olWorkflowLink--danger"
                                             title="Delete offer"
                                             disabled={deleting}
-                                            onClick={() => deleteOne(o.id, o.candidateName)}
+                                            onClick={() =>
+                                                deleteOne(o.id, o.candidateName, o.refNumber)
+                                            }
                                         >
                                             <Trash2 size={16} />
                                         </button>
