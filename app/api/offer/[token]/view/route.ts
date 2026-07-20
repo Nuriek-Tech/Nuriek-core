@@ -14,8 +14,15 @@ export async function POST(
             return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
 
-        if (offer.status === OFFER_STATUS.SIGNED || offer.status === OFFER_STATUS.DECLINED) {
-            return NextResponse.json({ status: offer.status });
+        if (
+            offer.status === OFFER_STATUS.SIGNED ||
+            offer.status === OFFER_STATUS.DECLINED ||
+            offer.status === OFFER_STATUS.REVOKED ||
+            offer.revokedAt
+        ) {
+            return NextResponse.json({
+                status: offer.revokedAt ? OFFER_STATUS.REVOKED : offer.status,
+            });
         }
 
         const nextStatus =

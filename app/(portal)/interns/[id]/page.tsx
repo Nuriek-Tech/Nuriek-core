@@ -107,6 +107,13 @@ export default function InternDetailPage() {
         employmentType: "Full-time",
     });
 
+    const [finishLetterOpen, setFinishLetterOpen] = useState(false);
+    const [finishLetterForm, setFinishLetterForm] = useState({
+        lastWorkingDate: new Date().toISOString().slice(0, 10),
+        toEmail: "",
+    });
+    const [sendingFinishLetter, setSendingFinishLetter] = useState(false);
+
     const isAdmin =
         session?.user?.role === "HR_ADMIN" ||
         session?.user?.role === "FOUNDER" ||
@@ -130,6 +137,10 @@ export default function InternDetailPage() {
                 ...f,
                 position: json.profile?.position || "Software Engineer",
                 department: json.profile?.department || "Engineering",
+            }));
+            setFinishLetterForm((f) => ({
+                ...f,
+                toEmail: json.user.email || "",
             }));
         } catch {
             setError("Failed to load profile.");
@@ -182,8 +193,33 @@ export default function InternDetailPage() {
         if (convertForm.department || data.profile?.department) {
             q.set("department", convertForm.department || data.profile?.department || "");
         }
-        q.set("employmentType", convertForm.employmentType);
+        if (convertForm.employmentType) {
+            q.set("employmentType", convertForm.employmentType);
+        }
         router.push(`/admin/offer-letter?${q.toString()}`);
+    };
+
+    const handleSendFinishLetter = async () => {
+        if (!data) return;
+        setSendingFinishLetter(true);
+        try {
+            const res = await fetch(`/api/admin/interns/${userId}/finish-letter`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(finishLetterForm),
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                alert(json?.error || "Failed to send finish letter");
+                return;
+            }
+            alert("Finish letter sent successfully!");
+            setFinishLetterOpen(false);
+        } catch {
+            alert("Failed to send finish letter. Please try again.");
+        } finally {
+            setSendingFinishLetter(false);
+        }
     };
 
     if (loading || status === "loading") {
@@ -294,6 +330,16 @@ export default function InternDetailPage() {
                         >
                             <FileSignature size={18} />
                             Send employment letter
+                        </button>
+                    )}
+                    {isAdmin && data.isIntern && (
+                        <button
+                            type="button"
+                            className="hubBtnSecondary internDetailConvertBtn"
+                            onClick={() => setFinishLetterOpen(true)}
+                        >
+                            <FileSignature size={18} />
+                            Send finish letter
                         </button>
                     )}
                 </div>
@@ -521,6 +567,67 @@ export default function InternDetailPage() {
                                 className="internCancelBtn"
                                 onClick={() => setConvertOpen(false)}
                                 disabled={converting}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {finishLetterOpen && (
+                <div
+                    className="internConvertOverlay"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="finish-title"
+                >
+                    <div className="internConvertModal glass">
+                        <h2 id="finish-title" className="internDetailPanelTitle">
+                            Send Finish Letter
+                        </h2>
+                        <p className="internConvertDesc">
+                            Generate and email an internship completion letter.
+                        </p>
+                        <label className="internFormLabel">Last Working Date</label>
+                        <input
+                            type="date"
+                            className="internFormInput"
+                            value={finishLetterForm.lastWorkingDate}
+                            onChange={(e) =>
+                                setFinishLetterForm((f) => ({ ...f, lastWorkingDate: e.target.value }))
+                            }
+                        />
+                        <label className="internFormLabel">Recipient Email</label>
+                        <input
+                            type="email"
+                            className="internFormInput"
+                            value={finishLetterForm.toEmail}
+                            onChange={(e) =>
+                                setFinishLetterForm((f) => ({ ...f, toEmail: e.target.value }))
+                            }
+                        />
+                        <div className="internFormActions">
+                            <button
+                                type="button"
+                                className="internSaveBtn"
+                                onClick={handleSendFinishLetter}
+                                disabled={sendingFinishLetter}
+                            >
+                                {sendingFinishLetter ? (
+                                    <Loader2 size={18} className="animate-spin" />
+                                ) : (
+                                    <>
+                                        <Mail size={16} />
+                                        Send Email
+                                    </>
+                                )}
+                            </button>
+                            <button
+                                type="button"
+                                className="internCancelBtn"
+                                onClick={() => setFinishLetterOpen(false)}
+                                disabled={sendingFinishLetter}
                             >
                                 Cancel
                             </button>

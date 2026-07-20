@@ -45,6 +45,7 @@ model User {
   certificateRequests CertificateRequest[]
   offerLettersCreated OfferLetter[] @relation("OfferLetterCreator")
   offerLettersProvisioned OfferLetter[] @relation("OfferLetterProvisioned")
+  offerLettersRevoked   OfferLetter[] @relation("OfferLetterRevokedBy")
   employeeDocuments   Document[]    @relation("EmployeeDocuments")
   reportsToId         String?
   reportsTo           User?         @relation("UserReportsTo", fields: [reportsToId], references: [id], onDelete: SetNull)
@@ -108,6 +109,10 @@ model OfferLetter {
   signatureText   String?
   declinedAt      DateTime?
   declineReason   String?
+  revokedAt       DateTime?
+  revokedById     String?
+  revokedBy       User?     @relation("OfferLetterRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+  revokeReason    String?
   expiresAt       DateTime?
   provisionedUserId   String?
   provisionedUser     User?     @relation("OfferLetterProvisioned", fields: [provisionedUserId], references: [id], onDelete: SetNull)

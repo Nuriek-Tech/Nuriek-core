@@ -14,6 +14,40 @@ export default async function OfferLetterViewPage({ params }: Props) {
     const offer = await prisma.offerLetter.findUnique({ where: { token } });
     if (!offer) notFound();
 
+    const isRevoked =
+        offer.status === OFFER_STATUS.REVOKED || Boolean(offer.revokedAt);
+
+    if (isRevoked) {
+        const isIntern = isInternEmploymentType(resolveOfferEmploymentType(offer));
+        return (
+            <main className="offerViewPage">
+                <div className="offerViewCard offerViewCard--revoked">
+                    <h1>{isIntern ? "Internship offer withdrawn" : "Offer withdrawn"}</h1>
+                    <p>
+                        This offer (<strong>{offer.refNumber}</strong>) is no longer valid. HR has
+                        withdrawn it
+                        {offer.revokedAt
+                            ? ` on ${offer.revokedAt.toLocaleString("en-IN")}`
+                            : ""}
+                        .
+                    </p>
+                    {offer.revokeReason && (
+                        <p className="offerViewRevokeReason">
+                            <strong>Note from HR:</strong> {offer.revokeReason}
+                        </p>
+                    )}
+                    <p>
+                        If you have questions, contact{" "}
+                        <a href="mailto:hr@nuriek.com">hr@nuriek.com</a>.
+                    </p>
+                    <Link href="/login" className="offerViewLink">
+                        Sign in to Nuriek Core
+                    </Link>
+                </div>
+            </main>
+        );
+    }
+
     if (
         offer.expiresAt &&
         offer.expiresAt < new Date() &&

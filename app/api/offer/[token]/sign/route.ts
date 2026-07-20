@@ -60,6 +60,13 @@ export async function POST(
             );
         }
 
+        if (offer.status === OFFER_STATUS.REVOKED || offer.revokedAt) {
+            return NextResponse.json(
+                { error: "This offer has been withdrawn by HR" },
+                { status: 410 }
+            );
+        }
+
         const baseHtml = await getOfferDisplayHtmlHydrated(offer);
         const signedHtml = applyOfferSignature(baseHtml, {
             signedName,

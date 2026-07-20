@@ -15,6 +15,7 @@ import {
     UserPlus,
     Link2,
     XCircle,
+    Ban,
 } from "lucide-react";
 import { isSuperAdminRole } from "@/lib/constants";
 import { internshipTypeLabel } from "@/lib/internship-offer";
@@ -40,6 +41,8 @@ type OfferRow = {
     signedName: string | null;
     declinedAt: string | null;
     declineReason: string | null;
+    revokedAt?: string | null;
+    revokeReason?: string | null;
     createdAt: string;
     provisionedUserId?: string | null;
     provisionedAt?: string | null;
@@ -69,6 +72,8 @@ function statusClass(status: string) {
             return "olStatus olStatus--signed";
         case "DECLINED":
             return "olStatus olStatus--declined";
+        case "REVOKED":
+            return "olStatus olStatus--revoked";
         case "VIEWED":
             return "olStatus olStatus--viewed";
         case "SENT":
@@ -92,6 +97,9 @@ export default function OfferLetterWorkflow() {
     const [showPurgeAll, setShowPurgeAll] = useState(false);
     const [onboardingOffer, setOnboardingOffer] = useState<OfferRow | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [revokeTarget, setRevokeTarget] = useState<OfferRow | null>(null);
+    const [revokeReason, setRevokeReason] = useState("");
+    const [revoking, setRevoking] = useState(false);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -208,6 +216,43 @@ export default function OfferLetterWorkflow() {
             else alert(result.error);
         } finally {
             setDeleting(false);
+        }
+    };
+
+    const canRevoke = (o: OfferRow) =>
+        o.status !== "REVOKED" && o.status !== "DECLINED" && !o.revokedAt && !o.declinedAt;
+
+    const confirmRevokeOffer = async () => {
+        if (!revokeTarget) return;
+        setRevoking(true);
+        try {
+            const res = await fetch(
+                `/api/admin/offer-letter/${revokeTarget.id}/revoke`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        reason: revokeReason.trim() || undefined,
+                    }),
+                }
+            );
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert((data as { error?: string }).error || "Revoke failed");
+                return;
+            }
+            const emails = (data as { emails?: { candidate: boolean; hr: string[] } }).emails;
+            const warning = (data as { warning?: string }).warning;
+            setRevokeTarget(null);
+            setRevokeReason("");
+            await load();
+            const parts = ["Offer revoked."];
+            if (emails?.candidate) parts.push("Candidate notified.");
+            if (emails?.hr?.length) parts.push(`HR notified (${emails.hr.length}).`);
+            if (warning) parts.push(warning);
+            alert(parts.join(" "));
+        } finally {
+            setRevoking(false);
         }
     };
 
@@ -433,6 +478,7 @@ export default function OfferLetterWorkflow() {
                                                 <CheckCircle2 size={12} />
                                             )}
                                             {o.status === "DECLINED" && <XCircle size={12} />}
+                                            {o.status === "REVOKED" && <Ban size={12} />}
                                             {o.status === "VIEWED" && <Eye size={12} />}
                                             {o.status === "SENT" && <Mail size={12} />}
                                             {o.statusLabel}
@@ -509,6 +555,20 @@ export default function OfferLetterWorkflow() {
                                         >
                                             <ExternalLink size={16} />
                                         </Link>
+                                        {canRevoke(o) && (
+                                            <button
+                                                type="button"
+                                                className="olWorkflowLink olWorkflowLink--warn"
+                                                title="Revoke offer and notify parties"
+                                                disabled={revoking || deleting}
+                                                onClick={() => {
+                                                    setRevokeTarget(o);
+                                                    setRevokeReason("");
+                                                }}
+                                            >
+                                                <Ban size={16} />
+                                            </button>
+                                        )}
                                         <button
                                             type="button"
                                             className="olWorkflowLink olWorkflowLink--danger"
@@ -525,6 +585,64 @@ export default function OfferLetterWorkflow() {
                             ))}
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {revokeTarget && (
+                <div className="olRevokeBackdrop" role="presentation">
+                    <div
+                        className="olRevokeModal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="ol-revoke-title"
+                    >
+                        <h3 id="ol-revoke-title">Revoke offer</h3>
+                        <p>
+                            Withdraw <strong>{revokeTarget.candidateName}</strong> (
+                            <code>{revokeTarget.refNumber}</code>)? The candidate and HR team will
+                            receive email notification.
+                        </p>
+                        {revokeTarget.status === "SIGNED" && (
+                            <p className="olRevokeWarn">
+                                This offer was already signed
+                                {revokeTarget.provisionedUser?.email
+                                    ? ` and a portal account exists (${revokeTarget.provisionedUser.email}). Review access separately.`
+                                    : "."}
+                            </p>
+                        )}
+                        <label className="admLabel" htmlFor="ol-revoke-reason">
+                            Message to candidate (optional)
+                        </label>
+                        <textarea
+                            id="ol-revoke-reason"
+                            className="admTextarea"
+                            rows={3}
+                            value={revokeReason}
+                            onChange={(e) => setRevokeReason(e.target.value)}
+                            placeholder="e.g. Role no longer available / programme intake closed"
+                        />
+                        <div className="olRevokeActions">
+                            <button
+                                type="button"
+                                className="olBtnSecondary"
+                                disabled={revoking}
+                                onClick={() => {
+                                    setRevokeTarget(null);
+                                    setRevokeReason("");
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="olBtnDanger"
+                                disabled={revoking}
+                                onClick={() => void confirmRevokeOffer()}
+                            >
+                                {revoking ? "Revoking…" : "Revoke & notify"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 

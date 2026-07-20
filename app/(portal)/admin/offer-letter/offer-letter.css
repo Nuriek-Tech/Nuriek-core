@@ -435,10 +435,19 @@
   color: #b42318;
 }
 
+.olStatus--revoked {
+  background: rgba(120, 90, 40, 0.12);
+  color: #8b5a14;
+}
+
 .olWorkflowLink {
   color: var(--nuriek-blue);
   display: inline-flex;
   padding: 0.25rem;
+}
+
+.olWorkflowLink--warn {
+  color: #b45309;
 }
 
 .olWorkflowLink--danger {
@@ -704,6 +713,53 @@
   gap: 0.5rem;
   margin-top: 0.75rem;
   align-items: center;
+}
+
+.olRevokeBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(26, 25, 23, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.olRevokeModal {
+  width: min(480px, 100%);
+  padding: 1.25rem;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.olRevokeModal h3 {
+  margin: 0 0 0.65rem;
+  font-size: 1.05rem;
+}
+
+.olRevokeModal p {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.olRevokeWarn {
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-sm);
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  color: #92400e !important;
+}
+
+.olRevokeActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
 
 .olPurgeRow .admInput {

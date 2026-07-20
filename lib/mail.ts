@@ -224,6 +224,105 @@ export async function sendOfferLetterEmail(params: {
     return { success: true };
 }
 
+export async function sendOfferRevokeNotifications(params: {
+    candidateEmail?: string | null;
+    candidateName: string;
+    position: string;
+    department: string;
+    refNumber: string;
+    employmentType?: string | null;
+    revokeReason?: string | null;
+    revokedByName?: string | null;
+    wasSigned?: boolean;
+    previousStatus?: string;
+    provisionedEmail?: string | null;
+    hrRecipients: string[];
+}): Promise<{ candidateSent: boolean; hrSentTo: string[]; errors: string[] }> {
+    const errors: string[] = [];
+    let candidateSent = false;
+    const hrSentTo: string[] = [];
+
+    if (!isZohoConfigured()) {
+        return {
+            candidateSent: false,
+            hrSentTo: [],
+            errors: ["Missing Zoho credentials — emails not sent"],
+        };
+    }
+
+    const {
+        buildOfferRevokeCandidateEmailHtml,
+        buildOfferRevokeHrEmailHtml,
+        offerRevokeCandidateSubject,
+        offerRevokeHrSubject,
+    } = await import("@/lib/offer-revoke-email");
+
+    const candidateTo = params.candidateEmail?.trim().toLowerCase();
+    if (candidateTo && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidateTo)) {
+        const result = await sendWithRetry(async () => {
+            await getTransporter().sendMail({
+                from: zohoMailFrom(),
+                to: candidateTo,
+                subject: offerRevokeCandidateSubject(params.refNumber, params.employmentType),
+                html: buildOfferRevokeCandidateEmailHtml({
+                    candidateName: params.candidateName,
+                    position: params.position,
+                    department: params.department,
+                    refNumber: params.refNumber,
+                    employmentType: params.employmentType,
+                    revokeReason: params.revokeReason,
+                    revokedByName: params.revokedByName,
+                    wasSigned: params.wasSigned,
+                }),
+                attachments: [nuriekEmailHeaderAttachment()],
+            });
+            return { success: true };
+        });
+        if (result.success) {
+            candidateSent = true;
+        } else if (result.error) {
+            errors.push(`Candidate: ${formatZohoSmtpError(result.error)}`);
+        }
+    }
+
+    const hrTo = [...new Set(params.hrRecipients.map((e) => e.trim().toLowerCase()))].filter(
+        (e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
+    );
+
+    if (hrTo.length > 0) {
+        const result = await sendWithRetry(async () => {
+            await getTransporter().sendMail({
+                from: zohoMailFrom(),
+                to: hrTo[0],
+                bcc: hrTo.length > 1 ? hrTo.slice(1) : undefined,
+                subject: offerRevokeHrSubject(params.refNumber, params.candidateName),
+                html: buildOfferRevokeHrEmailHtml({
+                    candidateName: params.candidateName,
+                    candidateEmail: params.candidateEmail,
+                    position: params.position,
+                    department: params.department,
+                    refNumber: params.refNumber,
+                    employmentType: params.employmentType,
+                    revokeReason: params.revokeReason,
+                    revokedByName: params.revokedByName,
+                    wasSigned: params.wasSigned,
+                    previousStatus: params.previousStatus,
+                    provisionedEmail: params.provisionedEmail,
+                }),
+                attachments: [nuriekEmailHeaderAttachment()],
+            });
+            return { success: true };
+        });
+        if (result.success) {
+            hrSentTo.push(...hrTo);
+        } else if (result.error) {
+            errors.push(`HR: ${formatZohoSmtpError(result.error)}`);
+        }
+    }
+
+    return { candidateSent, hrSentTo, errors };
+}
+
 export async function sendTimesheetApprovalEmail(
     employeeName: string,
     date: string,

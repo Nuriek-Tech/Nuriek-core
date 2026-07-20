@@ -27,6 +27,13 @@ export async function POST(
             );
         }
 
+        if (offer.status === OFFER_STATUS.REVOKED || offer.revokedAt) {
+            return NextResponse.json(
+                { error: "This offer has been withdrawn by HR" },
+                { status: 410 }
+            );
+        }
+
         if (offer.status === OFFER_STATUS.DECLINED || offer.declinedAt) {
             return NextResponse.json(
                 {
