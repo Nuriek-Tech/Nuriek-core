@@ -30,7 +30,9 @@ export type AuditAction =
     | "OFFER_PURGE"
     | "OFFER_PURGE_ALL"
     | "OFFER_ONBOARDING_SENT"
-    | "INTERN_CONVERT";
+    | "INTERN_CONVERT"
+    | "FINISH_LETTER_SENT"
+    | "EMPLOYEE_EXITED";
 
 type AuditParams = {
     actorId?: string | null;
