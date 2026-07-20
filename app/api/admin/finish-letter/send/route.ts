@@ -3,6 +3,7 @@ import { requireHrPermission, isNextResponse } from "@/lib/rbac";
 import { buildInternFinishLetterHtml, FinishLetterInput } from "@/lib/finish-letter-intern";
 import { sendFinishLetterEmail } from "@/lib/finish-letter-email";
 import { logAudit } from "@/lib/audit";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
     const user = await requireHrPermission("offer_letter");
@@ -62,6 +63,21 @@ export async function POST(req: Request) {
             entityId: userId || "unknown",
             metadata: { emailedTo: emailTo },
         });
+
+        if (userId) {
+            await prisma.user.update({
+                where: { id: userId },
+                data: { isActive: false },
+            });
+            await logAudit({
+                actorId: user.id,
+                actorEmail: user.email,
+                action: "USER_DEACTIVATED",
+                entity: "User",
+                entityId: userId,
+                metadata: { reason: "Internship completion letter sent" },
+            });
+        }
 
         return NextResponse.json({ success: true, sentTo: emailTo });
     } catch (error) {

@@ -313,8 +313,9 @@ export default function FinishLetterPage() {
                 </div>
             </header>
 
-            <div className="olLayout">
-                <aside className="olSidebar">
+            <div className="olFormPanel glass">
+<form className="olFormColumns">
+                <div className="olFormCol">
                     {emailMsg && (
                         <div
                             style={{
@@ -446,7 +447,8 @@ export default function FinishLetterPage() {
                         </div>
                     </div>
 
-                    <div className="olSection">
+                    </div><div className="olFormCol">
+<div className="olSection">
                         <h2 className="olSectionTitle">
                             <Calendar size={16} /> Dates
                         </h2>
@@ -527,43 +529,19 @@ export default function FinishLetterPage() {
                             )}
                         </div>
                     </div>
-                </aside>
+                </div>
 
-                <main className="olMain">
-                    <div className="olPreviewGlass glass">
-                        {previewHtml ? (
-                            <div className="olLivePreviewWrap">
-                                {previewStale && (
-                                    <div className="olStaleOverlay">
-                                        <p>Updates pending.</p>
-                                        <button className="olStaleBtn" onClick={preview} disabled={generating}>
-                                            {generating ? <Loader2 size={16} className="animate-spin" /> : "Refresh preview"}
-                                        </button>
-                                    </div>
-                                )}
-                                <iframe srcDoc={previewHtml} className="olLivePreviewFrame" title="Finish Letter Preview" />
-                            </div>
-                        ) : (
-                            <div className="olPreviewEmpty">
-                                <FileSignature size={48} className="hubEmptyIcon" />
-                                <p>Fill in the details and click Preview to see the generated finish letter here.</p>
-                            </div>
-                        )}
 
-                        <div className="olActionRow">
-                            <button className="hubBtnSecondary" onClick={preview} disabled={generating}>
-                                {generating ? <Loader2 size={16} className="animate-spin" /> : <><Eye size={16} /> Preview Letter</>}
-                            </button>
+                
+            </form>
+<div className="olActionRow" style={{ marginTop: "2rem" }}>
+<button className="hubBtnPrimary" onClick={preview} disabled={generating}>
+{generating ? <Loader2 size={16} className="animate-spin" /> : <><Eye size={16} /> Preview Letter</>}
+</button>
+</div>
+</div>
 
-                            <button className="hubBtnPrimary" onClick={sendEmail} disabled={sendingEmail || !previewHtml || previewStale}>
-                                {sendingEmail ? <Loader2 size={16} className="animate-spin" /> : <><Mail size={16} /> Send Email</>}
-                            </button>
-                        </div>
-                    </div>
-                </main>
-            </div>
-
-            {previewOpen &&
+{previewOpen &&
                 previewHtml &&
                 createPortal(
                     <div className="olModalOverlay">
@@ -574,11 +552,16 @@ export default function FinishLetterPage() {
                                     <X size={20} />
                                 </button>
                             </div>
-                            <div className="olModalBody" style={{ padding: 0 }}>
+                                                        <div className="olModalBody" style={{ padding: 0 }}>
                                 <iframe srcDoc={previewHtml} style={{ width: "100%", height: "100%", border: "none" }} title="Preview" />
                             </div>
-                        </div>
-                    </div>,
+                            <footer className="olModalFoot">
+                                <button type="button" className="olBtnSecondary" onClick={() => setPreviewOpen(false)}>Close</button>
+                                <button type="button" className="admSubmitBtn" onClick={sendEmail} disabled={sendingEmail || previewStale}>
+                                    {sendingEmail ? <Loader2 size={16} className="animate-spin" /> : <><Mail size={16} /> Send Email</>}
+                                </button>
+                            </footer>
+</div></div>,
                     document.body
                 )}
         </div>

@@ -15,6 +15,8 @@ export type AuditAction =
     | "OFFER_SIGNED"
     | "OFFER_DECLINED"
     | "OFFER_REVOKED"
+    | "FINISH_LETTER_SENT"
+    | "USER_DEACTIVATED"
     | "LEAVE_REQUEST"
     | "LEAVE_APPROVE"
     | "LEAVE_REJECT"

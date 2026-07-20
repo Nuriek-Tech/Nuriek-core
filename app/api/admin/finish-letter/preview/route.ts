@@ -24,7 +24,8 @@ export async function POST(req: Request) {
             hrSignatureDataUrl: body.hrSignatureDataUrl,
         };
 
-        const html = buildInternFinishLetterHtml(finishLetterData);
+        let html = buildInternFinishLetterHtml(finishLetterData);
+        html = html.replace(/<button[^>]*class="print-btn"[^>]*>[\s\S]*?<\/button>/gi, "");
 
         return NextResponse.json({ html });
     } catch (error) {
