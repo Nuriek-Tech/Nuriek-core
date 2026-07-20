@@ -8,7 +8,7 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
-    const user = await requireHrPermission("manage_users");
+    const user = await requireHrPermission("directory");
     if (isNextResponse(user)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
