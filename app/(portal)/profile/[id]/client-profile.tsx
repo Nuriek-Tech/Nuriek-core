@@ -14,6 +14,8 @@ import {
     Trash2,
     AlertTriangle,
     Calendar,
+    LogOut,
+    Loader2,
 } from "lucide-react";
 import type { LeaveBalance } from "@/lib/api-types";
 import type { Role } from "@/lib/constants";
@@ -107,6 +109,11 @@ export default function ClientProfileWrapper({
 
     // Delete State
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+    // Exit State
+    const [exitOpen, setExitOpen] = useState(false);
+    const [exiting, setExiting] = useState(false);
+
     const handleManagerUpdate = async () => {
         setManagerSaving(true);
         try {
@@ -192,6 +199,27 @@ export default function ClientProfileWrapper({
         }
     };
 
+    const handleExitUser = async () => {
+        setExiting(true);
+        try {
+            const res = await fetch(`/api/admin/users/${user.id}/exit`, {
+                method: "POST",
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                alert(json?.error || "Failed to exit user");
+                return;
+            }
+            setExitOpen(false);
+            alert("User successfully marked as exited.");
+            window.location.reload();
+        } catch {
+            alert("Failed to exit user.");
+        } finally {
+            setExiting(false);
+        }
+    };
+
     return (
         <div className="profileLayout">
             <aside className="profileSidebar">
@@ -213,6 +241,14 @@ export default function ClientProfileWrapper({
                             <button onClick={() => setShowBadgeModal(true)} className="profileAction">
                                 <Award size={18} />
                                 <span>Award Badge</span>
+                            </button>
+                            <button
+                                onClick={() => setExitOpen(true)}
+                                className="profileAction"
+                                style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                            >
+                                <LogOut size={18} />
+                                <span>Exit User</span>
                             </button>
                             <button
                                 onClick={() => setShowDeleteModal(true)}
@@ -559,6 +595,41 @@ export default function ClientProfileWrapper({
                             </button>
                             <button
                                 onClick={() => setShowDeleteModal(false)}
+                                className="checkInButton ghost"
+                                style={{ flex: 1 }}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Exit Confirmation Modal */}
+            {exitOpen && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
+                    <div className="glass" style={{ width: '400px', padding: '2rem', background: 'white', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: '#ef4444' }}>
+                            <LogOut size={24} />
+                            <h3 style={{ margin: 0, color: '#ef4444' }}>Exit / Offboard User?</h3>
+                        </div>
+                        <p style={{ color: '#555', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                            Are you sure you want to offboard <strong>{user.name}</strong>?
+                            <br /><br />
+                            This will disable their login access and immediately end any active sessions. Their historical data will be preserved.
+                        </p>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button
+                                onClick={handleExitUser}
+                                className="checkInButton"
+                                disabled={exiting}
+                                style={{ flex: 1, background: '#ef4444', border: 'none', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
+                            >
+                                {exiting ? <Loader2 size={16} className="animate-spin" /> : "Confirm Exit"}
+                            </button>
+                            <button
+                                onClick={() => setExitOpen(false)}
+                                disabled={exiting}
                                 className="checkInButton ghost"
                                 style={{ flex: 1 }}
                             >
