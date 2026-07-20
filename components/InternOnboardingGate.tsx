@@ -12,12 +12,14 @@ export default function InternOnboardingGate() {
     const [checked, setChecked] = useState(false);
 
     useEffect(() => {
+        let cancelled = false;
+
         if (status !== "authenticated" || session?.user?.role !== ROLES.INTERN) {
-            setChecked(true);
+            Promise.resolve().then(() => {
+                if (!cancelled) setChecked(true);
+            });
             return;
         }
-
-        let cancelled = false;
 
         fetch("/api/onboarding/complete", { cache: "no-store" })
             .then((res) => (res.ok ? res.json() : null))

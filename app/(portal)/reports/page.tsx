@@ -21,17 +21,25 @@ export default function ReportsSummaryPage() {
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
 
     useEffect(() => {
-        setLoading(true);
-        Promise.all([
-            fetch("/api/reports/summary").then((r) => r.json()),
-            fetch(`/api/reports/analytics?month=${month}`).then((r) => r.json()),
-        ])
-            .then(([sum, ana]) => {
+        let active = true;
+        const load = async () => {
+            await Promise.resolve(); // make it async
+            if (!active) return;
+            setLoading(true);
+            try {
+                const [sum, ana] = await Promise.all([
+                    fetch("/api/reports/summary").then((r) => r.json()),
+                    fetch(`/api/reports/analytics?month=${month}`).then((r) => r.json()),
+                ]);
+                if (!active) return;
                 setSummary(sum);
                 setAnalytics(ana.error ? null : ana);
-                setLoading(false);
-            })
-            .catch(() => setLoading(false));
+            } finally {
+                if (active) setLoading(false);
+            }
+        };
+        load();
+        return () => { active = false; };
     }, [month]);
 
     const maxTrend = useMemo(

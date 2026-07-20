@@ -12,7 +12,7 @@ const ACTIVITY_THROTTLE_MS = 15_000;
 /** Signs out employees & HR after 15 minutes of inactivity. Super Admin is exempt. */
 export default function InactivityGuard() {
     const { data: session, status } = useSession();
-    const lastActivityRef = useRef(Date.now());
+    const lastActivityRef = useRef(0);
     const lastPingRef = useRef(0);
     const signingOutRef = useRef(false);
 
@@ -46,6 +46,7 @@ export default function InactivityGuard() {
     useEffect(() => {
         if (!enabled) return;
 
+        lastActivityRef.current = Date.now();
         recordActivity();
 
         const onActivity = () => {

@@ -61,7 +61,8 @@ export default function UserPreferences() {
     const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
 
     useEffect(() => {
-        setPrefs(loadPrefs());
+        const p = loadPrefs();
+        Promise.resolve().then(() => setPrefs(p));
     }, []);
 
     const update = (patch: Partial<Prefs>) => {
