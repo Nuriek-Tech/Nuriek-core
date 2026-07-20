@@ -137,7 +137,10 @@ export const authOptions: NextAuthOptions = {
 
             if (dbUser) {
                 if (!dbUser.isActive) {
-                    return { ...token, id: undefined, email: undefined, role: undefined };
+                    token.id = "";
+                    token.email = "";
+                    token.error = "AccountDisabled";
+                    return token;
                 }
                 token.id = dbUser.id;
                 token.email = dbUser.email;
