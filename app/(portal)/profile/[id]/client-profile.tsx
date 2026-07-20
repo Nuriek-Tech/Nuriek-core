@@ -14,8 +14,12 @@ import {
     Trash2,
     AlertTriangle,
     Calendar,
+    Trash2,
+    AlertTriangle,
+    Calendar,
     LogOut,
     Loader2,
+    CheckCircle2,
 } from "lucide-react";
 import type { LeaveBalance } from "@/lib/api-types";
 import type { Role } from "@/lib/constants";
@@ -113,6 +117,14 @@ export default function ClientProfileWrapper({
     // Exit State
     const [exitOpen, setExitOpen] = useState(false);
     const [exiting, setExiting] = useState(false);
+    
+    // Offboarding Flow State
+    const [offboardingOpen, setOffboardingOpen] = useState(false);
+    const [finishLetterForm, setFinishLetterForm] = useState({
+        lastWorkingDate: new Date().toISOString().slice(0, 10),
+        toEmail: user.email || "",
+    });
+    const [sendingFinishLetter, setSendingFinishLetter] = useState(false);
 
     const handleManagerUpdate = async () => {
         setManagerSaving(true);
@@ -211,12 +223,32 @@ export default function ClientProfileWrapper({
                 return;
             }
             setExitOpen(false);
-            alert("User successfully marked as exited.");
-            window.location.reload();
+            setOffboardingOpen(true);
         } catch {
             alert("Failed to exit user.");
         } finally {
             setExiting(false);
+        }
+    };
+
+    const handleSendFinishLetter = async () => {
+        setSendingFinishLetter(true);
+        try {
+            const res = await fetch(`/api/admin/interns/${user.id}/finish-letter`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(finishLetterForm),
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                alert(json?.error || "Failed to send finish letter");
+                return;
+            }
+            alert("Finish letter sent successfully!");
+        } catch {
+            alert("Failed to send finish letter. Please try again.");
+        } finally {
+            setSendingFinishLetter(false);
         }
     };
 
@@ -634,6 +666,61 @@ export default function ClientProfileWrapper({
                                 style={{ flex: 1 }}
                             >
                                 Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Offboarding Flow Modal */}
+            {offboardingOpen && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
+                    <div className="glass" style={{ width: '450px', padding: '2rem', background: 'white', borderRadius: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: '#10b981' }}>
+                            <CheckCircle2 size={24} />
+                            <h3 style={{ margin: 0 }}>User Exited Successfully</h3>
+                        </div>
+                        <p style={{ color: '#555', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                            <strong>{user.name}</strong> has been successfully offboarded and their login access is revoked. Please complete the following formalities:
+                        </p>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                            {user.role === "INTERN" && (
+                                <div style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '1rem' }}>
+                                    <h4 style={{ margin: '0 0 0.5rem 0' }}>1. Internship Completion Letter</h4>
+                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Generate and send the finish letter to their personal email.</p>
+                                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                        <input type="date" className="input" style={{ flex: 1 }} value={finishLetterForm.lastWorkingDate} onChange={(e) => setFinishLetterForm({...finishLetterForm, lastWorkingDate: e.target.value})} />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <input type="email" className="input" style={{ flex: 1 }} value={finishLetterForm.toEmail} onChange={(e) => setFinishLetterForm({...finishLetterForm, toEmail: e.target.value})} placeholder="Personal Email" />
+                                        <button className="checkInButton" onClick={handleSendFinishLetter} disabled={sendingFinishLetter} style={{ padding: '0 1rem', background: 'var(--nuriek-blue)', color: 'white' }}>
+                                            {sendingFinishLetter ? <Loader2 size={16} className="animate-spin" /> : "Send Email"}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '1rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                                <input type="checkbox" id="zoho-check" style={{ marginTop: '0.2rem', cursor: 'pointer' }} />
+                                <div>
+                                    <label htmlFor="zoho-check" style={{ fontWeight: 600, display: 'block', marginBottom: '0.25rem', cursor: 'pointer' }}>
+                                        {user.role === "INTERN" ? "2. " : "1. "}Delete user from Zoho Workspace
+                                    </label>
+                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                                        Remember to manually delete <strong>{user.email}</strong> from Zoho Workspace / Zoho People to stop billing and revoke email access.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="checkInButton"
+                                style={{ flex: 1 }}
+                            >
+                                Finish & Reload
                             </button>
                         </div>
                     </div>
