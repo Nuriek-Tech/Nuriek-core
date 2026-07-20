@@ -20,6 +20,7 @@ async function loadUserForToken(email?: string | null, id?: string | null) {
                 role: true,
                 mustChangePassword: true,
                 hrPermissions: true,
+                isActive: true,
             },
         });
     }
@@ -33,6 +34,7 @@ async function loadUserForToken(email?: string | null, id?: string | null) {
                 role: true,
                 mustChangePassword: true,
                 hrPermissions: true,
+                isActive: true,
             },
         });
     }
@@ -64,6 +66,7 @@ export const authOptions: NextAuthOptions = {
                     });
 
                     if (!user || !user.password) return null;
+                    if (!user.isActive) return null;
 
                     const isPasswordMatch = await bcrypt
                         .compare(credentials.password, user.password)
@@ -133,6 +136,9 @@ export const authOptions: NextAuthOptions = {
             );
 
             if (dbUser) {
+                if (!dbUser.isActive) {
+                    return { ...token, id: undefined, email: undefined, role: undefined };
+                }
                 token.id = dbUser.id;
                 token.email = dbUser.email;
                 token.role = normalizeRole(dbUser.role) ?? ROLES.EMPLOYEE;

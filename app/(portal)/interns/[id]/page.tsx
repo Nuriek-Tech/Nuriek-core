@@ -21,6 +21,7 @@ import {
     BookOpen,
     TrendingUp,
     Star,
+    LogOut,
 } from "lucide-react";
 import "@/styles/people-hub.css";
 import "../interns.css";
@@ -113,6 +114,9 @@ export default function InternDetailPage() {
         toEmail: "",
     });
     const [sendingFinishLetter, setSendingFinishLetter] = useState(false);
+
+    const [exitOpen, setExitOpen] = useState(false);
+    const [exiting, setExiting] = useState(false);
 
     const isAdmin =
         session?.user?.role === "HR_ADMIN" ||
@@ -215,10 +219,37 @@ export default function InternDetailPage() {
             }
             alert("Finish letter sent successfully!");
             setFinishLetterOpen(false);
+            load();
         } catch {
             alert("Failed to send finish letter. Please try again.");
         } finally {
             setSendingFinishLetter(false);
+        }
+    };
+
+    const handleExitUser = async () => {
+        if (!data) return;
+        setExiting(true);
+        try {
+            const res = await fetch(`/api/admin/users/${userId}/exit`, {
+                method: "POST",
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                alert(json?.error || "Failed to exit user");
+                return;
+            }
+            setExitOpen(false);
+            if (data.isIntern) {
+                setFinishLetterOpen(true);
+            } else {
+                alert("User successfully marked as exited.");
+            }
+            load();
+        } catch {
+            alert("Failed to exit user.");
+        } finally {
+            setExiting(false);
         }
     };
 
@@ -340,6 +371,17 @@ export default function InternDetailPage() {
                         >
                             <FileSignature size={18} />
                             Send finish letter
+                        </button>
+                    )}
+                    {isAdmin && (
+                        <button
+                            type="button"
+                            className="hubBtnSecondary internDetailConvertBtn"
+                            style={{ color: "#ef4444", borderColor: "#fca5a5", backgroundColor: "#fef2f2" }}
+                            onClick={() => setExitOpen(true)}
+                        >
+                            <LogOut size={18} />
+                            Exit User
                         </button>
                     )}
                 </div>
@@ -628,6 +670,52 @@ export default function InternDetailPage() {
                                 className="internCancelBtn"
                                 onClick={() => setFinishLetterOpen(false)}
                                 disabled={sendingFinishLetter}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {exitOpen && (
+                <div
+                    className="internConvertOverlay"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="exit-title"
+                >
+                    <div className="internConvertModal glass">
+                        <h2 id="exit-title" className="internDetailPanelTitle" style={{ color: "#ef4444" }}>
+                            Exit / Offboard User
+                        </h2>
+                        <p className="internConvertDesc">
+                            Are you sure you want to offboard this user? This will disable their login access 
+                            and immediately end any active sessions.
+                            {data?.isIntern && " You will be prompted to send a Finish Letter next."}
+                        </p>
+                        <div className="internFormActions" style={{ marginTop: "24px" }}>
+                            <button
+                                type="button"
+                                className="internSaveBtn"
+                                style={{ backgroundColor: "#ef4444", borderColor: "#ef4444" }}
+                                onClick={handleExitUser}
+                                disabled={exiting}
+                            >
+                                {exiting ? (
+                                    <Loader2 size={18} className="animate-spin" />
+                                ) : (
+                                    <>
+                                        <LogOut size={16} />
+                                        Confirm Exit
+                                    </>
+                                )}
+                            </button>
+                            <button
+                                type="button"
+                                className="internCancelBtn"
+                                onClick={() => setExitOpen(false)}
+                                disabled={exiting}
                             >
                                 Cancel
                             </button>

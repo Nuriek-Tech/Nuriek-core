@@ -27,6 +27,7 @@ model User {
   role               UserRole  @default(EMPLOYEE)
   onboardingStatus   String    @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
   mustChangePassword Boolean   @default(false)
+  isActive           Boolean   @default(true)
   /** JSON array of HR permission keys; null = role defaults (see lib/hr-permissions.ts) */
   hrPermissions      String?
   emailVerified      DateTime?
