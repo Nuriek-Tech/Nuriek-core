@@ -29,7 +29,8 @@ export async function POST(
         }
 
         if (!targetUser.isActive) {
-            return NextResponse.json({ error: "User is already inactive" }, { status: 400 });
+            // If already inactive, return success so frontend can still show the offboarding checklist/letter generator
+            return NextResponse.json({ success: true, alreadyInactive: true });
         }
 
         // Mark user as inactive
