@@ -544,8 +544,8 @@ export default function FinishLetterPage() {
 {previewOpen &&
                 previewHtml &&
                 createPortal(
-                    <div className="olModalBackdrop">
-                        <div className="olModal" style={{ width: "90vw", maxWidth: "900px", height: "90vh" }}>
+                    <div className="olEmailBackdrop">
+                        <div className="olModal" style={{ width: "90vw", maxWidth: "900px", height: "90vh", borderRadius: "12px", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)", overflow: "hidden" }}>
                             <header className="olModalHead">
                                 <h2 className="olModalTitle">Finish Letter Preview</h2>
                                 <button className="olModalClose" onClick={() => setPreviewOpen(false)}>
