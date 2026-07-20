@@ -544,15 +544,15 @@ export default function FinishLetterPage() {
 {previewOpen &&
                 previewHtml &&
                 createPortal(
-                    <div className="olModalOverlay">
-                        <div className="olModalContent glass" style={{ width: "90vw", maxWidth: "900px", height: "90vh" }}>
-                            <div className="olModalHeader">
-                                <h3 style={{ margin: 0 }}>Finish Letter Preview</h3>
+                    <div className="olModalBackdrop">
+                        <div className="olModal" style={{ width: "90vw", maxWidth: "900px", height: "90vh" }}>
+                            <header className="olModalHead">
+                                <h2 className="olModalTitle">Finish Letter Preview</h2>
                                 <button className="olModalClose" onClick={() => setPreviewOpen(false)}>
                                     <X size={20} />
                                 </button>
-                            </div>
-                                                        <div className="olModalBody" style={{ padding: 0 }}>
+                            </header>
+                            <div className="olModalBody" style={{ padding: 0 }}>
                                 <iframe srcDoc={previewHtml} style={{ width: "100%", height: "100%", border: "none" }} title="Preview" />
                             </div>
                             <footer className="olModalFoot">
@@ -561,7 +561,8 @@ export default function FinishLetterPage() {
                                     {sendingEmail ? <Loader2 size={16} className="animate-spin" /> : <><Mail size={16} /> Send Email</>}
                                 </button>
                             </footer>
-</div></div>,
+                        </div>
+                    </div>,
                     document.body
                 )}
         </div>
