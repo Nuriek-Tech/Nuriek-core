@@ -244,8 +244,8 @@ export default function InternDetailPage() {
                 setFinishLetterOpen(true);
             } else {
                 alert("User successfully marked as exited.");
+                load();
             }
-            load();
         } catch {
             alert("Failed to exit user.");
         } finally {
