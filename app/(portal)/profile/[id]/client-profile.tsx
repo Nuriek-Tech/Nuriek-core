@@ -14,9 +14,6 @@ import {
     Trash2,
     AlertTriangle,
     Calendar,
-    Trash2,
-    AlertTriangle,
-    Calendar,
     LogOut,
     Loader2,
     CheckCircle2,
@@ -120,11 +117,6 @@ export default function ClientProfileWrapper({
     
     // Offboarding Flow State
     const [offboardingOpen, setOffboardingOpen] = useState(false);
-    const [finishLetterForm, setFinishLetterForm] = useState({
-        lastWorkingDate: new Date().toISOString().slice(0, 10),
-        toEmail: user.email || "",
-    });
-    const [sendingFinishLetter, setSendingFinishLetter] = useState(false);
 
     const handleManagerUpdate = async () => {
         setManagerSaving(true);
@@ -231,26 +223,6 @@ export default function ClientProfileWrapper({
         }
     };
 
-    const handleSendFinishLetter = async () => {
-        setSendingFinishLetter(true);
-        try {
-            const res = await fetch(`/api/admin/interns/${user.id}/finish-letter`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(finishLetterForm),
-            });
-            const json = await res.json();
-            if (!res.ok) {
-                alert(json?.error || "Failed to send finish letter");
-                return;
-            }
-            alert("Finish letter sent successfully!");
-        } catch {
-            alert("Failed to send finish letter. Please try again.");
-        } finally {
-            setSendingFinishLetter(false);
-        }
-    };
 
     return (
         <div className="profileLayout">
@@ -688,16 +660,14 @@ export default function ClientProfileWrapper({
                             {user.role === "INTERN" && (
                                 <div style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '1rem' }}>
                                     <h4 style={{ margin: '0 0 0.5rem 0' }}>1. Internship Completion Letter</h4>
-                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Generate and send the finish letter to their personal email.</p>
-                                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                        <input type="date" className="input" style={{ flex: 1 }} value={finishLetterForm.lastWorkingDate} onChange={(e) => setFinishLetterForm({...finishLetterForm, lastWorkingDate: e.target.value})} />
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <input type="email" className="input" style={{ flex: 1 }} value={finishLetterForm.toEmail} onChange={(e) => setFinishLetterForm({...finishLetterForm, toEmail: e.target.value})} placeholder="Personal Email" />
-                                        <button className="checkInButton" onClick={handleSendFinishLetter} disabled={sendingFinishLetter} style={{ padding: '0 1rem', background: 'var(--nuriek-blue)', color: 'white' }}>
-                                            {sendingFinishLetter ? <Loader2 size={16} className="animate-spin" /> : "Send Email"}
-                                        </button>
-                                    </div>
+                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Open the generator to preview and send the finish letter to their personal email.</p>
+                                    <Link 
+                                        href={`/admin/finish-letter?fromIntern=${user.id}`}
+                                        className="checkInButton" 
+                                        style={{ display: 'inline-block', width: '100%', textAlign: 'center', background: 'var(--nuriek-blue)', color: 'white', textDecoration: 'none', padding: '0.5rem 1rem' }}
+                                    >
+                                        Open Finish Letter Generator
+                                    </Link>
                                 </div>
                             )}
 

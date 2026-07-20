@@ -16,6 +16,7 @@ export type FinishLetterInput = {
     reportingManager: string;
     hrSignatory: string;
     hrSignatoryTitle: string;
+    hrSignatureDataUrl?: string;
 };
 
 function escapeHtml(s: string): string {
@@ -83,7 +84,11 @@ export function buildInternFinishLetterHtml(data: FinishLetterInput): string {
     <div class="letter-closing" style="margin-top: 40px;">
       <p>Yours sincerely,</p>
       <p><strong>For ${NURIEK_LEGAL_NAME}</strong></p>
-      <br/><br/><br/>
+      ${
+          data.hrSignatureDataUrl
+              ? `<div style="height: 60px; margin: 10px 0;"><img src="${data.hrSignatureDataUrl}" alt="Signature" style="max-height: 60px;" /></div>`
+              : `<br/><br/><br/>`
+      }
       <p>
         <strong>${hrName}</strong><br>
         ${hrTitle}<br>
