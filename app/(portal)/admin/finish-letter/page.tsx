@@ -53,6 +53,7 @@ export default function FinishLetterPage() {
             id: string;
             name: string | null;
             email: string | null;
+            personalEmail?: string | null;
             role: string;
             reportsTo?: { id: string; name: string | null; email: string | null } | null;
         }[]
@@ -272,8 +273,18 @@ export default function FinishLetterPage() {
     }, [searchParams, directoryUsers, applyReportingFromUser]);
 
     useEffect(() => {
-        if (directoryUserId) applyReportingFromUser(directoryUserId);
-    }, [directoryUserId, applyReportingFromUser]);
+        if (directoryUserId && directoryUsers.length > 0) {
+            const u = directoryUsers.find((x) => x.id === directoryUserId);
+            if (u) {
+                setForm((f) => ({
+                    ...f,
+                    candidateName: f.candidateName || u.name || "",
+                    candidateEmail: f.candidateEmail || u.personalEmail || u.email || "",
+                }));
+            }
+            applyReportingFromUser(directoryUserId);
+        }
+    }, [directoryUserId, directoryUsers, applyReportingFromUser]);
 
     if (
         status === "loading" ||
@@ -323,15 +334,15 @@ export default function FinishLetterPage() {
                         </div>
                     )}
 
-                    <div className="olFormSection glass">
-                        <h2 className="olFormSectionTitle">
+                    <div className="olSection">
+                        <h2 className="olSectionTitle">
                             <User size={16} /> Candidate details
                         </h2>
 
-                        <div className="olFormGroup">
-                            <label className="olFormLabel">Link to Intern Profile (Optional)</label>
+                        <div className="admField">
+                            <label className="admLabel">Link to Intern Profile (Optional)</label>
                             <select
-                                className="olFormSelect"
+                                className="admSelect"
                                 value={directoryUserId}
                                 onChange={(e) => {
                                     const id = e.target.value;
@@ -340,7 +351,7 @@ export default function FinishLetterPage() {
                                         const u = directoryUsers.find((x) => x.id === id);
                                         if (u) {
                                             update("candidateName", u.name || "");
-                                            update("candidateEmail", u.email || "");
+                                            update("candidateEmail", u.personalEmail || u.email || "");
                                             applyReportingFromUser(id);
                                         }
                                     }
@@ -357,19 +368,19 @@ export default function FinishLetterPage() {
                             </select>
                         </div>
 
-                        <div className="olFormGroup">
-                            <label className="olFormLabel">Full name</label>
+                        <div className="admField">
+                            <label className="admLabel">Full name</label>
                             <input
-                                className="olFormInput"
+                                className="admInput"
                                 value={form.candidateName}
                                 onChange={(e) => update("candidateName", e.target.value)}
                                 placeholder="e.g. John Doe"
                             />
                         </div>
-                        <div className="olFormGroup">
-                            <label className="olFormLabel">Personal email</label>
+                        <div className="admField">
+                            <label className="admLabel">Personal email</label>
                             <input
-                                className="olFormInput"
+                                className="admInput"
                                 type="email"
                                 value={form.candidateEmail}
                                 onChange={(e) => update("candidateEmail", e.target.value)}
@@ -378,31 +389,31 @@ export default function FinishLetterPage() {
                         </div>
                     </div>
 
-                    <div className="olFormSection glass">
-                        <h2 className="olFormSectionTitle">
+                    <div className="olSection">
+                        <h2 className="olSectionTitle">
                             <Briefcase size={16} /> Internship details
                         </h2>
-                        <div className="olFormRow">
-                            <div className="olFormGroup">
-                                <label className="olFormLabel">Department</label>
+                        <div className="olGrid2">
+                            <div className="admField">
+                                <label className="admLabel">Department</label>
                                 <input
-                                    className="olFormInput"
+                                    className="admInput"
                                     value={form.department}
                                     onChange={(e) => update("department", e.target.value)}
                                 />
                             </div>
-                            <div className="olFormGroup">
-                                <label className="olFormLabel">Position / Title</label>
+                            <div className="admField">
+                                <label className="admLabel">Position / Title</label>
                                 <input
-                                    className="olFormInput"
+                                    className="admInput"
                                     value={form.position}
                                     onChange={(e) => update("position", e.target.value)}
                                 />
                             </div>
                         </div>
 
-                        <div className="olFormGroup">
-                            <label className="olFormLabel">Reporting Manager</label>
+                        <div className="admField">
+                            <label className="admLabel">Reporting Manager</label>
                             {directoryUserId ? (
                                 <div style={{ marginBottom: "0.5rem" }}>
                                     <ReportingManagerSelect
@@ -426,7 +437,7 @@ export default function FinishLetterPage() {
                                 </div>
                             ) : (
                                 <input
-                                    className="olFormInput"
+                                    className="admInput"
                                     value={form.reportingTo}
                                     onChange={(e) => update("reportingTo", e.target.value)}
                                     placeholder="e.g. Jane Smith, Engineering Manager"
@@ -435,25 +446,25 @@ export default function FinishLetterPage() {
                         </div>
                     </div>
 
-                    <div className="olFormSection glass">
-                        <h2 className="olFormSectionTitle">
+                    <div className="olSection">
+                        <h2 className="olSectionTitle">
                             <Calendar size={16} /> Dates
                         </h2>
-                        <div className="olFormRow">
-                            <div className="olFormGroup">
-                                <label className="olFormLabel">Joining Date</label>
+                        <div className="olGrid2">
+                            <div className="admField">
+                                <label className="admLabel">Joining Date</label>
                                 <input
                                     type="date"
-                                    className="olFormInput"
+                                    className="admInput"
                                     value={form.joiningDate}
                                     onChange={(e) => update("joiningDate", e.target.value)}
                                 />
                             </div>
-                            <div className="olFormGroup">
-                                <label className="olFormLabel">Last Working Date</label>
+                            <div className="admField">
+                                <label className="admLabel">Last Working Date</label>
                                 <input
                                     type="date"
-                                    className="olFormInput"
+                                    className="admInput"
                                     value={form.lastWorkingDate}
                                     onChange={(e) => update("lastWorkingDate", e.target.value)}
                                 />
@@ -461,8 +472,8 @@ export default function FinishLetterPage() {
                         </div>
                     </div>
 
-                    <div className="olFormSection glass">
-                        <h2 className="olFormSectionTitle" style={{ display: "flex", justifyContent: "space-between" }}>
+                    <div className="olSection">
+                        <h2 className="olSectionTitle" style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                 <PenLine size={16} /> Signatory
                             </span>
@@ -483,28 +494,28 @@ export default function FinishLetterPage() {
                                 </button>
                             )}
                         </h2>
-                        <div className="olFormGroup">
-                            <label className="olFormLabel">Signatory Name</label>
+                        <div className="admField">
+                            <label className="admLabel">Signatory Name</label>
                             <input
-                                className="olFormInput"
+                                className="admInput"
                                 value={form.hrSignatory}
                                 onChange={(e) => update("hrSignatory", e.target.value)}
                                 placeholder="e.g. Jane Smith"
                             />
                         </div>
-                        <div className="olFormGroup">
-                            <label className="olFormLabel">Signatory Title</label>
+                        <div className="admField">
+                            <label className="admLabel">Signatory Title</label>
                             <input
-                                className="olFormInput"
+                                className="admInput"
                                 value={form.hrSignatoryTitle}
                                 onChange={(e) => update("hrSignatoryTitle", e.target.value)}
                                 placeholder="e.g. Head of Human Resources"
                             />
                         </div>
-                        <div className="olFormGroup">
-                            <label className="olFormLabel">Digital Signature (Data URL)</label>
+                        <div className="admField">
+                            <label className="admLabel">Digital Signature (Data URL)</label>
                             <input
-                                className="olFormInput"
+                                className="admInput"
                                 value={form.hrSignatureDataUrl}
                                 onChange={(e) => update("hrSignatureDataUrl", e.target.value)}
                                 placeholder="data:image/png;base64,..."
