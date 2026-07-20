@@ -8,8 +8,9 @@ import { reportingManagerDisplayName } from "@/lib/reporting-manager";
 
 export async function POST(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     const user = await requireHrPermission("offer_letter");
     if (isNextResponse(user)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -23,7 +24,7 @@ export async function POST(
             return NextResponse.json({ error: "Last working date is required" }, { status: 400 });
         }
 
-        const internId = params.id;
+        const internId = id;
         const intern = await prisma.user.findUnique({
             where: { id: internId },
             include: {

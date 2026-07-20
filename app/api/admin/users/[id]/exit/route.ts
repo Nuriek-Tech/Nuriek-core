@@ -5,15 +5,16 @@ import { logAudit } from "@/lib/audit";
 
 export async function POST(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     const user = await requireHrPermission("manage_users");
     if (isNextResponse(user)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
-        const targetUserId = params.id;
+        const targetUserId = id;
 
         const targetUser = await prisma.user.findUnique({
             where: { id: targetUserId },
