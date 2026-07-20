@@ -53,12 +53,12 @@ export async function sendFinishLetterEmail(params: FinishLetterEmailParams) {
         const info = await getTransporter().sendMail({
             from: zohoMailFrom(),
             to: params.to,
-            subject: \`Internship Completion Letter - \${params.candidateName}\`,
+            subject: `Internship Completion Letter - ${params.candidateName}`,
             html: htmlBody,
             attachments: [
                 nuriekEmailHeaderAttachment(),
                 {
-                    filename: \`Internship_Completion_\${params.candidateName.replace(/\\s+/g, '_')}.html\`,
+                    filename: `Internship_Completion_${params.candidateName.replace(/\s+/g, '_')}.html`,
                     content: params.finishLetterHtml,
                     contentType: 'text/html'
                 }
