@@ -552,8 +552,8 @@ export default function FinishLetterPage() {
                                     <X size={20} />
                                 </button>
                             </header>
-                            <div className="olModalBody" style={{ padding: 0 }}>
-                                <iframe srcDoc={previewHtml} style={{ width: "100%", height: "100%", border: "none" }} title="Preview" />
+                            <div className="olPreviewBody">
+                                <iframe srcDoc={previewHtml} className="olPreviewFrame" title="Preview" />
                             </div>
                             <footer className="olModalFoot">
                                 <button type="button" className="olBtnSecondary" onClick={() => setPreviewOpen(false)}>Close</button>
