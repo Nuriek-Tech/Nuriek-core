@@ -22,7 +22,11 @@ import {
     UserCheck,
     Clock,
     ExternalLink,
+    Mail,
+    Building2,
+    Briefcase,
 } from "lucide-react";
+import { reportingManagerDisplayName } from "@/lib/reporting-manager";
 import { daysInSystem, resolveInternStartDate } from "@/lib/intern-tenure";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -359,13 +363,29 @@ export default function InternsPage() {
                                         </div>
                                         <div className="internIntro">
                                             <span className="internName">{intern.name}</span>
-                                            <span className="internMeta">
-                                                {intern.profile?.position || "Intern"}
-                                                {intern.duration ? ` · ${intern.duration}` : ""}
-                                                {intern.profile?.department
-                                                    ? ` · ${intern.profile.department}`
-                                                    : ""}
-                                            </span>
+                                            <div className="internMeta" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)' }}>
+                                                    <Briefcase size={12} />
+                                                    {intern.profile?.position || "Intern"}
+                                                    {intern.duration ? ` · ${intern.duration}` : ""}
+                                                </div>
+                                                {intern.profile?.department && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)' }}>
+                                                        <Building2 size={12} />
+                                                        {intern.profile.department}
+                                                    </div>
+                                                )}
+                                                {intern.email && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)' }}>
+                                                        <Mail size={12} />
+                                                        {intern.email}
+                                                    </div>
+                                                )}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)' }}>
+                                                    <Users size={12} />
+                                                    {reportingManagerDisplayName(intern.reportsTo)}
+                                                </div>
+                                            </div>
                                             {(() => {
                                                 const start = resolveInternStartDate(
                                                     intern.profile?.joinDate,

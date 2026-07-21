@@ -26,6 +26,7 @@ import {
 import "@/styles/people-hub.css";
 import "../interns.css";
 import "./intern-detail.css";
+import UserLifecycleTimeline from "@/components/UserLifecycleTimeline";
 import { reportingManagerDisplayName } from "@/lib/reporting-manager";
 import { formatRoleLabel } from "@/lib/roles";
 
@@ -509,6 +510,10 @@ export default function InternDetailPage() {
                             </table>
                         </div>
                     )}
+                </section>
+
+                <section className="internDetailSection glass" style={{ marginTop: '1.5rem' }}>
+                    <UserLifecycleTimeline userId={userId} />
                 </section>
             </div>
 

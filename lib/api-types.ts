@@ -59,6 +59,12 @@ export type UserSummary = {
         department?: string | null;
         joinDate?: string | null;
     } | null;
+    reportsTo?: {
+        id: string;
+        name: string | null;
+        email: string | null;
+        role?: string;
+    } | null;
 };
 
 export type DocumentRecord = {

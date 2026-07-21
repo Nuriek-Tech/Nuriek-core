@@ -24,6 +24,7 @@ import { BadgeIcon } from "@/lib/nav-icons";
 import "@/styles/directory.css";
 import Link from "next/link";
 import EmployeeDocumentsPanel from "@/components/EmployeeDocumentsPanel";
+import UserLifecycleTimeline from "@/components/UserLifecycleTimeline";
 import ReportingManagerSelect from "@/components/ReportingManagerSelect";
 import { reportingManagerDisplayName } from "@/lib/reporting-manager";
 import { formatRoleLabel } from "@/lib/roles";
@@ -524,6 +525,10 @@ export default function ClientProfileWrapper({
                             </p>
                         )}
                     </div>
+                </section>
+                
+                <section className="infoSection glass">
+                    <UserLifecycleTimeline userId={user.id} />
                 </section>
             </div>
 
