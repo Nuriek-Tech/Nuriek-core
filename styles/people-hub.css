@@ -141,6 +141,29 @@
 .hubKpiValue--red { color: #ff3b30; }
 .hubKpiValue--default { color: var(--text-primary); }
 
+/* Tabs */
+.hubTab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0 0 0.5rem 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.hubTab:hover {
+  color: var(--text-primary);
+}
+
+.hubTab--active {
+  color: var(--nuriek-blue);
+  border-bottom-color: var(--nuriek-blue);
+  font-weight: 600;
+}
+
 /* Toolbar */
 .hubToolbar {
   display: flex;

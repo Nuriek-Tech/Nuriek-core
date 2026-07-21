@@ -52,6 +52,7 @@ export type UserSummary = {
     name: string | null;
     email: string | null;
     role: Role;
+    isActive: boolean;
     createdAt?: string;
     profile?: {
         position?: string | null;

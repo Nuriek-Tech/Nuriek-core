@@ -43,6 +43,10 @@ interface InternData extends UserSummary, Partial<InternPerformance> {
         department?: string;
         joinDate?: string;
     };
+    history?: {
+        sentAt: string;
+        sentBy: string | null;
+    };
 }
 
 function riskClass(risk: string): string {
@@ -69,6 +73,7 @@ export default function InternsPage() {
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
     const [riskFilter, setRiskFilter] = useState("ALL");
+    const [viewMode, setViewMode] = useState<"ACTIVE" | "HISTORY">("ACTIVE");
 
     const [editForm, setEditForm] = useState({
         learningProgress: 0,
@@ -93,6 +98,18 @@ export default function InternsPage() {
                     internList = internList.filter((u) => u.id === session.user.id);
                 }
 
+                let historyMap: Record<string, { sentAt: string; sentBy: string | null }> = {};
+                if (isAdmin) {
+                    try {
+                        const hRes = await fetch("/api/interns/history");
+                        if (hRes.ok) {
+                            historyMap = await hRes.json();
+                        }
+                    } catch (e) {
+                        console.error("Failed to fetch intern history", e);
+                    }
+                }
+
                 const perfPromises = internList.map(async (intern) => {
                     try {
                         const pRes = await fetch(
@@ -105,9 +122,10 @@ export default function InternsPage() {
                             ...intern,
                             email: intern.email ?? "",
                             ...pData,
+                            history: historyMap[intern.id]
                         } as InternData;
                     } catch {
-                        return { ...intern, email: intern.email ?? "" } as InternData;
+                        return { ...intern, email: intern.email ?? "", history: historyMap[intern.id] } as InternData;
                     }
                 });
 
@@ -124,28 +142,32 @@ export default function InternsPage() {
         fetchInterns();
     }, [fetchInterns]);
 
-    const filteredInterns = useMemo(() => {
-        if (riskFilter === "ALL") return interns;
-        return interns.filter((i) => (i.conversionRisk || "LOW") === riskFilter);
-    }, [interns, riskFilter]);
+    const activeInterns = useMemo(() => interns.filter(i => i.isActive !== false), [interns]);
+    const historyInterns = useMemo(() => interns.filter(i => i.isActive === false), [interns]);
+
+    const displayedInterns = useMemo(() => {
+        const list = viewMode === "ACTIVE" ? activeInterns : historyInterns;
+        if (riskFilter === "ALL") return list;
+        return list.filter((i) => (i.conversionRisk || "LOW") === riskFilter);
+    }, [activeInterns, historyInterns, riskFilter, viewMode]);
 
     const avgScore =
-        interns.length > 0
-            ? Math.round(interns.reduce((a, i) => a + (i.score || 0), 0) / interns.length)
+        activeInterns.length > 0
+            ? Math.round(activeInterns.reduce((a, i) => a + (i.score || 0), 0) / activeInterns.length)
             : 0;
     const avgLearning =
-        interns.length > 0
+        activeInterns.length > 0
             ? Math.round(
-                  interns.reduce((a, i) => a + (i.learningProgress || 0), 0) / interns.length
+                  activeInterns.reduce((a, i) => a + (i.learningProgress || 0), 0) / activeInterns.length
               )
             : 0;
     const avgTasks =
-        interns.length > 0
+        activeInterns.length > 0
             ? Math.round(
-                  interns.reduce((a, i) => a + (i.taskCompletion || 0), 0) / interns.length
+                  activeInterns.reduce((a, i) => a + (i.taskCompletion || 0), 0) / activeInterns.length
               )
             : 0;
-    const highRiskCount = interns.filter((i) => i.conversionRisk === "HIGH").length;
+    const highRiskCount = activeInterns.filter((i) => i.conversionRisk === "HIGH").length;
 
     const startEdit = (intern: InternData) => {
         const onboarding: ChecklistItem[] = JSON.parse(intern.onboardingData || "[]");
@@ -235,8 +257,8 @@ export default function InternsPage() {
                     <div className="hubHeroActions">
                         <span className="hubStatChip">
                             <Users size={16} color="var(--nuriek-blue)" />
-                            <strong>{interns.length}</strong> intern
-                            {interns.length !== 1 ? "s" : ""}
+                            <strong>{activeInterns.length}</strong> active intern
+                            {activeInterns.length !== 1 ? "s" : ""}
                         </span>
                         <Link
                             href="/directory/onboard?role=INTERN"
@@ -249,7 +271,26 @@ export default function InternsPage() {
                 )}
             </header>
 
-            {isAdmin && interns.length > 0 && (
+            {isAdmin && (
+                <div style={{ borderBottom: "1px solid var(--border)", marginBottom: "1.5rem" }}>
+                    <div style={{ display: "flex", gap: "2rem" }}>
+                        <button
+                            className={`hubTab ${viewMode === "ACTIVE" ? "hubTab--active" : ""}`}
+                            onClick={() => setViewMode("ACTIVE")}
+                        >
+                            Active Cohort ({activeInterns.length})
+                        </button>
+                        <button
+                            className={`hubTab ${viewMode === "HISTORY" ? "hubTab--active" : ""}`}
+                            onClick={() => setViewMode("HISTORY")}
+                        >
+                            History & Alumni ({historyInterns.length})
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {isAdmin && activeInterns.length > 0 && viewMode === "ACTIVE" && (
                 <section className="hubKpiGrid" aria-label="Cohort summary">
                     <article className="hubKpiCard glass">
                         <span className="hubKpiLabel">Avg score</span>
@@ -270,7 +311,7 @@ export default function InternsPage() {
                 </section>
             )}
 
-            {isAdmin && interns.length > 0 && (
+            {isAdmin && (viewMode === "ACTIVE" ? activeInterns.length > 0 : historyInterns.length > 0) && (
                 <div className="hubToolbar">
                     <div className="hubFilters" role="group" aria-label="Filter by risk">
                         {["ALL", "LOW", "MEDIUM", "HIGH"].map((r) => (
@@ -285,7 +326,7 @@ export default function InternsPage() {
                         ))}
                     </div>
                     <span className="hubResultCount">
-                        {filteredInterns.length} of {interns.length}
+                        {displayedInterns.length} of {viewMode === "ACTIVE" ? activeInterns.length : historyInterns.length}
                     </span>
                 </div>
             )}
@@ -295,8 +336,8 @@ export default function InternsPage() {
                     <div className="hubLoading">
                         <Loader2 className="animate-spin" size={32} />
                     </div>
-                ) : filteredInterns.length > 0 ? (
-                    filteredInterns.map((intern) => {
+                ) : displayedInterns.length > 0 ? (
+                    displayedInterns.map((intern) => {
                         const onboarding: ChecklistItem[] = JSON.parse(
                             intern.onboardingData || "[]"
                         );
@@ -347,13 +388,18 @@ export default function InternsPage() {
                                         </div>
                                     </div>
                                     <div className="internHeaderActions">
+                                        {intern.history?.sentAt && (
+                                            <div className="internSentBadge" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--nuriek-green)', background: 'rgba(52, 199, 89, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '1rem', whiteSpace: 'nowrap' }}>
+                                                <CheckCircle2 size={12} /> Letter Sent: {new Date(intern.history.sentAt).toLocaleDateString()}
+                                            </div>
+                                        )}
                                         <div className="internScoreRing">
                                             <span className="internScoreValue">
                                                 {intern.score || 0}
                                             </span>
                                             <span className="internScoreLabel">Score</span>
                                         </div>
-                                        {isAdmin && !isEditing && (
+                                        {isAdmin && !isEditing && intern.isActive !== false && (
                                             <button
                                                 type="button"
                                                 className="internEditBtn"
@@ -697,9 +743,9 @@ export default function InternsPage() {
                                 <p>
                                     {riskFilter !== "ALL"
                                         ? "No interns match this risk filter."
-                                        : "No interns in the cohort yet."}
+                                        : viewMode === "HISTORY" ? "No historical interns found." : "No interns in the cohort yet."}
                                 </p>
-                                {riskFilter === "ALL" && (
+                                {riskFilter === "ALL" && viewMode === "ACTIVE" && (
                                     <Link
                                         href="/directory/onboard?role=INTERN"
                                         className="hubBtnPrimary"
