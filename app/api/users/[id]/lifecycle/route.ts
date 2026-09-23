@@ -68,6 +68,9 @@ export async function GET(
             LEAVE_APPROVE: "Leave approved", LEAVE_REJECT: "Leave rejected", LEAVE_REVOKE: "Leave approval revoked",
             DOCUMENT_SIGN: "Document signed", DOCUMENT_UPLOAD: "Document uploaded",
             FINISH_LETTER_SENT: "Finish letter sent", PASSWORD_CHANGE: "Password changed",
+            LOGIN: "Signed in", PASSWORD_RESET_REQUEST: "Password reset requested",
+            PASSWORD_RESET_COMPLETE: "Password reset completed", TIMESHEET_SUBMIT: "Timesheet submitted",
+            TIMESHEET_APPROVE: "Timesheet approved", HR_ACCESS_UPDATE: "HR access updated",
         };
         logs.forEach(log => {
             if (log.action === "OFFBOARDING_TASK_UPDATE") {
@@ -78,9 +81,8 @@ export async function GET(
                 } catch { /* ignore malformed audit metadata */ }
                 return;
             }
-            const title = actionNames[log.action];
-            if (!title) return;
-            const category = log.action.startsWith("ATTENDANCE") ? "Attendance" : log.action.startsWith("LEAVE") ? "Leave" : log.action.startsWith("DOCUMENT") ? "Document" : "Lifecycle";
+            const title = actionNames[log.action] || log.action.toLowerCase().split("_").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+            const category = log.action.startsWith("ATTENDANCE") ? "Attendance" : log.action.startsWith("LEAVE") ? "Leave" : log.action.startsWith("DOCUMENT") ? "Document" : log.action === "LOGIN" || log.action.startsWith("PASSWORD") ? "Account" : log.action.startsWith("TIMESHEET") ? "Timesheet" : "Lifecycle";
             let detail = log.actorEmail ? `By ${log.actorEmail}` : "";
             if (isAdmin && log.action === "EMPLOYEE_EXITED") {
                 try {
