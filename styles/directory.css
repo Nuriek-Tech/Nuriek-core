@@ -6,6 +6,7 @@
 .peopleHeader p:last-child { color: var(--text-secondary); font-size: .94rem; }
 .peoplePrimary { display: inline-flex; align-items: center; justify-content: center; gap: .55rem; background: var(--nuriek-blue); color: #fff; border-radius: 10px; padding: .8rem 1rem; font-size: .86rem; font-weight: 700; white-space: nowrap; text-decoration: none; box-shadow: 0 8px 24px rgba(var(--nuriek-blue-rgb), .18); }
 .peoplePrimary:hover { filter: brightness(1.12); }
+[data-theme="dark"] .peoplePrimary { color: #14251b; }
 .peopleSummary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .85rem; margin-bottom: 1.3rem; }
 .peopleSummary > div { padding: 1.25rem 1.35rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); display: flex; flex-direction: column; gap: .3rem; }
 .peopleSummary span { color: var(--text-secondary); font-size: .77rem; font-weight: 650; }
@@ -241,12 +242,15 @@
   justify-content: center;
   gap: 0.5rem;
   background: var(--surface-lighter);
+  color: var(--text-primary);
 }
 
 .profileActionMain {
   background: var(--nuriek-blue);
   color: white;
 }
+[data-theme="dark"] .profileActionMain { color: #14251b; }
+.profileWorkspace .employeeInfo .name, .profileWorkspace .sectionHeader, .profileWorkspace .activityHeading h2, .peoplePanelHeader h2 { font-family: inherit; }
 
 .profileMain {
   display: flex;

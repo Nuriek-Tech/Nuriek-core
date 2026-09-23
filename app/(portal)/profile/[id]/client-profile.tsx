@@ -271,14 +271,14 @@ export default function ClientProfileWrapper({
                     {isHrOrAdmin && (
                         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
                             {user.isActive && user.onboardingStatus === "IN_PROGRESS" && <button onClick={handleCompleteOnboarding} disabled={completingOnboarding} className="profileAction profileActionMain"><CheckCircle2 size={18}/><span>{completingOnboarding ? "Completing…" : "Complete onboarding"}</span></button>}
-                            <button onClick={() => setShowReviewModal(true)} className="profileAction profileActionMain">
+                            {user.isActive && <button onClick={() => setShowReviewModal(true)} className="profileAction profileActionMain">
                                 <Zap size={18} />
                                 <span>Performance Review</span>
-                            </button>
-                            <button onClick={() => setShowBadgeModal(true)} className="profileAction">
+                            </button>}
+                            {user.isActive && <button onClick={() => setShowBadgeModal(true)} className="profileAction">
                                 <Award size={18} />
                                 <span>Award Badge</span>
-                            </button>
+                            </button>}
                             {user.isActive && <button
                                 onClick={() => setExitOpen(true)}
                                 className="profileAction"
@@ -496,7 +496,7 @@ export default function ClientProfileWrapper({
                                 </div>
                             ) : (
                                 <span className="detailValue">
-                                    {user.profile?.joinDate ? new Date(user.profile.joinDate).toLocaleDateString() : "Jan 2025"}
+                                    {user.profile?.joinDate ? new Date(user.profile.joinDate).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" }) : "Not recorded"}
                                 </span>
                             )}
                         </div>
