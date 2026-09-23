@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 export type AuditAction =
     | "USER_ONBOARD"
     | "USER_REPORTING_MANAGER_UPDATE"
+    | "USER_RECORD_UPDATE"
     | "USER_DELETE"
     | "LOGIN"
     | "PASSWORD_CHANGE"
@@ -18,6 +19,7 @@ export type AuditAction =
     | "FINISH_LETTER_SENT"
     | "USER_DEACTIVATED"
     | "LEAVE_REQUEST"
+    | "LEAVE_CANCEL"
     | "LEAVE_APPROVE"
     | "LEAVE_REJECT"
     | "LEAVE_REVOKE"
@@ -27,6 +29,7 @@ export type AuditAction =
     | "ATTENDANCE_CHECK_IN"
     | "ATTENDANCE_CHECK_OUT"
     | "ATTENDANCE_BREAK"
+    | "ATTENDANCE_CORRECT"
     | "HR_ACCESS_UPDATE"
     | "OFFER_DELETE"
     | "OFFER_PURGE"

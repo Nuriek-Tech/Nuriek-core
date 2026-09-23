@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession, isNextResponse } from "@/lib/rbac";
-import { canApproveLeave, canRevokeLeave } from "@/lib/leave-approval";
+import { canApproveLeaveRequest, canRevokeLeave } from "@/lib/leave-approval";
 import { applyLeaveDecision } from "@/lib/leave-actions";
 import { normalizeRole } from "@/lib/roles";
 import type { Role } from "@/lib/constants";
+import { invalidateLeaveApprovalTokens } from "@/lib/leave-approval-token";
+import { logAudit } from "@/lib/audit";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -28,7 +30,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         const leave = await prisma.leave.findUnique({
             where: { id },
             include: {
-                user: { select: { id: true, name: true, email: true, role: true } },
+                user: { select: { id: true, name: true, email: true, role: true, reportsToId: true } },
             },
         });
 
@@ -67,7 +69,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         }
 
         const requesterRole = normalizeRole(leave.user.role) as Role;
-        if (!canApproveLeave(user.role, requesterRole)) {
+        if (!canApproveLeaveRequest(user.role, requesterRole, user.id, leave.user.reportsToId)) {
             return NextResponse.json(
                 {
                     error:
@@ -96,4 +98,18 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         console.error("Leave approval error:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
+}
+
+export async function DELETE(_req: Request, { params }: RouteParams) {
+    const user = await requireSession();
+    if (isNextResponse(user)) return user;
+    const { id } = await params;
+    const changed = await prisma.leave.updateMany({
+        where: { id, userId: user.id, status: "PENDING" },
+        data: { status: "CANCELLED" },
+    });
+    if (changed.count !== 1) return NextResponse.json({ error: "Only your pending requests can be cancelled" }, { status: 409 });
+    await invalidateLeaveApprovalTokens(id);
+    await logAudit({ actorId: user.id, actorEmail: user.email, action: "LEAVE_CANCEL", entity: "Leave", entityId: id });
+    return NextResponse.json({ success: true });
 }

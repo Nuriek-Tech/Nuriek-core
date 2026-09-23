@@ -10,7 +10,7 @@ export async function GET() {
         const logs = await prisma.attendance.findMany({
             where: { userId: user.id },
             orderBy: { checkIn: 'desc' },
-            take: 5
+            take: 30
         });
 
         return NextResponse.json(logs);
@@ -20,20 +20,5 @@ export async function GET() {
 }
 
 export async function POST() {
-    const user = await requireSession();
-    if (isNextResponse(user)) return user;
-
-    try {
-        const log = await prisma.attendance.create({
-            data: {
-                userId: user.id,
-                status: "ON_TIME",
-                checkIn: new Date(),
-            }
-        });
-
-        return NextResponse.json(log);
-    } catch {
-        return new NextResponse("Internal Server Error", { status: 500 });
-    }
+    return NextResponse.json({ error: "Use the check-in action to record attendance" }, { status: 405 });
 }

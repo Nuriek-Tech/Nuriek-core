@@ -20,7 +20,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XL from "xlsx";
 import ReportDetailModal from "@/components/ReportDetailModal";
-import { canApproveLeave, canRevokeLeave } from "@/lib/leave-approval";
+import { canRevokeLeave } from "@/lib/leave-approval";
 import type { Role } from "@/lib/constants";
 import "@/styles/people-hub.css";
 import "@/styles/reports.css";
@@ -29,6 +29,7 @@ import type { LeaveRecord, UserSummary } from "@/lib/api-types";
 
 type LeaveReportRow = LeaveRecord & {
     user: Pick<UserSummary, "name" | "email" | "role">;
+    canApprove?: boolean;
 };
 
 function statusClass(status: string): string {
@@ -371,10 +372,7 @@ export default function LeaveReportClient() {
                                                     }}
                                                 >
                                                     {item.status === "PENDING" &&
-                                                        canApproveLeave(
-                                                            viewerRole,
-                                                            item.user.role as Role
-                                                        ) && (
+                                                        item.canApprove && (
                                                             <>
                                                                 <button
                                                                     type="button"

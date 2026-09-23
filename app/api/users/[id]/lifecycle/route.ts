@@ -1,24 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireRoles } from "@/lib/rbac";
+import { requireSession, isNextResponse } from "@/lib/rbac";
 import { ROLES } from "@/lib/constants";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 
 export async function GET(
-    req: NextRequest,
+    _req: NextRequest,
     context: { params: Promise<{ id: string }> }
 ) {
     const params = await context.params;
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const session = await requireSession();
+    if (isNextResponse(session)) return session;
+    const isAdmin = session.role === ROLES.FOUNDER || session.role === ROLES.HR_ADMIN;
+    const isSelf = session.id === params.id;
+    const directReport = !isAdmin && !isSelf && (session.role === ROLES.MANAGER || session.role === ROLES.TEAM_LEAD)
+        ? await prisma.user.findFirst({ where: { id: params.id, reportsToId: session.id }, select: { id: true } })
+        : null;
 
-    const isHrOrAdmin = [ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER, ROLES.TEAM_LEAD].includes(session.user.role as any);
-    const isSelf = session.user.id === params.id;
-
-    if (!isHrOrAdmin && !isSelf) {
+    if (!isAdmin && !isSelf && !directReport) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -36,7 +34,7 @@ export async function GET(
         });
 
         // Also fetch any offer letters sent to them for earlier onboarding events
-        let offerLetters: any[] = [];
+        let offerLetters: { id: string; createdAt: Date; emailedAt: Date | null; signedAt: Date | null; status: string }[] = [];
         if (user?.email || user?.personalEmail) {
             const emails = [user.email, user.personalEmail].filter(Boolean) as string[];
             if (emails.length > 0) {
@@ -44,13 +42,14 @@ export async function GET(
                     where: {
                         candidateEmail: { in: emails }
                     },
+                    select: { id: true, createdAt: true, emailedAt: true, signedAt: true, status: true },
                     orderBy: { createdAt: "asc" }
                 });
             }
         }
 
         return NextResponse.json({ logs, offerLetters });
-    } catch (e: any) {
+    } catch {
         return NextResponse.json({ error: "Failed to fetch lifecycle" }, { status: 500 });
     }
 }

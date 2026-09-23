@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import {
     Search,
     Loader2,
@@ -10,6 +11,7 @@ import {
     FileSpreadsheet,
     FileText,
     Eye,
+    Pencil,
     ArrowLeft,
 } from "lucide-react";
 import jsPDF from "jspdf";
@@ -18,6 +20,7 @@ import * as XL from "xlsx";
 import ReportDetailModal from "@/components/ReportDetailModal";
 import "@/styles/people-hub.css";
 import "@/styles/reports.css";
+import "@/styles/attendance-correction.css";
 import "../../admin/documents/admin-documents.css";
 import type { AttendanceLog, UserSummary } from "@/lib/api-types";
 
@@ -34,6 +37,8 @@ function statusClass(status: string): string {
 }
 
 export default function AttendanceReportPage() {
+    const { data: session } = useSession();
+    const canCorrect = session?.user?.role === "FOUNDER" || session?.user?.role === "HR_ADMIN";
     const [data, setData] = useState<AttendanceReportRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -45,6 +50,43 @@ export default function AttendanceReportPage() {
     >(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalData, setModalData] = useState<AttendanceLog[]>([]);
+    const [editing, setEditing] = useState<AttendanceReportRow | null>(null);
+    const [correctedCheckOut, setCorrectedCheckOut] = useState("");
+    const [correctionReason, setCorrectionReason] = useState("");
+    const [correctionError, setCorrectionError] = useState("");
+    const [savingCorrection, setSavingCorrection] = useState(false);
+
+    const startCorrection = (item: AttendanceReportRow) => {
+        setEditing(item);
+        setCorrectedCheckOut(item.checkOut ? new Date(new Date(item.checkOut).getTime() - new Date(item.checkOut).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "");
+        setCorrectionReason("");
+        setCorrectionError("");
+    };
+
+    const saveCorrection = async () => {
+        if (!editing) return;
+        setSavingCorrection(true);
+        setCorrectionError("");
+        try {
+            const checkOut = new Date(correctedCheckOut);
+            const response = await fetch(`/api/admin/attendance/${editing.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ checkOut: checkOut.toISOString(), reason: correctionReason }),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                setCorrectionError(result.error || "Could not correct attendance");
+                return;
+            }
+            setEditing(null);
+            await fetchData();
+        } catch {
+            setCorrectionError("Enter a valid check-out time and try again.");
+        } finally {
+            setSavingCorrection(false);
+        }
+    };
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -294,6 +336,7 @@ export default function AttendanceReportPage() {
                                                 </span>
                                             </td>
                                             <td>
+                                                {canCorrect && <button type="button" className="repViewBtn" onClick={() => startCorrection(item)} aria-label={`Correct attendance for ${item.user.name || "employee"}`}><Pencil size={16} /></button>}
                                                 <button
                                                     type="button"
                                                     className="repViewBtn"
@@ -325,6 +368,16 @@ export default function AttendanceReportPage() {
                 data={modalData}
                 type="ATTENDANCE"
             />
+            {editing && <div className="attendanceCorrectionBackdrop" role="presentation">
+                <section className="attendanceCorrectionModal glass" role="dialog" aria-modal="true" aria-label="Correct attendance">
+                    <h2>Correct attendance</h2>
+                    <p>{editing.user.name || editing.user.email} · {new Date(editing.checkIn).toLocaleString()}</p>
+                    <label>Check-out time<input type="datetime-local" value={correctedCheckOut} onChange={event => setCorrectedCheckOut(event.target.value)} /></label>
+                    <label>Reason for correction<textarea rows={3} maxLength={500} value={correctionReason} onChange={event => setCorrectionReason(event.target.value)} /></label>
+                    {correctionError && <p role="alert" className="attendanceCorrectionError">{correctionError}</p>}
+                    <div className="attendanceCorrectionActions"><button type="button" onClick={() => setEditing(null)}>Cancel</button><button type="button" onClick={saveCorrection} disabled={savingCorrection || !correctedCheckOut || !correctionReason.trim()}>{savingCorrection ? "Saving…" : "Save correction"}</button></div>
+                </section>
+            </div>}
         </div>
     );
 }

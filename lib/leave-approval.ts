@@ -17,6 +17,19 @@ export function canApproveLeave(approverRole: Role, requesterRole: Role): boolea
     return approverRole === ROLES.FOUNDER || approverRole === ROLES.HR_ADMIN;
 }
 
+export function canApproveLeaveRequest(
+    approverRole: Role,
+    requesterRole: Role,
+    approverId: string,
+    reportingManagerId: string | null
+): boolean {
+    return canApproveLeave(approverRole, requesterRole) || (
+        requesterRole !== ROLES.HR_ADMIN &&
+        (approverRole === ROLES.MANAGER || approverRole === ROLES.TEAM_LEAD) &&
+        reportingManagerId === approverId
+    );
+}
+
 export function canReviewLeaveQueue(role: Role): boolean {
     return role === ROLES.FOUNDER || role === ROLES.HR_ADMIN;
 }
@@ -26,7 +39,7 @@ export function canRevokeLeave(role: Role): boolean {
 }
 
 export function leaveApprovalHint(): string {
-    return "Awaiting reporting manager approval (email sent)";
+    return "Awaiting approval";
 }
 
 export function isValidReportingManagerEmail(email: string): boolean {

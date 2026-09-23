@@ -213,13 +213,20 @@ export async function getLeaveBalance(userId: string, role: Role) {
     const approved = leaves.filter((l) => l.status === "APPROVED" && inCurrentPeriod(l));
     const pending = leaves.filter((l) => l.status === "PENDING" && inCurrentPeriod(l));
 
+    const daysInPeriod = (leave: { startDate: Date; endDate: Date }) => period
+        ? countInclusiveDays(
+            leave.startDate > period.periodStart ? leave.startDate : period.periodStart,
+            leave.endDate < period.periodEnd ? leave.endDate : period.periodEnd
+        )
+        : countInclusiveDays(leave.startDate, leave.endDate);
+
     const usedDays = approved.reduce(
-        (sum, leave) => sum + countInclusiveDays(leave.startDate, leave.endDate),
+        (sum, leave) => sum + daysInPeriod(leave),
         0
     );
 
     const pendingDays = pending.reduce(
-        (sum, leave) => sum + countInclusiveDays(leave.startDate, leave.endDate),
+        (sum, leave) => sum + daysInPeriod(leave),
         0
     );
 
@@ -236,7 +243,7 @@ export async function getLeaveBalance(userId: string, role: Role) {
         nextAnniversary: proration.nextAnniversary,
         used: usedDays,
         pending: pendingDays,
-        remaining: Math.max(0, Math.round((total - usedDays) * 10) / 10),
+        remaining: Math.max(0, Math.round((total - usedDays - pendingDays) * 10) / 10),
         byType: {
             casual: approved.filter((l) => l.type === "CASUAL").length,
             sick: approved.filter((l) => l.type === "SICK").length,

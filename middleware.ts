@@ -2,7 +2,7 @@ import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
 const LOGIN_PATH = "/login";
-const PUBLIC_PATHS = ["/contact-hr", "/offer", "/leave/respond"];
+const PUBLIC_PATHS = ["/contact-hr", "/offer", "/leave/respond", "/leave/approve"];
 
 function isPublicAsset(pathname: string) {
     return (

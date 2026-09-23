@@ -222,6 +222,9 @@ export default function DirectoryClient({
                                     View profile
                                     <ChevronRight size={16} />
                                 </Link>
+                                {canOnboard && (isSuperAdmin || (employee.role !== "FOUNDER" && employee.role !== "HR_ADMIN")) && (
+                                    <Link href={`/directory/${employee.id}/edit`} className="dirViewBtn">Edit record</Link>
+                                )}
                                 {isSuperAdmin && <DeleteUserButton userId={employee.id} />}
                             </footer>
                         </article>

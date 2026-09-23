@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession, isNextResponse } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
+import { Prisma } from "@prisma/client";
 
 export async function POST(req: Request) {
     const user = await requireSession();
@@ -11,27 +12,6 @@ export async function POST(req: Request) {
     const id = user.id;
 
     if (path.endsWith("check-in")) {
-        const openLog = await prisma.attendance.findFirst({
-            where: { userId: id, checkOut: null },
-            orderBy: { checkIn: "desc" },
-        });
-
-        if (openLog) {
-            const today = new Date().toDateString();
-            const openDay = new Date(openLog.checkIn).toDateString();
-            if (openDay === today) {
-                return NextResponse.json(
-                    { error: "You are already checked in. Use Check out when you finish." },
-                    { status: 400 }
-                );
-            }
-            // Close a forgotten session from a previous day so today can start fresh
-            await prisma.attendance.update({
-                where: { id: openLog.id },
-                data: { checkOut: new Date(openLog.checkIn.getTime() + 8 * 60 * 60 * 1000) },
-            });
-        }
-
         const [config, dbUser] = await Promise.all([
             prisma.systemConfig.findUnique({ where: { id: "global" } }),
             prisma.user.findUnique({ where: { id }, select: { role: true } }),
@@ -42,21 +22,29 @@ export async function POST(req: Request) {
         const flexibleRoles = config?.flexibleRoles?.split(",") || ["INTERN"];
 
         const now = new Date();
-        const startOfToday = new Date();
-        startOfToday.setHours(workStartHour, workStartMin, 0, 0);
+        const clock = new Intl.DateTimeFormat("en-GB", { timeZone: process.env.WORK_TIME_ZONE || "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+        const hour = Number(clock.find(part => part.type === "hour")?.value ?? 0);
+        const minute = Number(clock.find(part => part.type === "minute")?.value ?? 0);
 
         let status = "PRESENT";
         if (!flexibleRoles.includes(dbUser?.role || "")) {
-            if (now > startOfToday) status = "LATE";
+            if (hour * 60 + minute > workStartHour * 60 + workStartMin) status = "LATE";
         }
 
-        const log = await prisma.attendance.create({
-            data: {
-                userId: id,
-                status,
-                checkIn: now,
-            },
-        });
+        let log;
+        try {
+            log = await prisma.$transaction(async tx => {
+                const open = await tx.attendance.findFirst({ where: { userId: id, checkOut: null }, select: { id: true } });
+                if (open) return null;
+                return tx.attendance.create({ data: { userId: id, status, checkIn: now } });
+            }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+                return NextResponse.json({ error: "Attendance was updated. Refresh and try again." }, { status: 409 });
+            }
+            throw error;
+        }
+        if (!log) return NextResponse.json({ error: "You have an open attendance session. Check out before checking in again." }, { status: 409 });
 
         await logAudit({
             actorId: id,
@@ -79,9 +67,14 @@ export async function POST(req: Request) {
             return new NextResponse("No active log", { status: 404 });
         }
 
+        const checkoutAt = new Date();
+        if (checkoutAt.getTime() - activeLog.checkIn.getTime() > 24 * 60 * 60 * 1000) {
+            return NextResponse.json({ error: "This session is more than 24 hours old. Ask HR to correct its check-out time." }, { status: 409 });
+        }
+
         const log = await prisma.attendance.update({
             where: { id: activeLog.id },
-            data: { checkOut: new Date(), breakEnd: activeLog.breakStart && !activeLog.breakEnd ? new Date() : undefined },
+            data: { checkOut: checkoutAt, breakEnd: activeLog.breakStart && !activeLog.breakEnd ? checkoutAt : undefined },
         });
 
         await logAudit({
@@ -105,8 +98,8 @@ export async function POST(req: Request) {
             return new NextResponse("Check in before starting a break", { status: 400 });
         }
 
-        if (activeLog.breakStart && !activeLog.breakEnd) {
-            return new NextResponse("Break already in progress", { status: 400 });
+        if (activeLog.breakStart) {
+            return NextResponse.json({ error: activeLog.breakEnd ? "Only one break can be recorded per attendance session" : "Break already in progress" }, { status: 400 });
         }
 
         const log = await prisma.attendance.update({

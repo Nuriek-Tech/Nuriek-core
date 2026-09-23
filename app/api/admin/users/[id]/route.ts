@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRoles, isNextResponse } from "@/lib/rbac";
-import { ADMIN_ROLES } from "@/lib/constants";
+import { ADMIN_ROLES, ROLES } from "@/lib/constants";
 import {
     REPORTING_MANAGER_ROLES,
     reportingManagerDisplayName,
@@ -26,9 +26,17 @@ export async function DELETE(
             return new NextResponse("Cannot delete your own account", { status: 400 });
         }
 
+        const target = await prisma.user.findUnique({ where: { id }, select: { role: true, email: true } });
+        if (!target) return new NextResponse("User not found", { status: 404 });
+        if (user.role === ROLES.HR_ADMIN && ADMIN_ROLES.includes(target.role as (typeof ADMIN_ROLES)[number])) {
+            return new NextResponse("Only Super Admin can delete administrators", { status: 403 });
+        }
+
         await prisma.user.delete({
             where: { id },
         });
+
+        await logAudit({ actorId: user.id, actorEmail: user.email, action: "USER_DELETE", entity: "User", entityId: id, metadata: { deletedEmail: target.email } });
 
         return NextResponse.json({ success: true, message: "User deleted successfully" });
     } catch (error) {
@@ -50,6 +58,11 @@ export async function PATCH(
     }
 
     try {
+        const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+        if (!target) return NextResponse.json({ error: "User not found" }, { status: 404 });
+        if (actor.role === ROLES.HR_ADMIN && ADMIN_ROLES.includes(target.role as (typeof ADMIN_ROLES)[number])) {
+            return NextResponse.json({ error: "Only Super Admin can edit administrator records" }, { status: 403 });
+        }
         const body = await req.json();
         const reportsToId =
             body.reportsToId === null || body.reportsToId === ""
@@ -66,16 +79,24 @@ export async function PATCH(
         if (reportsToId) {
             const manager = await prisma.user.findUnique({
                 where: { id: reportsToId },
-                select: { id: true, role: true, name: true, email: true },
+                select: { id: true, role: true, name: true, email: true, isActive: true, reportsToId: true },
             });
             if (!manager) {
                 return NextResponse.json({ error: "Reporting manager not found" }, { status: 404 });
             }
-            if (!REPORTING_MANAGER_ROLES.includes(manager.role as (typeof REPORTING_MANAGER_ROLES)[number])) {
+            if (!manager.isActive || !REPORTING_MANAGER_ROLES.includes(manager.role as (typeof REPORTING_MANAGER_ROLES)[number])) {
                 return NextResponse.json(
                     { error: "Selected user cannot be a reporting manager" },
                     { status: 400 }
                 );
+            }
+            let ancestor = manager.reportsToId;
+            const visited = new Set([reportsToId]);
+            while (ancestor) {
+                if (ancestor === id || visited.has(ancestor)) return NextResponse.json({ error: "Reporting structure cannot contain a cycle" }, { status: 400 });
+                visited.add(ancestor);
+                const next = await prisma.user.findUnique({ where: { id: ancestor }, select: { reportsToId: true } });
+                ancestor = next?.reportsToId ?? null;
             }
         }
 

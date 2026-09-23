@@ -24,6 +24,7 @@ async function resolveUserFromDb(email?: string | null, id?: string | null) {
                 email: true,
                 name: true,
                 role: true,
+                isActive: true,
                 mustChangePassword: true,
                 hrPermissions: true,
             },
@@ -37,6 +38,7 @@ async function resolveUserFromDb(email?: string | null, id?: string | null) {
                 email: true,
                 name: true,
                 role: true,
+                isActive: true,
                 mustChangePassword: true,
                 hrPermissions: true,
             },
@@ -51,7 +53,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
     const dbUser = await resolveUserFromDb(session.user.email, session.user.id);
 
-    if (dbUser) {
+    if (dbUser?.isActive) {
         return {
             id: dbUser.id,
             email: dbUser.email,
@@ -62,16 +64,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
         };
     }
 
-    if (!session.user.id) return null;
-
-    return {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name,
-        role: normalizeRole(session.user.role) ?? ROLES.EMPLOYEE,
-        mustChangePassword: session.user.mustChangePassword ?? false,
-        hrPermissions: null,
-    };
+    return null;
 }
 
 export function unauthorized(message = "Unauthorized") {

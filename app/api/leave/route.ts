@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession, isNextResponse } from "@/lib/rbac";
 import { getLeaveBalance, countInclusiveDays } from "@/lib/leave";
-import { isLeaveExemptRole, isValidReportingManagerEmail } from "@/lib/leave-approval";
+import { isLeaveExemptRole } from "@/lib/leave-approval";
+import { validateLeaveInput } from "@/lib/leave-request";
 import { logAudit } from "@/lib/audit";
 import { createLeaveApprovalTokens, LEAVE_APPROVAL_EXPIRY_MS } from "@/lib/leave-approval-token";
 import { sendLeaveApprovalRequestEmail } from "@/lib/mail";
 import { portalEmailUrl } from "@/lib/portal-url";
-import { normalizeWorkEmail } from "@/lib/email-policy";
 import type { Role } from "@/lib/constants";
+import { REPORTING_MANAGER_ROLES } from "@/lib/reporting-manager";
 
 function formatEmailDate(d: Date): string {
     return d.toLocaleDateString("en-IN", {
@@ -23,7 +24,7 @@ export async function GET() {
     if (isNextResponse(user)) return user;
 
     try {
-        const [leaves, dbUser] = await Promise.all([
+        const [leaves, dbUser, fallbackApprover] = await Promise.all([
             prisma.leave.findMany({
                 where: { userId: user.id },
                 orderBy: { startDate: "desc" },
@@ -31,9 +32,10 @@ export async function GET() {
             prisma.user.findUnique({
                 where: { id: user.id },
                 select: {
-                    reportsTo: { select: { email: true, name: true } },
+                    reportsTo: { select: { email: true, name: true, isActive: true, role: true } },
                 },
             }),
+            prisma.user.findFirst({ where: { isActive: true, role: { in: user.role === "HR_ADMIN" ? ["FOUNDER"] : ["HR_ADMIN", "FOUNDER"] }, email: { not: null } }, select: { email: true, name: true }, orderBy: { createdAt: "asc" } }),
         ]);
 
         const exempt = isLeaveExemptRole(user.role);
@@ -45,8 +47,8 @@ export async function GET() {
             leaves,
             balance,
             leaveExempt: exempt,
-            defaultReportingManagerEmail: dbUser?.reportsTo?.email ?? null,
-            defaultReportingManagerName: dbUser?.reportsTo?.name ?? null,
+            defaultReportingManagerEmail: dbUser?.reportsTo?.isActive && REPORTING_MANAGER_ROLES.includes(dbUser.reportsTo.role as (typeof REPORTING_MANAGER_ROLES)[number]) && (user.role !== "HR_ADMIN" || dbUser.reportsTo.role === "FOUNDER") ? dbUser.reportsTo.email : fallbackApprover?.email ?? null,
+            defaultReportingManagerName: dbUser?.reportsTo?.isActive && REPORTING_MANAGER_ROLES.includes(dbUser.reportsTo.role as (typeof REPORTING_MANAGER_ROLES)[number]) && (user.role !== "HR_ADMIN" || dbUser.reportsTo.role === "FOUNDER") ? dbUser.reportsTo.name : fallbackApprover?.name ?? null,
         });
     } catch {
         return new NextResponse("Internal Server Error", { status: 500 });
@@ -65,24 +67,25 @@ export async function POST(req: Request) {
     }
 
     try {
-        const body = await req.json();
-        const { type, startDate, endDate, reason, reportingManagerEmail } = body;
-
-        if (!type || !startDate || !endDate) {
-            return new NextResponse("Missing required fields", { status: 400 });
-        }
-
-        const managerEmail = normalizeWorkEmail(String(reportingManagerEmail || ""));
-        if (!managerEmail || !isValidReportingManagerEmail(managerEmail)) {
-            return NextResponse.json(
-                { error: "Enter a valid reporting manager email for approval." },
-                { status: 400 }
-            );
-        }
-
-        const start = new Date(startDate);
-        const end = new Date(endDate);
+        const validated = validateLeaveInput(await req.json());
+        if (!validated.ok) return NextResponse.json({ error: validated.error }, { status: 400 });
+        const { type, start, end, reason } = validated;
         const requestedDays = countInclusiveDays(start, end);
+        const [dbUser, fallbackApprover] = await Promise.all([
+            prisma.user.findUnique({ where: { id: user.id }, select: { reportsTo: { select: { id: true, email: true, isActive: true, role: true } } } }),
+            prisma.user.findFirst({ where: { isActive: true, role: { in: user.role === "HR_ADMIN" ? ["FOUNDER"] : ["HR_ADMIN", "FOUNDER"] }, email: { not: null } }, select: { email: true }, orderBy: { createdAt: "asc" } }),
+        ]);
+        const manager = dbUser?.reportsTo;
+        const validManager = manager?.isActive && manager.id !== user.id && manager.email && REPORTING_MANAGER_ROLES.includes(manager.role as (typeof REPORTING_MANAGER_ROLES)[number]) &&
+            (user.role !== "HR_ADMIN" || manager.role === "FOUNDER");
+        const managerEmail = validManager ? manager.email : fallbackApprover?.email;
+        if (!managerEmail) return NextResponse.json({ error: "No approver is configured. Contact HR." }, { status: 409 });
+
+        const overlapping = await prisma.leave.findFirst({
+            where: { userId: user.id, status: { in: ["PENDING", "APPROVED"] }, startDate: { lte: end }, endDate: { gte: start } },
+            select: { id: true },
+        });
+        if (overlapping) return NextResponse.json({ error: "These dates overlap an existing leave request" }, { status: 409 });
         const balance = await getLeaveBalance(user.id, user.role as Role);
 
         if (requestedDays > balance.remaining) {
@@ -100,7 +103,7 @@ export async function POST(req: Request) {
                 type,
                 startDate: start,
                 endDate: end,
-                reason: reason ? String(reason).trim() : null,
+                reason,
                 reportingManagerEmail: managerEmail,
                 status: "PENDING",
             },
@@ -116,7 +119,7 @@ export async function POST(req: Request) {
             startDate: formatEmailDate(start),
             endDate: formatEmailDate(end),
             days: requestedDays,
-            reason: reason ? String(reason).trim() : null,
+            reason,
             approveUrl: portalEmailUrl(`/api/leave/respond/${approveToken}`),
             rejectUrl: portalEmailUrl(`/api/leave/respond/${rejectToken}`),
             expiresDays: Math.round(LEAVE_APPROVAL_EXPIRY_MS / (24 * 60 * 60 * 1000)),

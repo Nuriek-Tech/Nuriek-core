@@ -1,0 +1,11 @@
+.attendanceCorrectionBackdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 1rem; background: rgba(0, 0, 0, .65); }
+.attendanceCorrectionModal { width: min(100%, 480px); padding: 1.5rem; border: 1px solid var(--border); border-radius: var(--radius-lg); display: grid; gap: 1rem; }
+.attendanceCorrectionModal h2 { font-size: 1.2rem; }
+.attendanceCorrectionModal p { font-size: .85rem; color: var(--text-secondary); }
+.attendanceCorrectionModal label { display: grid; gap: .45rem; font-size: .85rem; font-weight: 600; }
+.attendanceCorrectionModal input, .attendanceCorrectionModal textarea { width: 100%; padding: .7rem; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--surface-lighter); color: var(--text-primary); font: inherit; }
+.attendanceCorrectionActions { display: flex; gap: .75rem; justify-content: flex-end; }
+.attendanceCorrectionActions button { padding: .6rem 1rem; border-radius: var(--radius-md); }
+.attendanceCorrectionActions button:last-child { background: var(--nuriek-blue); color: white; }
+.attendanceCorrectionActions button:disabled { opacity: .5; }
+.attendanceCorrectionError { color: #ff453a !important; }

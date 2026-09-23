@@ -11,6 +11,14 @@ Internal HR and operations portal for Nuriek (`@nuriek.com` accounts).
 - Intern performance, reports, and certificate requests
 - Audit logging for sensitive actions
 
+## Employee management workflows
+
+- **Employee records:** HR Admin and Super Admin can edit names, work details, join dates, contact details, and reporting managers from the directory. Changes are audited. HR Admin cannot edit administrator records.
+- **Attendance:** Employees check in and out through the action buttons. Open sessions cannot be duplicated or silently closed with invented hours. HR Admin and Super Admin can correct a check-out from the attendance report with a required reason; corrections are audited and limited to a 24-hour session.
+- **Leave:** Employees submit dated leave requests and can cancel pending requests. The app rejects invalid dates and overlapping active requests, reserves pending days in the available balance, and routes approvals to the assigned manager or an active HR/Super Admin fallback. Managers can review their direct reports in the leave report; HR and Super Admin can review broader requests. Email approval links require a confirmation click before changing state.
+
+Set `WORK_TIME_ZONE` to the office's IANA time zone (default `Asia/Kolkata`) so attendance lateness follows local work hours.
+
 ## Prerequisites
 
 - Node.js 20+

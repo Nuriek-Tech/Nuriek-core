@@ -47,6 +47,7 @@ export default function DashboardPage() {
     const [isLoadingLogs, setIsLoadingLogs] = useState(true);
     const [isLoadingAdminSummary, setIsLoadingAdminSummary] = useState(true);
     const [onBreak, setOnBreak] = useState(false);
+    const [attendanceError, setAttendanceError] = useState("");
     const [officeName, setOfficeName] = useState("Bangalore (HQ)");
 
     const { role: userRole, isReady: roleReady } = useNavRole();
@@ -139,6 +140,7 @@ export default function DashboardPage() {
 
     const handleCheckIn = async () => {
         setIsLoadingLogs(true);
+        setAttendanceError("");
         try {
             const res = await fetch("/api/attendance/check-in", { method: "POST" });
             if (res.ok) {
@@ -147,9 +149,12 @@ export default function DashboardPage() {
                     new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                 );
                 fetchData();
+            } else {
+                const body = await res.json().catch(() => ({}));
+                setAttendanceError(body.error || "Could not check in");
             }
         } catch {
-            console.error("Check-in failed");
+            setAttendanceError("Could not check in. Try again.");
         } finally {
             setIsLoadingLogs(false);
         }
@@ -157,15 +162,19 @@ export default function DashboardPage() {
 
     const handleCheckOut = async () => {
         setIsLoadingLogs(true);
+        setAttendanceError("");
         try {
             const res = await fetch("/api/attendance/check-out", { method: "POST" });
             if (res.ok) {
                 setIsCheckedIn(false);
                 setCheckInTime(null);
                 fetchData();
+            } else {
+                const body = await res.json().catch(() => ({}));
+                setAttendanceError(body.error || "Could not check out");
             }
         } catch {
-            console.error("Check-out failed");
+            setAttendanceError("Could not check out. Try again.");
         } finally {
             setIsLoadingLogs(false);
         }
@@ -173,14 +182,18 @@ export default function DashboardPage() {
 
     const handleBreak = async (action: "break-start" | "break-end") => {
         setIsLoadingLogs(true);
+        setAttendanceError("");
         try {
             const res = await fetch(`/api/attendance/${action}`, { method: "POST" });
             if (res.ok) {
                 setOnBreak(action === "break-start");
                 await fetchData();
+            } else {
+                const body = await res.json().catch(() => ({}));
+                setAttendanceError(body.error || "Could not update break");
             }
-        } catch (error) {
-            console.error("Break action failed", error);
+        } catch {
+            setAttendanceError("Could not update break. Try again.");
         } finally {
             setIsLoadingLogs(false);
         }
@@ -450,6 +463,8 @@ export default function DashboardPage() {
                                     </>
                                 )}
                             </div>
+
+                            {attendanceError && <p role="alert" style={{ color: "#ff453a", fontSize: ".8rem", marginTop: ".75rem" }}>{attendanceError}</p>}
 
                             <div>
                                 <p

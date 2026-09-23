@@ -51,6 +51,7 @@ export async function DELETE(req: Request) {
         if (!userId) {
             return new NextResponse("User ID required", { status: 400 });
         }
+        if (userId === current.id) return new NextResponse("Cannot delete your own account", { status: 400 });
 
         const userToDelete = await prisma.user.findUnique({
             where: { id: userId },

@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ROLES } from "@/lib/constants";
+import { ROLES, REPORT_ROLES } from "@/lib/constants";
+import { canApproveLeaveRequest } from "@/lib/leave-approval";
+import { requireSession, isNextResponse } from "@/lib/rbac";
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
+    const session = await requireSession();
+    if (isNextResponse(session)) return session;
 
-    if (!session || !([ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER] as string[]).includes((session.user as { role: string }).role)) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!REPORT_ROLES.includes(session.role)) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -37,13 +38,14 @@ export async function GET(req: Request) {
         }
 
         const leaves = await prisma.leave.findMany({
-            where,
+            where: { ...where, ...(session.role === ROLES.MANAGER ? { user: { reportsToId: session.id } } : {}) },
             include: {
                 user: {
                     select: {
                         name: true,
                         email: true,
                         role: true,
+                        reportsToId: true,
                         profile: { select: { department: true } },
                     },
                 },
@@ -53,7 +55,10 @@ export async function GET(req: Request) {
             },
         });
 
-        return NextResponse.json(leaves);
+        return NextResponse.json(leaves.map(leave => ({
+            ...leave,
+            canApprove: leave.status === "PENDING" && canApproveLeaveRequest(session.role, leave.user.role, session.id, leave.user.reportsToId),
+        })));
     } catch (error) {
         console.error("Leaves Report API Error:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

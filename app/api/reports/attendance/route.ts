@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
 import { Prisma, UserRole } from "@prisma/client";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ROLES } from "@/lib/constants";
+import { ROLES, REPORT_ROLES } from "@/lib/constants";
+import { requireSession, isNextResponse } from "@/lib/rbac";
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
+    const session = await requireSession();
+    if (isNextResponse(session)) return session;
 
-    if (!session || !([ROLES.FOUNDER, ROLES.HR_ADMIN, ROLES.MANAGER] as string[]).includes((session.user as { role: string }).role)) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!REPORT_ROLES.includes(session.role)) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -21,6 +21,7 @@ export async function GET(req: Request) {
 
     try {
         const where: Prisma.AttendanceWhereInput = {};
+        if (session.role === ROLES.MANAGER) where.user = { reportsToId: session.id };
 
         if (month) {
             const [year, monthNum] = month.split("-").map(Number);
@@ -32,7 +33,7 @@ export async function GET(req: Request) {
         if (userId) where.userId = userId;
         if (status) where.status = status;
         if (role || department) {
-            where.user = {};
+            where.user = where.user ?? {};
             if (role) where.user.role = role as UserRole;
             if (department) {
                 where.user.profile = {

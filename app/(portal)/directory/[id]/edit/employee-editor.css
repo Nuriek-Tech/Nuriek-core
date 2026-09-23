@@ -1,0 +1,15 @@
+.employeeEditor { max-width: 860px; }
+.employeeEditorBack { display: inline-flex; align-items: center; gap: .4rem; margin-bottom: 1.25rem; color: var(--text-secondary); font-size: .85rem; }
+.employeeEditorForm { padding: clamp(1.25rem, 3vw, 2rem); border: 1px solid var(--border); border-radius: var(--radius-lg); display: grid; gap: 1.25rem; }
+.employeeEditorGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+.employeeEditorForm label { display: grid; gap: .45rem; font-size: .82rem; font-weight: 600; color: var(--text-secondary); }
+.employeeEditorForm input, .employeeEditorForm select, .employeeEditorForm textarea { width: 100%; padding: .72rem .85rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-lighter); color: var(--text-primary); font: inherit; }
+.employeeEditorForm input:focus-visible, .employeeEditorForm select:focus-visible, .employeeEditorForm textarea:focus-visible { outline: 2px solid var(--nuriek-blue); outline-offset: 2px; }
+.employeeEditorInfo { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--border); padding-bottom: .8rem; font-size: .85rem; }
+.employeeEditorInfo span { color: var(--text-secondary); }
+.employeeEditorInfo strong { overflow-wrap: anywhere; }
+.employeeEditorError { color: #ff453a; font-size: .85rem; }
+.employeeEditorActions { display: flex; align-items: center; justify-content: flex-end; gap: 1rem; }
+.employeeEditorActions > a { color: var(--text-secondary); font-size: .85rem; }
+.employeeEditorActions button:disabled { opacity: .6; cursor: wait; }
+@media (max-width: 600px) { .employeeEditorGrid { grid-template-columns: 1fr; } }

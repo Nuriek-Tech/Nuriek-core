@@ -1,9 +1,8 @@
 import "@/styles/directory.css";
 import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { isAdminRole, isSuperAdminRole, type Role } from "@/lib/constants";
+import { notFound, redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/rbac";
+import { isAdminRole, isSuperAdminRole, isDirectoryHiddenRole, type Role } from "@/lib/constants";
 import { isLeaveExemptRole } from "@/lib/leave-approval";
 import { getLeaveBalance } from "@/lib/leave";
 import ClientProfileWrapper from "./client-profile";
@@ -13,29 +12,35 @@ type LeaveEntry = { status: string };
 
 export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
-    const viewerRole = session?.user?.role;
+    const session = await getSessionUser();
+    if (!session) redirect("/login");
+    const viewerRole = session.role;
     const isHrOrAdmin = isAdminRole(viewerRole);
 
     const user = await prisma.user.findUnique({
         where: { id },
-        include: {
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            reportsToId: true,
             reportsTo: { select: { id: true, name: true, email: true, role: true } },
-            profile: true,
-            attendance: isHrOrAdmin ? true : false,
-            leaves: isHrOrAdmin ? true : false,
-            badges: true,
+            profile: { select: { department: true, joinDate: true } },
+            attendance: isHrOrAdmin ? { select: { status: true } } : false,
+            leaves: isHrOrAdmin ? { select: { status: true } } : false,
+            badges: { select: { id: true, name: true, icon: true } },
             signatures: {
-                include: { document: true }
+                select: { id: true, signedAt: true, document: { select: { title: true } } }
             },
             reviews: {
-                include: { reviewer: { select: { name: true } } },
+                select: { id: true, rating: true, feedback: true, createdAt: true, reviewer: { select: { name: true } } },
                 orderBy: { createdAt: 'desc' }
             }
         }
     });
 
-    if (!user) {
+    if (!user || (!isHrOrAdmin && isDirectoryHiddenRole(user.role))) {
         return notFound();
     }
 
@@ -46,6 +51,18 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
     const lateArrivals = attendance.filter((a) => a.status === "LATE").length;
     const attendanceRate = totalAttendance > 0 ? Math.round(((totalAttendance - lateArrivals) / totalAttendance) * 100) : 100;
     const approvedLeaves = leaves.filter((l) => l.status === "APPROVED").length;
+    const safeUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        reportsToId: user.reportsToId,
+        reportsTo: user.reportsTo,
+        profile: user.profile,
+        badges: user.badges,
+        signatures: user.signatures,
+        reviews: user.reviews,
+    };
 
     const leaveBalance =
         isSuperAdminRole(viewerRole as Role) &&
@@ -55,7 +72,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
 
     return (
         <ClientProfileWrapper
-            user={user}
+            user={safeUser}
             viewerRole={viewerRole}
             isHrOrAdmin={isHrOrAdmin}
             analytics={{ attendanceRate, lateArrivals, approvedLeaves }}

@@ -87,7 +87,7 @@ export default function FinishLetterPage() {
         const loadPrefs = async () => {
             const saved = loadHrSignatoryPrefs();
             const legacySig = loadLegacySignatureOnly();
-            let server: any = null;
+            let server: { hrSignatory?: string; hrSignatoryTitle?: string; hrSignatureDataUrl?: string } | null = null;
 
             try {
                 const res = await fetch("/api/admin/offer-letter/hr-signatory");

@@ -33,6 +33,7 @@ export default function LeavePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [showApplyModal, setShowApplyModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [cancellingId, setCancellingId] = useState<string | null>(null);
 
     // Calendar navigation state
     const today = new Date();
@@ -44,9 +45,9 @@ export default function LeavePage() {
         startDate: "",
         endDate: "",
         reason: "",
-        reportingManagerEmail: "",
     });
     const [defaultManagerName, setDefaultManagerName] = useState("");
+    const [approverEmail, setApproverEmail] = useState("");
 
     const userRole = session?.user?.role;
     const isSuperAdmin = userRole === "FOUNDER";
@@ -72,10 +73,7 @@ export default function LeavePage() {
                     setBalance(data.balance ?? null);
                     const managerEmail = data.defaultReportingManagerEmail ?? "";
                     setDefaultManagerName(data.defaultReportingManagerName ?? "");
-                    setFormData((f) => ({
-                        ...f,
-                        reportingManagerEmail: f.reportingManagerEmail || managerEmail,
-                    }));
+                    setApproverEmail(managerEmail);
                 }
             }
             if (holidaysRes.ok) setHolidays(await holidaysRes.json());
@@ -103,7 +101,6 @@ export default function LeavePage() {
                     startDate: "",
                     endDate: "",
                     reason: "",
-                    reportingManagerEmail: "",
                 });
                 fetchData();
                 if (body.emailSent === false) {
@@ -122,6 +119,24 @@ export default function LeavePage() {
             alert("Failed to apply for leave");
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const cancelLeave = async (id: string) => {
+        if (!window.confirm("Cancel this pending leave request?")) return;
+        setCancellingId(id);
+        try {
+            const response = await fetch(`/api/leave/${id}`, { method: "DELETE" });
+            if (!response.ok) {
+                const result = await response.json().catch(() => ({}));
+                alert(result.error || "Could not cancel leave");
+            } else {
+                await fetchData();
+            }
+        } catch {
+            alert("Could not cancel leave");
+        } finally {
+            setCancellingId(null);
         }
     };
 
@@ -256,20 +271,8 @@ export default function LeavePage() {
                                 </div>
                             </div>
                             <div className="inputGroup">
-                                <label className="statLabel">Reporting manager email *</label>
-                                <input
-                                    type="email"
-                                    className="input"
-                                    required
-                                    value={formData.reportingManagerEmail}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            reportingManagerEmail: e.target.value,
-                                        })
-                                    }
-                                    placeholder="manager@nuriek.com"
-                                />
+                                <label className="statLabel">Approval goes to</label>
+                                <input type="text" className="input" value={approverEmail || "No approver configured"} readOnly />
                                 {defaultManagerName && (
                                     <p
                                         style={{
@@ -278,7 +281,7 @@ export default function LeavePage() {
                                             marginTop: "0.35rem",
                                         }}
                                     >
-                                        Default: {defaultManagerName}
+                                        {defaultManagerName}
                                     </p>
                                 )}
                             </div>
@@ -346,7 +349,7 @@ export default function LeavePage() {
                             <span className="statValue" style={{ color: "#34c759" }}>{remainingLeaves}</span>
                         </div>
                         <div className="statItem">
-                            <span className="statLabel">Pending Review</span>
+                            <span className="statLabel">Pending days</span>
                             <span className="statValue" style={{ color: "#ff9f0a" }}>{pendingLeaves}</span>
                         </div>
                     </div>
@@ -498,6 +501,7 @@ export default function LeavePage() {
                                         {leaveApprovalHint()}
                                     </p>
                                 )}
+                                {leave.status === "PENDING" && <button type="button" onClick={() => cancelLeave(leave.id)} disabled={cancellingId === leave.id} style={{ marginTop: ".4rem", color: "var(--nuriek-blue)", fontSize: ".75rem" }}>{cancellingId === leave.id ? "Cancelling…" : "Cancel request"}</button>}
                                 </div>
                             </div>
                         </div>

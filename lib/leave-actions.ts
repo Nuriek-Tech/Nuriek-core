@@ -39,14 +39,16 @@ export async function applyLeaveDecision({
             };
         }
 
-        const updated = await prisma.leave.update({
-            where: { id: leaveId },
+        const changed = await prisma.leave.updateMany({
+            where: { id: leaveId, status: "APPROVED" },
             data: {
                 status: "REVOKED",
                 revokedAt: new Date(),
                 revokedById: actorId ?? null,
             },
         });
+        if (changed.count !== 1) return { ok: false as const, error: "This request was already processed", status: 409 };
+        const updated = await prisma.leave.findUniqueOrThrow({ where: { id: leaveId } });
 
         await invalidateLeaveApprovalTokens(leaveId);
 
@@ -74,13 +76,15 @@ export async function applyLeaveDecision({
         };
     }
 
-    const updated = await prisma.leave.update({
-        where: { id: leaveId },
+    const changed = await prisma.leave.updateMany({
+        where: { id: leaveId, status: "PENDING" },
         data: {
             status,
             approvalActorEmail: actorEmail ?? null,
         },
     });
+    if (changed.count !== 1) return { ok: false as const, error: "This request was already processed", status: 409 };
+    const updated = await prisma.leave.findUniqueOrThrow({ where: { id: leaveId } });
 
     await invalidateLeaveApprovalTokens(leaveId);
 

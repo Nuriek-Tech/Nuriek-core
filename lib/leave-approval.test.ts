@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canApproveLeave, canRevokeLeave, isLeaveExemptRole } from "./leave-approval";
+import { canApproveLeave, canApproveLeaveRequest, canRevokeLeave, isLeaveExemptRole } from "./leave-approval";
 import { ROLES } from "./constants";
 
 describe("canApproveLeave", () => {
@@ -19,6 +19,17 @@ describe("canRevokeLeave", () => {
         expect(canRevokeLeave(ROLES.FOUNDER)).toBe(true);
         expect(canRevokeLeave(ROLES.HR_ADMIN)).toBe(true);
         expect(canRevokeLeave(ROLES.EMPLOYEE)).toBe(false);
+    });
+});
+
+describe("canApproveLeaveRequest", () => {
+    it("limits manager approval to direct reports", () => {
+        expect(canApproveLeaveRequest(ROLES.MANAGER, ROLES.EMPLOYEE, "manager-1", "manager-1")).toBe(true);
+        expect(canApproveLeaveRequest(ROLES.MANAGER, ROLES.EMPLOYEE, "manager-2", "manager-1")).toBe(false);
+    });
+
+    it("reserves HR requests for Super Admin", () => {
+        expect(canApproveLeaveRequest(ROLES.MANAGER, ROLES.HR_ADMIN, "manager-1", "manager-1")).toBe(false);
     });
 });
 

@@ -1,12 +1,13 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/rbac";
 import { ROLES, filterDirectoryEmployees } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import DirectoryClient from "./DirectoryClient";
 
 export default async function DirectoryPage() {
-    const session = await getServerSession(authOptions);
-    const viewerRole = session?.user?.role;
+    const session = await getSessionUser();
+    if (!session) redirect("/login");
+    const viewerRole = session.role;
     const canOnboard =
         viewerRole === ROLES.FOUNDER || viewerRole === ROLES.HR_ADMIN;
     const isSuperAdmin = viewerRole === ROLES.FOUNDER;
