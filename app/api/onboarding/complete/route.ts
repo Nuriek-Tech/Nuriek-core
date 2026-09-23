@@ -8,11 +8,15 @@ export async function POST() {
     if (isNextResponse(user)) return user;
 
     try {
-        const updated = await prisma.user.update({
-            where: { id: user.id },
-            data: { onboardingStatus: "COMPLETED" },
-            select: { id: true, onboardingStatus: true },
-        });
+        const existing = await prisma.user.findUnique({ where: { id: user.id }, select: { onboardingStatus: true } });
+        if (!existing) return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+        const updated = existing.onboardingStatus === "COMPLETED"
+            ? { id: user.id, onboardingStatus: "COMPLETED" }
+            : await prisma.$transaction(async tx => {
+                const result = await tx.user.update({ where: { id: user.id }, data: { onboardingStatus: "COMPLETED" }, select: { id: true, onboardingStatus: true } });
+                await tx.auditLog.create({ data: { actorId: user.id, actorEmail: user.email, action: "USER_ONBOARDING_COMPLETED", entity: "User", entityId: user.id } });
+                return result;
+            });
 
         return NextResponse.json(updated);
     } catch (error) {

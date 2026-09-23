@@ -2,19 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-    ChevronRight,
-    UserPlus,
-    Search,
-    Users,
-    Building2,
-    Mail,
-    Briefcase,
-} from "lucide-react";
-import DeleteUserButton from "./DeleteUserButton";
+import { ArrowUpRight, Search, UserPlus, Users } from "lucide-react";
 import { formatRoleLabel } from "@/lib/roles";
 import { reportingManagerDisplayName } from "@/lib/reporting-manager";
-import "@/styles/people-hub.css";
 import "@/styles/directory.css";
 
 export type DirectoryEmployee = {
@@ -22,215 +12,74 @@ export type DirectoryEmployee = {
     name: string | null;
     email: string | null;
     role: string;
+    isActive: boolean;
+    onboardingStatus: string;
+    createdAt: string;
+    updatedAt: string;
     reportsTo?: { id: string; name: string | null; email: string | null } | null;
-    profile?: {
-        position?: string | null;
-        department?: string | null;
-    } | null;
+    profile?: { position?: string | null; department?: string | null; joinDate?: string | null } | null;
 };
 
-function roleBadgeClass(role: string): string {
-    const key = role.toLowerCase();
-    if (key === "founder" || key === "super_admin" || key === "hr_admin") return "hubRoleBadge--super-admin";
-    if (key === "manager" || key === "team_lead") return "hubRoleBadge--manager";
-    if (key === "employee") return "hubRoleBadge--employee";
-    if (key === "intern") return "hubRoleBadge--intern";
-    return "hubRoleBadge--contractor";
+function statusOf(employee: DirectoryEmployee) {
+    if (!employee.isActive) return "Exited";
+    if (employee.onboardingStatus === "IN_PROGRESS") return "Onboarding";
+    return "Active";
 }
 
-export default function DirectoryClient({
-    employees,
-    canOnboard,
-    isSuperAdmin,
-}: {
+function dateLabel(value: string | null | undefined) {
+    if (!value) return "—";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(date);
+}
+function timeLabel(value: string) {
+    return new Intl.DateTimeFormat("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date(value));
+}
+
+export default function DirectoryClient({ employees, canOnboard }: {
     employees: DirectoryEmployee[];
     canOnboard: boolean;
     isSuperAdmin: boolean;
 }) {
     const [search, setSearch] = useState("");
-    const [roleFilter, setRoleFilter] = useState("ALL");
+    const [status, setStatus] = useState("All");
+    const [department, setDepartment] = useState("All departments");
+    const departments = useMemo(() => ["All departments", ...new Set(employees.map(e => e.profile?.department).filter((value): value is string => Boolean(value)))].sort((a, b) => a === "All departments" ? -1 : b === "All departments" ? 1 : a.localeCompare(b)), [employees]);
+    const filtered = useMemo(() => employees.filter(employee => {
+        if (status !== "All" && statusOf(employee) !== status) return false;
+        if (department !== "All departments" && employee.profile?.department !== department) return false;
+        const haystack = [employee.name, employee.email, employee.role, employee.profile?.position, employee.profile?.department, employee.reportsTo?.name].filter(Boolean).join(" ").toLowerCase();
+        return haystack.includes(search.trim().toLowerCase());
+    }), [employees, search, status, department]);
+    const counts = { Active: 0, Onboarding: 0, Exited: 0 };
+    employees.forEach(employee => counts[statusOf(employee) as keyof typeof counts]++);
 
-    const roles = useMemo(() => {
-        const set = new Set(employees.map((e) => e.role));
-        return ["ALL", ...Array.from(set).sort()];
-    }, [employees]);
-
-    const filtered = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        return employees.filter((e) => {
-            if (roleFilter !== "ALL" && e.role !== roleFilter) return false;
-            if (!q) return true;
-            const hay = [
-                e.name,
-                e.email,
-                e.role,
-                e.profile?.department,
-                e.profile?.position,
-            ]
-                .filter(Boolean)
-                .join(" ")
-                .toLowerCase();
-            return hay.includes(q);
-        });
-    }, [employees, search, roleFilter]);
-
-    const deptCount = useMemo(() => {
-        const depts = new Set(
-            employees.map((e) => e.profile?.department).filter(Boolean)
-        );
-        return depts.size;
-    }, [employees]);
-
-    const internCount = employees.filter((e) => e.role === "INTERN").length;
-
-    return (
-        <div className="hubPage">
-            <header className="hubHero">
-                <div className="hubHeroMain">
-                    <p className="hubEyebrow">People</p>
-                    <h1>
-                        Employee <span className="text-gradient">Directory</span>
-                    </h1>
-                    <p className="hubSubtitle">
-                        Browse the Nuriek team, view profiles, and manage onboarding.
-                    </p>
-                </div>
-                <div className="hubHeroActions">
-                    <span className="hubStatChip">
-                        <Users size={16} color="var(--nuriek-blue)" />
-                        <strong>{employees.length}</strong> people
-                    </span>
-                    {canOnboard && (
-                        <Link href="/directory/onboard" className="hubBtnPrimary">
-                            <UserPlus size={18} />
-                            Onboard employee
-                        </Link>
-                    )}
-                </div>
-            </header>
-
-            <section className="hubKpiGrid" aria-label="Directory summary">
-                <article className="hubKpiCard glass">
-                    <span className="hubKpiLabel">Total team</span>
-                    <span className="hubKpiValue hubKpiValue--default">{employees.length}</span>
-                </article>
-                <article className="hubKpiCard glass">
-                    <span className="hubKpiLabel">Departments</span>
-                    <span className="hubKpiValue hubKpiValue--blue">{deptCount || "—"}</span>
-                </article>
-                <article className="hubKpiCard glass">
-                    <span className="hubKpiLabel">Interns</span>
-                    <span className="hubKpiValue hubKpiValue--orange">{internCount}</span>
-                </article>
-                <article className="hubKpiCard glass">
-                    <span className="hubKpiLabel">Showing</span>
-                    <span className="hubKpiValue hubKpiValue--green">{filtered.length}</span>
-                </article>
-            </section>
-
-            <div className="hubToolbar">
-                <div className="hubSearchWrap">
-                    <Search size={18} />
-                    <input
-                        type="search"
-                        className="hubSearchInput"
-                        placeholder="Search by name, email, role, department…"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        aria-label="Search employees"
-                    />
-                </div>
-                <div className="hubFilters" role="group" aria-label="Filter by role">
-                    {roles.map((role) => (
-                        <button
-                            key={role}
-                            type="button"
-                            className={`hubFilterPill ${roleFilter === role ? "hubFilterPill--active" : ""}`}
-                            onClick={() => setRoleFilter(role)}
-                        >
-                            {role === "ALL" ? "All roles" : formatRoleLabel(role)}
-                        </button>
-                    ))}
-                </div>
-                <span className="hubResultCount">
-                    {filtered.length} of {employees.length}
-                </span>
+    return <main className="peopleWorkspace">
+        <header className="peopleHeader">
+            <div><p className="peopleEyebrow">People operations / Workforce</p><h1>Employee directory</h1><p>One place to manage every employee from joining through exit.</p></div>
+            {canOnboard && <Link href="/directory/onboard" className="peoplePrimary"><UserPlus size={17} /> Add employee</Link>}
+        </header>
+        <section className="peopleSummary" aria-label="Workforce summary">
+            <div><span>Total employees</span><strong>{employees.length}</strong><small>All workforce records</small></div>
+            <div><span>Active</span><strong>{counts.Active}</strong><small>Currently employed</small></div>
+            <div><span>Onboarding</span><strong>{counts.Onboarding}</strong><small>Joining in progress</small></div>
+            <div><span>Exited</span><strong>{counts.Exited}</strong><small>Records retained</small></div>
+        </section>
+        <section className="peoplePanel">
+            <div className="peoplePanelHeader"><div><h2>Workforce records</h2><p>{filtered.length} of {employees.length} employees</p></div></div>
+            <div className="peopleToolbar">
+                <label className="peopleSearch"><Search size={17}/><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search name, role, team or manager" aria-label="Search employees" /></label>
+                <select value={status} onChange={event => setStatus(event.target.value)} aria-label="Filter by employment status"><option>All</option><option>Active</option><option>Onboarding</option><option>Exited</option></select>
+                <select value={department} onChange={event => setDepartment(event.target.value)} aria-label="Filter by department">{departments.map(item => <option key={item}>{item}</option>)}</select>
             </div>
-
-            {filtered.length === 0 ? (
-                <div className="dirEmptyState glass">
-                    <Users size={48} className="hubEmptyIcon" />
-                    <p>No employees match your search.</p>
-                    <button
-                        type="button"
-                        className="hubFilterPill hubFilterPill--active"
-                        style={{ marginTop: "1rem" }}
-                        onClick={() => {
-                            setSearch("");
-                            setRoleFilter("ALL");
-                        }}
-                    >
-                        Clear filters
-                    </button>
-                </div>
-            ) : (
-                <div className="dirGrid">
-                    {filtered.map((employee) => (
-                        <article key={employee.id} className="dirCard glass glass-hover">
-                            <div className="dirCardTop">
-                                <div
-                                    className="dirAvatar"
-                                    aria-hidden
-                                    data-initial={(employee.name?.charAt(0) || "U").toUpperCase()}
-                                >
-                                    {employee.name?.charAt(0) || "U"}
-                                </div>
-                                <span className={`hubRoleBadge ${roleBadgeClass(employee.role)}`}>
-                                    {formatRoleLabel(employee.role)}
-                                </span>
-                            </div>
-
-                            <div className="dirCardBody">
-                                <h2 className="dirName">{employee.name || "Unnamed"}</h2>
-                                {employee.profile?.position && (
-                                    <p className="dirMeta">
-                                        <Briefcase size={14} />
-                                        {employee.profile.position}
-                                    </p>
-                                )}
-                                {employee.profile?.department && (
-                                    <p className="dirMeta">
-                                        <Building2 size={14} />
-                                        {employee.profile.department}
-                                    </p>
-                                )}
-                                {employee.email && (
-                                    <p className="dirMeta dirMeta--email">
-                                        <Mail size={14} />
-                                        {employee.email}
-                                    </p>
-                                )}
-                                {employee.reportsTo && (
-                                    <p className="dirMeta">
-                                        Reports to {reportingManagerDisplayName(employee.reportsTo)}
-                                    </p>
-                                )}
-                            </div>
-
-                            <footer className="dirCardFooter">
-                                <Link href={`/profile/${employee.id}`} className="dirViewBtn">
-                                    View profile
-                                    <ChevronRight size={16} />
-                                </Link>
-                                {canOnboard && (isSuperAdmin || (employee.role !== "FOUNDER" && employee.role !== "HR_ADMIN")) && (
-                                    <Link href={`/directory/${employee.id}/edit`} className="dirViewBtn">Edit record</Link>
-                                )}
-                                {isSuperAdmin && <DeleteUserButton userId={employee.id} />}
-                            </footer>
-                        </article>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
+            {filtered.length ? <div className="peopleTableScroll"><table className="peopleTable"><thead><tr><th>Employee</th><th>Role &amp; team</th><th>Reports to</th><th>Joined</th><th>Record updated</th><th>Status</th><th><span className="sr-only">Open</span></th></tr></thead><tbody>{filtered.map(employee => <tr key={employee.id}>
+                <td><Link className="peopleIdentity" href={`/profile/${employee.id}`}><span className="peopleAvatar">{(employee.name || "U").charAt(0).toUpperCase()}</span><span><strong>{employee.name || "Unnamed employee"}</strong><small>{employee.email || "No work email"}</small></span></Link></td>
+                <td><strong>{employee.profile?.position || formatRoleLabel(employee.role)}</strong><small>{employee.profile?.department || "Unassigned department"}</small></td>
+                <td>{employee.reportsTo ? reportingManagerDisplayName(employee.reportsTo) : "—"}</td>
+                <td><time dateTime={employee.profile?.joinDate || employee.createdAt}>{dateLabel(employee.profile?.joinDate || employee.createdAt)}</time></td>
+                <td><time dateTime={employee.updatedAt}>{dateLabel(employee.updatedAt)}<small>{timeLabel(employee.updatedAt)} IST</small></time></td>
+                <td><span className={`peopleStatus peopleStatus--${statusOf(employee).toLowerCase()}`}>{statusOf(employee)}</span></td>
+                <td><Link className="peopleOpen" href={`/profile/${employee.id}`} aria-label={`Open ${employee.name || "employee"} profile`}><ArrowUpRight size={17}/></Link></td>
+            </tr>)}</tbody></table></div> : <div className="peopleEmpty"><Users size={28}/><strong>No employees found</strong><p>Try a different search or filter.</p><button type="button" onClick={() => {setSearch(""); setStatus("All"); setDepartment("All departments");}}>Clear filters</button></div>}
+        </section>
+    </main>;
 }

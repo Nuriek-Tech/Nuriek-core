@@ -2,6 +2,12 @@
   max-width: 880px;
   margin: 0 auto;
 }
+.obSteps { display: flex; gap: .55rem; margin: 0 0 1.2rem; flex-wrap: wrap; }
+.obSteps span { display: inline-flex; align-items: center; gap: .45rem; padding: .55rem .75rem; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); color: var(--text-secondary); font-size: .75rem; font-weight: 650; }
+.obSteps b { color: var(--text-tertiary); font-size: .7rem; }
+.obSteps .obStepActive { color: var(--nuriek-blue); border-color: rgba(var(--nuriek-blue-rgb), .4); background: rgba(var(--nuriek-blue-rgb), .08); }
+.obSteps .obStepActive b { color: var(--nuriek-blue); }
+.obSuccessActions { display: flex; justify-content: center; align-items: center; gap: .7rem; margin-top: 1.5rem; flex-wrap: wrap; }
 
 .obPsychBanner {
   display: flex;

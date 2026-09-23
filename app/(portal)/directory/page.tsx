@@ -25,6 +25,10 @@ export default async function DirectoryPage() {
         name: e.name,
         email: e.email,
         role: e.role,
+        isActive: e.isActive,
+        onboardingStatus: e.onboardingStatus,
+        createdAt: e.createdAt.toISOString(),
+        updatedAt: e.updatedAt.toISOString(),
         reportsTo: e.reportsTo
             ? { id: e.reportsTo.id, name: e.reportsTo.name, email: e.reportsTo.email }
             : null,
@@ -32,6 +36,7 @@ export default async function DirectoryPage() {
             ? {
                   position: e.profile.position,
                   department: e.profile.department,
+                  joinDate: e.profile.joinDate.toISOString(),
               }
             : null,
     }));

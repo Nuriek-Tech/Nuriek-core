@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireHrPermission, isNextResponse } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { logAudit } from "@/lib/audit";
 
 export async function POST(
     req: Request,
@@ -14,6 +13,9 @@ export async function POST(
     }
 
     try {
+        const body = await req.json().catch(() => ({}));
+        const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+        if (!reason || reason.length > 500) return NextResponse.json({ error: "Provide an exit reason (up to 500 characters)." }, { status: 400 });
         const targetUserId = id;
 
         const targetUser = await prisma.user.findUnique({
@@ -33,35 +35,13 @@ export async function POST(
             return NextResponse.json({ success: true, alreadyInactive: true });
         }
 
-        // Mark user as inactive
-        await prisma.user.update({
-            where: { id: targetUserId },
-            data: { isActive: false },
-        });
-
-        // Terminate all active sessions
-        await prisma.loginSession.updateMany({
-            where: {
-                userId: targetUserId,
-                logoutAt: null,
-            },
-            data: {
-                logoutAt: new Date(),
-                endReason: "revoked",
-            },
-        });
-
-        // Log Audit Event
-        await logAudit({
-            actorId: user.id,
-            actorEmail: user.email,
-            action: "EMPLOYEE_EXITED",
-            entity: "User",
-            entityId: targetUserId,
-            metadata: { targetEmail: targetUser.email },
-        });
-
-        return NextResponse.json({ success: true });
+        const exitedAt = new Date();
+        await prisma.$transaction([
+            prisma.user.update({ where: { id: targetUserId }, data: { isActive: false } }),
+            prisma.loginSession.updateMany({ where: { userId: targetUserId, logoutAt: null }, data: { logoutAt: exitedAt, endReason: "revoked" } }),
+            prisma.auditLog.create({ data: { actorId: user.id, actorEmail: user.email, action: "EMPLOYEE_EXITED", entity: "User", entityId: targetUserId, metadata: JSON.stringify({ targetEmail: targetUser.email, reason }), createdAt: exitedAt } }),
+        ]);
+        return NextResponse.json({ success: true, exitedAt: exitedAt.toISOString() });
     } catch (error) {
         console.error("User exit error:", error);
         return NextResponse.json({ error: "Failed to process exit" }, { status: 500 });

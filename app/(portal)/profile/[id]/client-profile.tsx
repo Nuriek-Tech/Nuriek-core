@@ -25,6 +25,7 @@ import "@/styles/directory.css";
 import Link from "next/link";
 import EmployeeDocumentsPanel from "@/components/EmployeeDocumentsPanel";
 import UserLifecycleTimeline from "@/components/UserLifecycleTimeline";
+import OffboardingChecklist from "@/components/OffboardingChecklist";
 import ReportingManagerSelect from "@/components/ReportingManagerSelect";
 import { reportingManagerDisplayName } from "@/lib/reporting-manager";
 import { formatRoleLabel } from "@/lib/roles";
@@ -54,9 +55,13 @@ type ProfileUser = {
     name: string | null;
     email: string | null;
     role: Role;
+    isActive: boolean;
+    onboardingStatus: string;
+    createdAt: string | Date;
+    updatedAt: string | Date;
     reportsToId?: string | null;
     reportsTo?: ProfileManager | null;
-    profile?: { department?: string | null; joinDate?: string | Date | null } | null;
+    profile?: { department?: string | null; position?: string | null; joinDate?: string | Date | null } | null;
     badges?: ProfileBadge[];
     reviews?: ProfileReview[];
     signatures?: ProfileSignature[];
@@ -115,6 +120,8 @@ export default function ClientProfileWrapper({
     // Exit State
     const [exitOpen, setExitOpen] = useState(false);
     const [exiting, setExiting] = useState(false);
+    const [exitReason, setExitReason] = useState("");
+    const [completingOnboarding, setCompletingOnboarding] = useState(false);
     
     // Offboarding Flow State
     const [offboardingOpen, setOffboardingOpen] = useState(false);
@@ -209,6 +216,8 @@ export default function ClientProfileWrapper({
         try {
             const res = await fetch(`/api/admin/users/${user.id}/exit`, {
                 method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reason: exitReason.trim() }),
             });
             const json = await res.json();
             if (!res.ok) {
@@ -224,8 +233,30 @@ export default function ClientProfileWrapper({
         }
     };
 
+    const handleCompleteOnboarding = async () => {
+        setCompletingOnboarding(true);
+        try {
+            const response = await fetch(`/api/admin/users/${user.id}/onboarding`, { method: "POST" });
+            if (!response.ok) {
+                const result = await response.json().catch(() => ({}));
+                alert(result.error || "Could not complete onboarding");
+                return;
+            }
+            window.location.reload();
+        } catch {
+            alert("Could not complete onboarding");
+        } finally {
+            setCompletingOnboarding(false);
+        }
+    };
+
 
     return (
+        <div className="profileWorkspace">
+        <header className="employeeHeader">
+            <div><Link href="/directory" className="employeeBack">← Workforce directory</Link><p className="peopleEyebrow">Employee record</p><h1>{user.name || "Employee"}</h1><p>{user.profile?.position || formatRoleLabel(user.role)} · {user.profile?.department || "Department unassigned"}</p></div>
+            <div className="employeeHeaderSide"><span className={`peopleStatus peopleStatus--${!user.isActive ? "exited" : user.onboardingStatus === "IN_PROGRESS" ? "onboarding" : "active"}`}>{!user.isActive ? "Exited" : user.onboardingStatus === "IN_PROGRESS" ? "Onboarding" : "Active"}</span><small>Record updated <time dateTime={new Date(user.updatedAt).toISOString()}>{new Date(user.updatedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })} IST</time></small>{isHrOrAdmin && <Link href={`/directory/${user.id}/edit`} className="employeeEdit">Edit employee record</Link>}</div>
+        </header>
         <div className="profileLayout">
             <aside className="profileSidebar">
                 <div className="sidebarCard glass">
@@ -239,6 +270,7 @@ export default function ClientProfileWrapper({
 
                     {isHrOrAdmin && (
                         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+                            {user.isActive && user.onboardingStatus === "IN_PROGRESS" && <button onClick={handleCompleteOnboarding} disabled={completingOnboarding} className="profileAction profileActionMain"><CheckCircle2 size={18}/><span>{completingOnboarding ? "Completing…" : "Complete onboarding"}</span></button>}
                             <button onClick={() => setShowReviewModal(true)} className="profileAction profileActionMain">
                                 <Zap size={18} />
                                 <span>Performance Review</span>
@@ -247,21 +279,20 @@ export default function ClientProfileWrapper({
                                 <Award size={18} />
                                 <span>Award Badge</span>
                             </button>
-                            <button
+                            {user.isActive && <button
                                 onClick={() => setExitOpen(true)}
                                 className="profileAction"
-                                style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                                style={{ color: 'var(--text-secondary)' }}
                             >
                                 <LogOut size={18} />
-                                <span>Exit User</span>
-                            </button>
+                                <span>Start employee exit</span>
+                            </button>}
                             <button
                                 onClick={() => setShowDeleteModal(true)}
-                                className="profileAction"
-                                style={{ color: '#ff453a', borderColor: 'rgba(255, 69, 58, 0.3)' }}
+                                className="employeeDeleteLink"
                             >
-                                <Trash2 size={18} />
-                                <span>Delete Employee</span>
+                                <Trash2 size={14} />
+                                <span>Delete record</span>
                             </button>
                         </div>
                     )}
@@ -377,6 +408,8 @@ export default function ClientProfileWrapper({
             </aside>
 
             <div className="profileMain">
+                <section className="infoSection glass"><UserLifecycleTimeline userId={user.id} /></section>
+                {!user.isActive && isHrOrAdmin && <section className="infoSection glass"><OffboardingChecklist userId={user.id} /></section>}
                 <section className="infoSection glass">
                     <div className="sectionHeader">
                         <User size={20} />
@@ -485,7 +518,7 @@ export default function ClientProfileWrapper({
                                                 <Star key={i} size={14} fill={i < review.rating ? "#FFD700" : "none"} color={i < review.rating ? "#FFD700" : "#ccc"} />
                                             ))}
                                         </div>
-                                        <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{new Date(review.createdAt).toLocaleDateString()}</span>
+                                        <time dateTime={new Date(review.createdAt).toISOString()} style={{ fontSize: '0.75rem', opacity: 0.7 }}>{new Date(review.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })} IST</time>
                                     </div>
                                     <p style={{ fontSize: '0.9rem' }}>&quot;{review.feedback}&quot;</p>
                                     <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Reviewed by {review.reviewer.name}</span>
@@ -514,7 +547,7 @@ export default function ClientProfileWrapper({
                                 <div key={sig.id} className="logItem">
                                     <div className="logInfo">
                                         <span className="logTitle">{sig.document.title}</span>
-                                        <span className="logTime">Signed on {new Date(sig.signedAt).toLocaleDateString()}</span>
+                                        <time dateTime={new Date(sig.signedAt).toISOString()} className="logTime">Signed {new Date(sig.signedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })} IST</time>
                                     </div>
                                     <span className="logStatus statusOnTime">Signed</span>
                                 </div>
@@ -527,9 +560,6 @@ export default function ClientProfileWrapper({
                     </div>
                 </section>
                 
-                <section className="infoSection glass">
-                    <UserLifecycleTimeline userId={user.id} />
-                </section>
             </div>
 
             {/* Performance Review Modal */}
@@ -594,6 +624,8 @@ export default function ClientProfileWrapper({
                             <br /><br />
                             This action is <strong>irreversible</strong> and will remove all attendance records, documents, and performance data.
                         </p>
+                        <label className="exitReasonLabel" htmlFor="exit-reason">Exit reason <span>(required for the activity record)</span></label>
+                        <textarea id="exit-reason" className="exitReasonInput" value={exitReason} onChange={event => setExitReason(event.target.value)} maxLength={500} placeholder="Briefly document the reason for this exit" />
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             <button
                                 onClick={handleDeleteUser}
@@ -631,7 +663,7 @@ export default function ClientProfileWrapper({
                             <button
                                 onClick={handleExitUser}
                                 className="checkInButton"
-                                disabled={exiting}
+                                disabled={exiting || !exitReason.trim()}
                                 style={{ flex: 1, background: '#ef4444', border: 'none', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
                             >
                                 {exiting ? <Loader2 size={16} className="animate-spin" /> : "Confirm Exit"}
@@ -658,7 +690,7 @@ export default function ClientProfileWrapper({
                             <h3 style={{ margin: 0 }}>User Exited Successfully</h3>
                         </div>
                         <p style={{ color: '#555', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-                            <strong>{user.name}</strong> has been successfully offboarded and their login access is revoked. Please complete the following formalities:
+                            <strong>{user.name}</strong> has been exited and their portal access is revoked. Continue with the tracked exit checklist on this employee record.
                         </p>
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -676,17 +708,6 @@ export default function ClientProfileWrapper({
                                 </div>
                             )}
 
-                            <div style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '1rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                                <input type="checkbox" id="zoho-check" style={{ marginTop: '0.2rem', cursor: 'pointer' }} />
-                                <div>
-                                    <label htmlFor="zoho-check" style={{ fontWeight: 600, display: 'block', marginBottom: '0.25rem', cursor: 'pointer' }}>
-                                        {user.role === "INTERN" ? "2. " : "1. "}Delete user from Zoho Workspace
-                                    </label>
-                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                                        Remember to manually delete <strong>{user.email}</strong> from Zoho Workspace / Zoho People to stop billing and revoke email access.
-                                    </p>
-                                </div>
-                            </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
@@ -701,6 +722,7 @@ export default function ClientProfileWrapper({
                     </div>
                 </div>
             )}
+        </div>
         </div>
     );
 }

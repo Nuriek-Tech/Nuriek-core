@@ -34,6 +34,8 @@ function OnboardForm() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [createdId, setCreatedId] = useState("");
+    const [emailSent, setEmailSent] = useState(false);
     const [error, setError] = useState("");
 
     const [formData, setFormData] = useState({
@@ -43,6 +45,7 @@ function OnboardForm() {
         department: "Engineering",
         position: "",
         reportsToId: "",
+        joinDate: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }),
     });
 
     useEffect(() => {
@@ -75,8 +78,10 @@ function OnboardForm() {
             });
 
             if (res.ok) {
+                const data = await res.json();
+                setCreatedId(data.user.id);
+                setEmailSent(Boolean(data.emailSent));
                 setIsSuccess(true);
-                setTimeout(() => router.push("/interns"), 2200);
             } else {
                 let msg = "Failed to onboard employee";
                 try {
@@ -104,11 +109,9 @@ function OnboardForm() {
                     {isInternFlow ? "Intern journey started" : "Onboarding initiated"}
                 </h2>
                 <p style={{ color: "var(--text-secondary)", lineHeight: 1.55 }}>
-                    Welcome email sent to <strong>{formData.email}</strong>.
-                    {isInternFlow
-                        ? " They'll see the Nuriek Psychology welcome when they first sign in."
-                        : " Redirecting…"}
+                    The employee record is ready. {emailSent ? <>Welcome email sent to <strong>{formData.email}</strong>.</> : <>The welcome email could not be sent. Check mail settings before asking the employee to sign in.</>}
                 </p>
+                <div className="obSuccessActions"><Link href={`/profile/${createdId}`} className="peoplePrimary">Open employee profile</Link><Link href="/directory" className="admRefreshBtn">Back to workforce</Link></div>
             </div>
         );
     }
@@ -123,24 +126,16 @@ function OnboardForm() {
                     <p className="hubEyebrow">
                         {isInternFlow ? "Intern program" : "People ops"}
                     </p>
-                    <h1>
-                        {isInternFlow ? (
-                            <>
-                                Onboard <span className="text-gradient">Intern</span>
-                            </>
-                        ) : (
-                            <>
-                                Onboard <span className="text-gradient">Teammate</span>
-                            </>
-                        )}
-                    </h1>
+                    <h1>{isInternFlow ? "Onboard intern" : "Add employee"}</h1>
                     <p className="hubSubtitle">
                         {isInternFlow
                             ? "Create portal access and seed their psychology-aligned onboarding checklist."
-                            : "Send credentials and initialize their Nuriek Core profile."}
+                            : "Create a workforce record, assign a manager, and start onboarding."}
                     </p>
                 </div>
             </header>
+
+            <div className="obSteps" aria-label="Onboarding workflow"><span className="obStepActive"><b>01</b> Employee details</span><span><b>02</b> Invitation</span><span><b>03</b> Profile completion</span></div>
 
             {isInternFlow && (
                 <div className="obPsychBanner glass">
@@ -248,6 +243,10 @@ function OnboardForm() {
                             Optional. Shown on profiles and pre-filled on offer letters.
                         </p>
                     </div>
+                    <div className="admField">
+                        <label className="admLabel" htmlFor="joining-date">Joining date</label>
+                        <input id="joining-date" required type="date" className="admInput" value={formData.joinDate} onChange={(e) => setFormData({ ...formData, joinDate: e.target.value })} />
+                    </div>
 
                     <div className="admField" style={{ gridColumn: "1 / -1" }}>
                         <label className="admLabel">Portal role</label>
@@ -283,7 +282,7 @@ function OnboardForm() {
                         ) : (
                             <>
                                 <UserPlus size={18} />
-                                {isInternFlow ? "Launch intern journey" : "Complete onboarding"}
+                                {isInternFlow ? "Launch intern journey" : "Create employee and send invite"}
                             </>
                         )}
                     </button>

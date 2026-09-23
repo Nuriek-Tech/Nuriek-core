@@ -7,7 +7,6 @@ import { generateTemporaryPassword } from "@/lib/password";
 import { isNuriekWorkEmail, normalizeWorkEmail, WORK_EMAIL_ERROR } from "@/lib/email-policy";
 import { DEFAULT_INTERN_ONBOARDING_CHECKLIST } from "@/lib/nuriek-psychology";
 import { REPORTING_MANAGER_ROLES } from "@/lib/reporting-manager";
-import { logAudit } from "@/lib/audit";
 import bcrypt from "bcryptjs";
 import type { UserRole } from "@prisma/client";
 
@@ -17,7 +16,7 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json();
-        const { name, email, role, department, position, reportsToId } = body;
+        const { name, email, role, department, position, reportsToId, joinDate } = body;
 
         if (
             current.role === ROLES.HR_ADMIN &&
@@ -29,9 +28,13 @@ export async function POST(req: Request) {
             );
         }
 
-        if (!name || !email || !role) {
+        if (typeof name !== "string" || !name.trim() || !email || !role || typeof position !== "string" || !position.trim() || typeof department !== "string" || !department.trim()) {
             return new NextResponse("Missing required fields", { status: 400 });
         }
+        const allowedRoles = [ROLES.EMPLOYEE, ROLES.INTERN, ROLES.CONTRACTOR, ROLES.TEAM_LEAD, ROLES.MANAGER, ROLES.HR_ADMIN, ROLES.FOUNDER];
+        if (!allowedRoles.includes(role)) return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+        const parsedJoinDate = typeof joinDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(joinDate) ? new Date(`${joinDate}T12:00:00+05:30`) : null;
+        if (!parsedJoinDate || Number.isNaN(parsedJoinDate.getTime()) || parsedJoinDate.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) !== joinDate) return NextResponse.json({ error: "Valid joining date is required" }, { status: 400 });
 
         const normalizedEmail = normalizeWorkEmail(email);
         if (!isNuriekWorkEmail(normalizedEmail)) {
@@ -69,7 +72,7 @@ export async function POST(req: Request) {
 
         const result = await prisma.user.create({
             data: {
-                name,
+                name: name.trim(),
                 email: normalizedEmail,
                 role: role as UserRole,
                 reportsToId: managerId,
@@ -78,9 +81,9 @@ export async function POST(req: Request) {
                 password: hashedPassword,
                 profile: {
                     create: {
-                        department,
-                        position,
-                        joinDate: new Date(),
+                        department: department.trim(),
+                        position: position.trim(),
+                        joinDate: parsedJoinDate,
                     },
                 },
                 ...(role === ROLES.INTERN
@@ -98,24 +101,26 @@ export async function POST(req: Request) {
             },
         });
 
-        await sendOnboardingEmail({
-            name,
-            email: normalizedEmail,
-            temporaryPassword,
-        });
+        await prisma.auditLog.create({ data: {
+            actorId: current.id, actorEmail: current.email, action: "USER_ONBOARD", entity: "User", entityId: result.id,
+            metadata: JSON.stringify({ email: normalizedEmail, role, joinDate: parsedJoinDate.toISOString() }),
+        } });
 
-        await logAudit({
-            actorId: current.id,
-            actorEmail: current.email,
-            action: "USER_ONBOARD",
-            entity: "User",
-            entityId: result.id,
-            metadata: { email: normalizedEmail, role },
-        });
+        let emailSent = false;
+        try {
+            const emailResult = await sendOnboardingEmail({ name: name.trim(), email: normalizedEmail, temporaryPassword });
+            emailSent = emailResult.success;
+        } catch (error) {
+            console.error("Onboarding email error:", error);
+        }
+        if (emailSent) await prisma.auditLog.create({ data: {
+            actorId: current.id, actorEmail: current.email, action: "ONBOARDING_EMAIL_SENT", entity: "User", entityId: result.id,
+        } });
 
         return NextResponse.json({
             message: "Employee onboarded successfully",
             user: { id: result.id, name: result.name, email: result.email },
+            emailSent,
         });
     } catch (error) {
         console.error("Onboarding error:", error);
